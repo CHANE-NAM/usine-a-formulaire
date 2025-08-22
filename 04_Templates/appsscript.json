@@ -1,0 +1,15 @@
+{
+  "timeZone": "Indian/Mauritius",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "LoggerLib",
+        "version": "1",
+        "libraryId": "1sxhE-bPoQJ2S9gzvx4gSPXIS_QL17gG6iQmdgTe6VcRbARXVw2u-8qe3",
+        "developmentMode": false
+      }
+    ]
+  }
+}

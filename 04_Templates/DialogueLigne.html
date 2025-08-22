@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <style>
+      body { padding: 20px; font-family: Arial, sans-serif; text-align: center; }
+      input { width: 100%; margin-bottom: 15px; }
+      button { margin-left: 10px; }
+    </style>
+  </head>
+  <body>
+    <p>Entrez le numéro de la ligne à retraiter :</p>
+    <input type="text" id="row-input" autofocus>
+    <div>
+      <button class="action" onclick="submitRow()">OK</button>
+      <button onclick="google.script.host.close()">Annuler</button>
+    </div>
+
+    <script>
+      // Permet d'utiliser la touche "Entrée"
+      document.getElementById('row-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitRow();
+        }
+      });
+
+      function submitRow() {
+        const rowNum = document.getElementById('row-input').value;
+        if (!isNaN(rowNum) && rowNum.trim() !== '' && parseInt(rowNum, 10) > 1) {
+          // Appelle la fonction côté serveur pour ouvrir la barre latérale
+          google.script.run.ouvrirSidebarPourLigne(parseInt(rowNum, 10));
+          google.script.host.close(); // Ferme ce dialogue
+        } else {
+          alert('Veuillez entrer un numéro de ligne valide (supérieur à 1).');
+        }
+      }
+    </script>
+  </body>
+</html>

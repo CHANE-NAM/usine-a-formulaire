@@ -1,0 +1,186 @@
+// Fichier généré le 22/07/2025 à 16:48:04
+
+// --- Début du fichier: Code.js ---
+/**
+ * @OnlyCurrentDoc
+ * Crée un menu personnalisé dans l'interface utilisateur de la feuille de calcul
+ * pour lancer les fonctions utilitaires.
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+      .createMenu('⚙️ Utilitaires BDD')
+      .addItem('Lister les fichiers d\'un dossier Drive', 'listFilesFromFolder')
+      .addToUi();
+}
+
+/**
+ * Demande à l'utilisateur l'ID d'un dossier Drive, puis liste tous les fichiers
+ * de ce dossier (et optionnellement des sous-dossiers) à la suite des données.
+ */
+function listFilesFromFolder() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // 1. Demander l'ID du dossier à l'utilisateur
+  const result = ui.prompt(
+      'Lister les Fichiers Drive',
+      'Veuillez coller l\'ID du dossier Google Drive contenant vos rapports :',
+      ui.ButtonSet.OK_CANCEL);
+
+  if (result.getSelectedButton() !== ui.Button.OK || !result.getResponseText()) {
+    return;
+  }
+  
+  const folderId = result.getResponseText().trim();
+
+  // NOUVEAU : Demander si l'on doit inclure les sous-dossiers
+  const recursiveSearchResponse = ui.alert(
+      'Recherche approfondie',
+      'Voulez-vous inclure les fichiers des sous-dossiers ?',
+      ui.ButtonSet.YES_NO);
+      
+  const shouldRecurse = (recursiveSearchResponse === ui.Button.YES);
+  
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    const filesToAdd = [];
+
+    // NOUVEAU : Lancer la recherche simple ou récursive en fonction de la réponse
+    if (shouldRecurse) {
+        // Lancer la recherche récursive
+        getFilesRecursive(folder, filesToAdd);
+    } else {
+        // Lancer la recherche simple (uniquement le dossier racine)
+        const files = folder.getFiles();
+        while (files.hasNext()) {
+            const file = files.next();
+            filesToAdd.push([file.getName(), file.getId()]);
+        }
+    }
+    
+    if (filesToAdd.length === 0) {
+      ui.alert('Information', `Aucun fichier n'a été trouvé dans le dossier "${folder.getName()}" (et ses sous-dossiers, si l'option était choisie).`, ui.ButtonSet.OK);
+      return;
+    }
+    
+    // 3. Écrire les résultats dans la feuille de calcul
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let outputSheet = ss.getSheetByName('Liste_Fichiers_Drive');
+    
+    if (!outputSheet) {
+      outputSheet = ss.insertSheet('Liste_Fichiers_Drive', 0);
+    }
+    
+    const lastRow = outputSheet.getLastRow();
+    let startRow;
+
+    if (lastRow === 0) {
+      outputSheet.getRange(1, 1, 1, 2).setValues([['Nom du Fichier', 'ID du Fichier']]);
+      startRow = 2;
+    } else {
+      startRow = lastRow + 1;
+    }
+    
+    outputSheet.getRange(startRow, 1, filesToAdd.length, 2).setValues(filesToAdd);
+    outputSheet.autoResizeColumns(1, 2);
+    outputSheet.activate();
+    
+    ui.alert('Opération terminée', `${filesToAdd.length} nouveau(x) fichier(s) ont été ajoutés dans l'onglet "Liste_Fichiers_Drive".`, ui.ButtonSet.OK);
+
+  } catch (e) {
+    Logger.log(e.toString());
+    ui.alert('Erreur', 'Impossible d\'accéder au dossier. Veuillez vérifier que l\'ID est correct et que vous avez les droits d\'accès.', ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Fonction auxiliaire récursive pour lister les fichiers.
+ * @param {Folder} folder - Le dossier à parcourir.
+ * @param {Array} fileList - Le tableau où ajouter les fichiers trouvés.
+ */
+function getFilesRecursive(folder, fileList) {
+    // Ajouter les fichiers du dossier courant
+    const files = folder.getFiles();
+    while (files.hasNext()) {
+        const file = files.next();
+        fileList.push([file.getName(), file.getId()]);
+    }
+
+    // Parcourir les sous-dossiers et s'appeler soi-même
+    const subFolders = folder.getFolders();
+    while (subFolders.hasNext()) {
+        const subFolder = subFolders.next();
+        getFilesRecursive(subFolder, fileList);
+    }
+}
+// --- Fin du fichier: Code.js ---
+
+// --- Début du fichier: concat_scripts_rep.js ---
+const fs = require('fs');
+const path = require('path');
+
+// --- CONFIGURATION ---
+// Extensions de fichiers à inclure
+const scriptExtensions = [
+    '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less',
+    '.xml', '.php', '.rb', '.java', '.c', '.cpp', '.cs', '.go',
+    '.sh', '.ps1', '.bat', '.cmd', '.sql', '.vue', '.svelte', '.astro'
+];
+
+// Le dossier à scanner
+const folderToScan = './'; // À ajuster si besoin
+// --- FIN CONFIGURATION ---
+
+// Récupérer le nom du répertoire scanné
+const resolvedFolderPath = path.resolve(folderToScan);
+const dirName = path.basename(resolvedFolderPath);
+
+// Créer une date au format aammjj
+const now = new Date();
+const year = String(now.getFullYear()).slice(2); // 2 derniers chiffres de l'année
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const dateStamp = `${year}${month}${day}`;
+
+// Nom du fichier de sortie
+const outputFileName = `${dirName}_Script_${dateStamp}.txt`;
+
+// Créer une chaîne avec date et heure en français
+const dateTimeString = `// Fichier généré le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR')}\n\n`;
+
+// Initialiser la variable qui accumulera le contenu
+let allContent = dateTimeString;
+
+// Fonction récursive
+function readFilesRecursively(directory) {
+    fs.readdirSync(directory).forEach(file => {
+        const absolutePath = path.join(directory, file);
+        if (fs.statSync(absolutePath).isDirectory()) {
+            readFilesRecursively(absolutePath);
+        } else {
+            const fileExtension = path.extname(file).toLowerCase();
+            if (scriptExtensions.includes(fileExtension)) {
+                allContent += `// --- Début du fichier: ${absolutePath} ---\n`;
+                allContent += fs.readFileSync(absolutePath, 'utf8');
+                allContent += `\n// --- Fin du fichier: ${absolutePath} ---\n\n`;
+            }
+        }
+    });
+}
+
+// Supprimer le fichier de sortie existant
+if (fs.existsSync(outputFileName)) {
+    fs.unlinkSync(outputFileName);
+    console.log(`Ancien fichier '${outputFileName}' supprimé.`);
+}
+
+// Lancer le traitement
+try {
+    readFilesRecursively(folderToScan);
+    fs.writeFileSync(outputFileName, allContent, 'utf8');
+    console.log(`Succès : Tous les scripts ont été exportés dans '${outputFileName}'`);
+} catch (error) {
+    console.error(`Erreur lors de la lecture ou de l'écriture des fichiers : ${error.message}`);
+}
+
+// --- Fin du fichier: concat_scripts_rep.js ---
+

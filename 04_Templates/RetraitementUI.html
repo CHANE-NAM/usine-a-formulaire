@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: 'Roboto', Arial, sans-serif; padding: 0 20px; background-color: #f8f9fa; color: #3c4043; }
+      h3 { font-size: 20px; font-weight: 500; color: #1a73e8; border-bottom: 1px solid #dadce0; padding-bottom: 8px; margin-top: 24px; }
+      .form-group { margin-bottom: 16px; }
+      label { font-size: 12px; font-weight: 700; color: #5f6368; display: block; margin-bottom: 4px; }
+      input[type="text"], input[type="email"], select { width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+      input[type="text"][readonly] { background-color: #f1f3f4; color: #5f6368; }
+      .button-group { margin-top: 24px; display: flex; justify-content: space-between; }
+      button { padding: 10px 16px; border: none; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; }
+      #btn-lancer { background-color: #1a73e8; color: white; }
+      #btn-annuler { background-color: #e8eaed; color: #5f6368; }
+      #status { margin-top: 16px; font-size: 12px; color: #5f6368; padding: 8px; background-color: #e8f0fe; border-radius: 4px; text-align: center; display: none; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <input type="hidden" id="row-index-data" value="<?= ligneActive ?>">
+    
+    <h3>Retraitement de Réponse</h3>
+
+    <div id="info-section">
+      <div class="form-group"> <label for="nom">NOM DU RÉPONDANT</label> <input type="text" id="nom" readonly> </div>
+      <div class="form-group"> <label for="email">E-MAIL DU RÉPONDANT</label> <input type="text" id="email" readonly> </div>
+      <div class="form-group"> <label for="langue-origine">LANGUE D'ORIGINE</label> <input type="text" id="langue-origine" readonly> </div>
+    </div>
+    
+    <hr>
+    
+    <h3>Options</h3>
+    <div id="options-section">
+        <div class="form-group">
+          <label for="langue-cible">FORCER LA LANGUE DE L'E-MAIL</label>
+          <select id="langue-cible">
+            <option value="FR">Français (FR)</option> <option value="EN">English (EN)</option> <option value="ES">Español (ES)</option> <option value="DE">Deutsch (DE)</option>
+          </select>
+        </div>
+        <div class="form-group">
+         <label for="niveau-resultat">FORCER LE NIVEAU DE RÉSULTAT</label>
+         <select id="niveau-resultat">
+           <option value="">Automatique (par défaut)</option>
+           <option value="N1">Niveau 1</option>
+           <option value="N2">Niveau 2</option>
+           <option value="N3">Niveau 3</option>
+         </select>
+       </div>
+       
+       <div class="form-group">
+         <label for="alias-expediteur">ALIAS D'EXPÉDITION (LAISSER VIDE POUR DÉFAUT)</label>
+         <input type="email" id="alias-expediteur">
+       </div>
+       </div>
+    
+    <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
+    <div id="destinataires-section">
+      <div class="form-group">
+        <label style="display: flex; align-items: center; font-weight: normal;"> <input type="checkbox" id="check-repondant" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Répondant </label>
+        <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-formateur" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Formateur </label>
+        <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-patron" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Patron </label>
+      </div>
+      
+      <div id="formateur-email-group" class="form-group hidden">
+        <label for="email-formateur">E-MAIL DU FORMATEUR</label>
+        <input type="email" id="email-formateur" placeholder="adresse.formateur@example.com">
+      </div>
+      
+      <div id="patron-email-group" class="form-group hidden">
+        <label for="email-patron">E-MAIL DU PATRON</label>
+        <input type="email" id="email-patron" placeholder="adresse.patron@example.com">
+      </div>
+
+      <div class="form-group">
+          <label for="email-test">AJOUTER UNE ADRESSE DE TEST</label>
+          <input type="email" id="email-test" placeholder="adresse.test@example.com">
+      </div>
+    </div>
+
+    <div class="button-group"> <button id="btn-annuler">Annuler</button> <button id="btn-lancer">🚀 Lancer le Retraitement</button> </div>
+    <div id="status">Chargement...</div>
+
+    <script>
+      window.onload = function() {
+        const rowIndex = document.getElementById('row-index-data').value;
+        
+        const statusDiv = document.getElementById('status');
+        const lancerBtn = document.getElementById('btn-lancer');
+        
+        const checkFormateur = document.getElementById('check-formateur');
+        const formateurEmailGroup = document.getElementById('formateur-email-group');
+        const checkPatron = document.getElementById('check-patron');
+        const patronEmailGroup = document.getElementById('patron-email-group');
+
+        // Fonctions de rappel
+        function onDataReceived(data) {
+          document.getElementById('nom').value = data.nomRepondant || 'Non trouvé';
+          document.getElementById('email').value = data.emailRepondant || 'Non trouvé';
+          document.getElementById('langue-origine').value = data.langueOrigine || 'Non détectée';
+          document.getElementById('langue-cible').value = data.langueOrigine || 'FR';
+          
+          // ==================== DÉBUT MODIFICATION ====================
+          document.getElementById('alias-expediteur').value = data.emailAlias || '';
+          // ===================== FIN MODIFICATION =====================
+
+          document.getElementById('check-repondant').checked = data.repondantActif;
+          document.getElementById('check-formateur').checked = data.formateurActif;
+          document.getElementById('check-patron').checked = data.patronActif;
+          
+          if (data.formateurEmail) {
+            document.getElementById('email-formateur').value = data.formateurEmail;
+          }
+          formateurEmailGroup.classList.toggle('hidden', !data.formateurActif);
+          
+          if (data.patronEmail) {
+            document.getElementById('email-patron').value = data.patronEmail;
+          }
+          patronEmailGroup.classList.toggle('hidden', !data.patronActif);
+
+          statusDiv.style.display = 'none';
+          lancerBtn.disabled = false;
+        }
+
+        function onLaunchSuccess(message) {
+          statusDiv.textContent = message;
+          setTimeout(() => google.script.host.close(), 3000); 
+        }
+
+        function onFailure(error) {
+          statusDiv.textContent = "Erreur : " + error.message;
+          statusDiv.style.backgroundColor = '#fce8e6';
+          lancerBtn.disabled = false;
+        }
+
+        // Écouteurs d'événements
+        checkFormateur.addEventListener('change', function() {
+          formateurEmailGroup.classList.toggle('hidden', !this.checked);
+        });
+        checkPatron.addEventListener('change', function() {
+          patronEmailGroup.classList.toggle('hidden', !this.checked);
+        });
+        
+        document.getElementById('btn-lancer').addEventListener('click', function() {
+          lancerBtn.disabled = true;
+          statusDiv.style.display = 'block';
+          
+          const options = {
+            rowIndex: rowIndex,
+            langue: document.getElementById('langue-cible').value,
+            niveau: document.getElementById('niveau-resultat').value,
+            
+            // ==================== DÉBUT MODIFICATION ====================
+            alias: document.getElementById('alias-expediteur').value.trim(),
+            // ===================== FIN MODIFICATION =====================
+
+            destinataires: {
+              repondant: document.getElementById('check-repondant').checked,
+              formateur: document.getElementById('check-formateur').checked,
+              formateurEmail: document.getElementById('email-formateur').value.trim(),
+              patron: document.getElementById('check-patron').checked,
+              patronEmail: document.getElementById('email-patron').value.trim(),
+              test: document.getElementById('email-test').value.trim()
+            }
+          };
+          google.script.run.withSuccessHandler(onLaunchSuccess).withFailureHandler(onFailure).lancerRetraitementDepuisUI(options);
+        });
+
+        document.getElementById('btn-annuler').addEventListener('click', () => google.script.host.close());
+
+        // Appel initial pour charger les données
+        statusDiv.style.display = 'block';
+        google.script.run.withSuccessHandler(onDataReceived).withFailureHandler(onFailure).getDonneesPourRetraitement(rowIndex);
+      };
+    </script>
+  </body>
+</html>

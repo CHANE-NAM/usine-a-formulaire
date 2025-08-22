@@ -1,0 +1,49 @@
+ID,QuestionType,QuestionTitle,Options,Logic
+1,BINARY_CHOICE,Which attitude do you prioritise in your relationships?,Being fair and objective; Being compassionate and caring,T;F
+2,BINARY_CHOICE,Which method do you use to resolve dilemmas?,Reflect alone first; Discuss to clarify ideas,I;E
+3,BINARY_CHOICE,How do you manage completed tasks?,Tick off completed tasks; Move quickly to the next one,J;P
+4,BINARY_CHOICE,Which flaw seems most detrimental to you?,Being overly sensitive or emotional; Being too cold or distant,F;T
+5,BINARY_CHOICE,Which reading material do you choose to relax?,Science fiction novels; Realistic stories,N;S
+6,BINARY_CHOICE,How do you prefer to clarify your ideas?,Discuss to clarify; Reflect alone first,E;I
+7,BINARY_CHOICE,What do you focus on in new situations?,Focus on present details; Look for patterns or alternatives,S;N
+8,BINARY_CHOICE,How do you prepare your leisure time?,Improvise on the spot; Plan holidays precisely,P;J
+9,BINARY_CHOICE,What is your approach to deadlines?,Start early to finish stress-free; Work under pressure at the last minute,J;P
+10,BINARY_CHOICE,How do you express ideas in group settings?,Speak easily to voice your ideas; Prefer to listen first then speak,E;I
+11,BINARY_CHOICE,How do you envision the future?,Imagine what could happen; Rely on past experience,N;S
+12,BINARY_CHOICE,What flexibility do you adopt in your schedule?,Leave room for the unexpected; Plan your timetable in advance,P;J
+13,BINARY_CHOICE,How do you approach new social situations?,Observe before building relationships; Comfortable making friends quickly,I;E
+14,BINARY_CHOICE,What do you base your decisions on?,Rely on past experience; Imagine possibilities,S;N
+15,BINARY_CHOICE,Which perspective do you favour when evaluating?,Consider emotional impact; Apply logical criteria,F;T
+16,BINARY_CHOICE,Which criterion dominates your choices?,Apply logical criteria; Consider emotional impact,T;F
+17,BINARY_CHOICE,How do you handle finished tasks?,Tick off completed tasks; Move quickly to the next one,J;P
+18,BINARY_CHOICE,How do you analyse situations?,Look for patterns or alternatives; Focus on present details,N;S
+19,BINARY_CHOICE,How do you distribute your social interactions?,Spend time with a few close people in depth; Chat with many people, including strangers,I;E
+20,BINARY_CHOICE,What goal do you prioritise in conflict?,Seek the most rational solution; Preserve the relationship,T;F
+21,BINARY_CHOICE,Where do you draw your energy from?,Do activities with others; Isolate yourself to reflect or read,E;I
+22,BINARY_CHOICE,In which environment do you work best?,Comfortable when options remain open; Comfortable when everything is structured,P;J
+23,BINARY_CHOICE,Which information type do you prefer?,Appreciate concrete facts and examples; Seek general principles or concepts,S;N
+24,BINARY_CHOICE,How do you evaluate an idea's relevance?,Feel whether it makes human sense; Look for logical inconsistencies,F;T
+25,BINARY_CHOICE,How do you organise your time?,Plan your schedule in advance; Leave room for the unexpected,J;P
+26,BINARY_CHOICE,Which fictional world interests you?,Science fiction novels; Realistic stories,N;S
+27,BINARY_CHOICE,Where do you find rejuvenation?,Isolate yourself to reflect or read; Do activities with others,I;E
+28,BINARY_CHOICE,What is your focus when facing problems?,Focus on present details; Look for patterns or alternatives,S;N
+29,BINARY_CHOICE,Which principle guides difficult decisions?,Preserve relationships; Seek the most rational solution,F;T
+30,BINARY_CHOICE,How do you structure your social life?,Spend time with a few close people; Interact with many people,I;E
+31,BINARY_CHOICE,How do you approach travel?,Improvise on the spot; Plan trips precisely,P;J
+32,BINARY_CHOICE,What is your natural role in discussions?,Speak easily to express ideas; Prefer to listen first then speak,E;I
+33,BINARY_CHOICE,Which level of abstraction do you prefer?,Enjoy hypotheses and abstract ideas; Discuss tangible things,N;S
+34,BINARY_CHOICE,How do you plan long-term projects?,Start early to finish stress-free; Work under pressure last minute,J;P
+35,BINARY_CHOICE,Which excess seems hardest to control?,Being overly emotional; Being too distant,F;T
+36,BINARY_CHOICE,What captures your interest?,Appreciate concrete facts; Seek general principles,S;N
+37,BINARY_CHOICE,Which value guides your interactions?,Being fair and objective; Being compassionate and caring,T;F
+38,BINARY_CHOICE,How do you verify an argument's validity?,Feel whether it makes human sense; Look for logical inconsistencies,F;T
+39,BINARY_CHOICE,How do you approach meetings?,Observe before engaging; Feel comfortable engaging quickly,I;E
+40,BINARY_CHOICE,Which narrative style do you prefer?,Science fiction novels; Realistic stories,N;S
+41,BINARY_CHOICE,How do you cultivate relationships?,Spend time with few close people; Interact with many people,I;E
+42,BINARY_CHOICE,What priority do you defend in disagreements?,Preserve relationships; Seek rational solutions,F;T
+43,BINARY_CHOICE,What sparks your intellectual curiosity?,Appreciate concrete facts; Seek general principles,S;N
+44,BINARY_CHOICE,How do you test reasoning solidity?,Feel whether it makes human sense; Look for logical inconsistencies,F;T
+45,BINARY_CHOICE,How do you consider future situations?,Imagine possibilities; Rely on past experience,N;S
+46,BINARY_CHOICE,Which structure suits you best?,Comfortable with open options; Comfortable with structured environments,P;J
+47,BINARY_CHOICE,How do you develop reflections?,Reflect alone first; Discuss to clarify,I;E
+48,BINARY_CHOICE,Which register dominates your exchanges?,Enjoy abstract ideas; Discuss tangible things,N;S

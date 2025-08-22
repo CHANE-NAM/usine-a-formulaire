@@ -1,0 +1,24 @@
+﻿# VS / VS Code
+.vs/
+.vscode/
+.history/
+*.log
+*.tmp
+Thumbs.db
+.DS_Store
+
+# Python / Node
+venv/
+.env
+node_modules/
+__pycache__/
+
+# Google / Apps Script
+.clasprc.json
+*.gsheet
+*.gdoc
+*.gslides
+
+# Fichiers temporaires Office
+~$*
+*.gform

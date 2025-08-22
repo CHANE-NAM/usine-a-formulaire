@@ -1,0 +1,49 @@
+ID,TypeQuestion,TitreQuestion,Options,Logique
+1,CHOIX_BINAIRE,"Quelle attitude privilégiez-vous dans vos relations ?","Être juste et objectif; Être compatissant et attentionné",T;F
+2,CHOIX_BINAIRE,"Quelle méthode utilisez-vous pour résoudre les dilemmes ?","Réfléchir d’abord seul; En parler pour clarifier",I;E
+3,CHOIX_BINAIRE,"Comment gérez-vous les tâches accomplies ?","Cocher la tâche; Passer à la suivante",J;P
+4,CHOIX_BINAIRE,"Quel défaut vous semble le plus pénalisant ?","Être trop émotif; Être trop distant",F;T
+5,CHOIX_BINAIRE,"Quelle lecture choisissez-vous pour vous détendre ?","Science-fiction; Histoires réalistes",N;S
+6,CHOIX_BINAIRE,"Comment préférez-vous clarifier vos idées ?","En parler; Réfléchir seul d'abord",E;I
+7,CHOIX_BINAIRE,"Sur quoi portent vos observations en situation nouvelle ?","Détails présents; Schémas ou alternatives",S;N
+8,CHOIX_BINAIRE,"Comment préparez-vous vos loisirs ?","Improviser; Programmer précisément",P;J
+9,CHOIX_BINAIRE,"Quelle est votre approche pour les échéances ?","Commencer tôt; Travailler sous pression",J;P
+10,CHOIX_BINAIRE,"Comment exprimez-vous vos idées en groupe ?","Parler facilement; Écouter d'abord",E;I
+11,CHOIX_BINAIRE,"Comment envisagez-vous l'avenir ?","Imaginer ce qui pourrait arriver; Vous fier à l'expérience",N;S
+12,CHOIX_BINAIRE,"Quelle flexibilité adoptez-vous dans votre planning ?","Laisser de l'imprévu; Tout planifier",P;J
+13,CHOIX_BINAIRE,"Comment apprivoisez-vous la nouveauté sociale ?","Observer avant d'agir; À l'aise rapidement",I;E
+14,CHOIX_BINAIRE,"Sur quoi basez-vous vos décisions ?","Expérience passée; Imaginer des possibilités",S;N
+15,CHOIX_BINAIRE,"Quel angle privilégiez-vous pour évaluer ?","Impact émotionnel; Critères logiques",F;T
+16,CHOIX_BINAIRE,"Quel critère prime dans vos choix ?","Appliquer la logique; Considérer les émotions",T;F
+17,CHOIX_BINAIRE,"Comment traitez-vous les tâches terminées ?","Cocher accompli; Passer à la suivante",J;P
+18,CHOIX_BINAIRE,"Comment analysez-vous une situation ?","Chercher des schémas; Détails présents",N;S
+19,CHOIX_BINAIRE,"Comment répartissez-vous vos interactions sociales ?","Peu de proches; Discuter avec beaucoup",I;E
+20,CHOIX_BINAIRE,"Quel objectif priorisez-vous en conflit ?","Solution rationnelle; Préserver la relation",T;F
+21,CHOIX_BINAIRE,"Où puisez-vous votre énergie ?","Activités avec d'autres; Isolement pour réfléchir",E;I
+22,CHOIX_BINAIRE,"Dans quel environnement travaillez-vous le mieux ?","Options ouvertes; Tout structuré",P;J
+23,CHOIX_BINAIRE,"Quel type d'information privilégiez-vous ?","Faits concrets; Principes généraux",S;N
+24,CHOIX_BINAIRE,"Comment évaluez-vous la pertinence d'une idée ?","Sens humain; Incohérences logiques",F;T
+25,CHOIX_BINAIRE,"Comment organisez-vous votre temps ?","Planifier à l'avance; Laisser de l'imprévu",J;P
+26,CHOIX_BINAIRE,"Quel univers fictif vous intéresse ?","Science-fiction; Histoires réalistes",N;S
+27,CHOIX_BINAIRE,"Où puisez-vous votre ressourcement ?","Isolement; Activités sociales",I;E
+28,CHOIX_BINAIRE,"Quelle est votre focalisation face à un problème ?","Détails présents; Schémas ou alternatives",S;N
+29,CHOIX_BINAIRE,"Quel principe guide vos arbitrages difficiles ?","Préserver la relation; Solution rationnelle",F;T
+30,CHOIX_BINAIRE,"Comment structurez-vous votre vie sociale ?","Peu de proches; Beaucoup de personnes",I;E
+31,CHOIX_BINAIRE,"Comment abordez-vous les voyages ?","Improviser; Programmer précisément",P;J
+32,CHOIX_BINAIRE,"Quel est votre rôle naturel en discussion ?","Parler facilement; Écouter d'abord",E;I
+33,CHOIX_BINAIRE,"Quel niveau d'abstraction préférez-vous ?","Idées abstraites; Choses tangibles",N;S
+34,CHOIX_BINAIRE,"Comment planifiez-vous les projets à long terme ?","Commencer tôt; Dernière minute",J;P
+35,CHOIX_BINAIRE,"Quel excès vous semble le plus difficile à contrôler ?","Trop émotif; Trop distant",F;T
+36,CHOIX_BINAIRE,"Qu'est-ce qui captive votre intérêt ?","Faits concrets; Principes généraux",S;N
+37,CHOIX_BINAIRE,"Quelle valeur oriente vos interactions ?","Être juste; Être compatissant",T;F
+38,CHOIX_BINAIRE,"Comment vérifiez-vous la validité d'un argument ?","Sens humain; Incohérences logiques",F;T
+39,CHOIX_BINAIRE,"Comment appréciez-vous les rencontres ?","Observer d'abord; À l'aise rapidement",I;E
+40,CHOIX_BINAIRE,"Quel style narratif préférez-vous ?","Science-fiction; Histoires réalistes",N;S
+41,CHOIX_BINAIRE,"Comment cultivez-vous vos relations ?","Peu de proches; Beaucoup de personnes",I;E
+42,CHOIX_BINAIRE,"Quelle priorité défendez-vous dans les désaccords ?","Préserver la relation; Solution rationnelle",F;T
+43,CHOIX_BINAIRE,"Qu'est-ce qui éveille votre curiosité ?","Faits concrets; Principes généraux",S;N
+44,CHOIX_BINAIRE,"Comment testez-vous la solidité d'un raisonnement ?","Sens humain; Incohérences logiques",F;T
+45,CHOIX_BINAIRE,"Comment envisagez-vous les situations futures ?","Imaginer des possibilités; Expérience passée",N;S
+46,CHOIX_BINAIRE,"Quelle structure vous convient le mieux ?","Options ouvertes; Tout structuré",P;J
+47,CHOIX_BINAIRE,"Comment mûrissez-vous vos réflexions ?","Réfléchir seul d'abord; En parler",I;E
+48,CHOIX_BINAIRE,"Quel registre domine vos échanges ?","Idées abstraites; Choses tangibles",N;S

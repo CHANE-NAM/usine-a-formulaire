@@ -1,0 +1,852 @@
+// Fichier généré le 22/07/2025 à 16:45:49
+
+// --- Début du fichier: MoteurV2.js ---
+// =================================================================================
+// FICHIER : Moteur V2.js
+// RÔLE : Fonctions principales de création et d'orchestration des tests.
+// VERSION : 4.3 - Correction pour lire le type de question depuis le JSON (V2).
+// =================================================================================
+
+/**
+ * Fonction de compatibilité pour une ancienne méthode (ne fait plus rien).
+ */
+function lancerCreationFormulaire() {
+  SpreadsheetApp.getUi().alert("Cette fonction est l'ancienne méthode et n'est plus maintenue activement.");
+}
+
+/**
+ * Orchestre la création d'un système de formulaire complet à partir d'une ligne de configuration.
+ */
+function lancerCreationSysteme(rowIndex) {
+  try {
+    console.log("Lancement de la création pour la ligne " + rowIndex + "...");
+    const config = getConfigurationFromRow(rowIndex);
+
+    Logger.log("CONFIG REÇUE DANS LE MOTEUR : " + JSON.stringify(config, null, 2));
+
+    if (config['Statut'].toLowerCase() !== 'en construction') {
+      console.log("Le statut pour la ligne " + rowIndex + " est '" + config['Statut'] + "'. Création ignorée.");
+      return null;
+    }
+
+    const nomFichierComplet = "[" + config['Type_Test'] + "] " + config['Titre_Formulaire_Utilisateur'];
+    
+    const systemIds = getSystemIds();
+    if (!systemIds.ID_TEMPLATE_TRAITEMENT_V2) {
+      throw new Error("La clé 'ID_TEMPLATE_TRAITEMENT_V2' est introuvable dans sys_ID_Fichiers.");
+    }
+
+    let dossierCible;
+    if (config['ID_Dossier_Cible']) {
+      dossierCible = DriveApp.getFolderById(config['ID_Dossier_Cible']);
+    } else {
+      if (!systemIds.ID_DOSSIER_CIBLE_GEN) {
+        throw new Error("La clé 'ID_DOSSIER_CIBLE_GEN' est introuvable dans sys_ID_Fichiers.");
+      }
+      dossierCible = DriveApp.getFolderById(systemIds.ID_DOSSIER_CIBLE_GEN);
+    }
+    console.log("Utilisation du dossier cible : " + dossierCible.getName());
+
+    const templateFile = DriveApp.getFileById(systemIds.ID_TEMPLATE_TRAITEMENT_V2);
+    const sheetFile = templateFile.makeCopy(nomFichierComplet, dossierCible);
+    
+    const reponsesSheetId = sheetFile.getId();
+    console.log("Kit de traitement copié : " + sheetFile.getName());
+
+    const form = FormApp.create(nomFichierComplet);
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, reponsesSheetId);
+    form.setProgressBar(true);
+    form.setDescription(config['Titre_Formulaire_Utilisateur']);
+    console.log("Formulaire créé : " + form.getTitle());
+
+    const formFile = DriveApp.getFileById(form.getId());
+    formFile.moveTo(dossierCible);
+    
+    try {
+      console.log("Génération des questions pour le test : " + config['Type_Test']);
+      
+      if (!systemIds.ID_BDD) {
+        throw new Error("La clé 'ID_BDD' est introuvable dans sys_ID_Fichiers.");
+      }
+      const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+      
+      // Injection des blocs méta configurables
+      const blocsMetaConfig = config['Blocs_Meta_A_Inclure'];
+      if (blocsMetaConfig && blocsMetaConfig.trim() !== '') {
+        const metaIds = blocsMetaConfig.split(',').map(id => id.trim());
+        const metaSheet = bdd.getSheetByName('Questions_META_FR'); // Convention: on utilise le FR comme base pour les metas
+        
+        if (metaSheet) {
+          const metaData = metaSheet.getDataRange().getValues();
+          const metaHeaders = metaData.shift();
+          const idCol = metaHeaders.indexOf('ID');
+
+          const metaQuestionsMap = metaData.reduce((acc, row) => {
+            acc[row[idCol]] = row;
+            return acc;
+          }, {});
+
+          metaIds.forEach(id => {
+            if (metaQuestionsMap[id]) {
+              const q_data = metaQuestionsMap[id];
+              const [q_id, q_type_old, q_titre, q_options, q_logique, q_description, q_params_json] = q_data;
+              
+                    // ======================= DEBUT CORRECTION V4.3 =======================
+                    // On détermine le type de question en priorité depuis le JSON.
+                    let final_meta_type = q_type_old; // On garde l'ancien type par défaut
+                    if (q_params_json && typeof q_params_json === 'string') {
+                        try {
+                            const parsedJson = JSON.parse(q_params_json);
+                            if (parsedJson && parsedJson.mode) {
+                                final_meta_type = parsedJson.mode; // Le JSON est la source de vérité
+                            }
+                        } catch (e) {
+                             console.warn(`Bloc Méta '${id}': Le JSON est invalide. Utilisation du type de la colonne B. Erreur: ${e.message}`);
+                        }
+                    }
+              creerItemFormulaire(form, final_meta_type, q_titre, q_options, q_description, q_params_json);
+                    // ======================= FIN CORRECTION V4.3 =======================
+            }
+          });
+        }
+      }
+
+      const toutesLesFeuillesBDD = bdd.getSheets();
+      const regexLangues = new RegExp('^Questions_' + config['Type_Test'] + '_([A-Z]{2})$', 'i');
+      const languesAInclure = [];
+      
+      toutesLesFeuillesBDD.forEach(feuille => {
+        const match = feuille.getName().match(regexLangues);
+        if (match && match[1]) {
+          languesAInclure.push({ code: match[1].toUpperCase(), nomComplet: getLangueFullName(match[1]), feuille: feuille });
+        }
+      });
+
+      if (languesAInclure.length === 0) {
+        throw new Error("Aucune feuille de questions trouvée pour le type '" + config['Type_Test'] + "'.");
+      }
+      
+      const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
+      const choices = [];
+
+      languesAInclure.forEach(langue => {
+        const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
+        choices.push(itemLangue.createChoice(langue.nomComplet, page));
+        
+        const nbQuestionsDisponibles = langue.feuille.getLastRow() - 1;
+        let nbQuestionsAUtiliser = (config['nbQuestions'] && config['nbQuestions'] > 0) ? Math.min(config['nbQuestions'], nbQuestionsDisponibles) : nbQuestionsDisponibles;
+
+        if (nbQuestionsAUtiliser <= 0) return;
+
+        const questionsData = langue.feuille.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
+
+        questionsData.forEach((q_data, index) => {
+            const [id, type_old, titre, options, logique, description, params_json] = q_data;
+
+            // ======================= DEBUT CORRECTION V4.3 =======================
+            // On détermine le type de question en priorité depuis le JSON.
+            let final_type = type_old; // On garde l'ancien type par défaut
+            if (params_json && typeof params_json === 'string') {
+                try {
+                    const parsedJson = JSON.parse(params_json);
+                    if (parsedJson && parsedJson.mode) {
+                        final_type = parsedJson.mode; // Le JSON est la source de vérité
+                    }
+                } catch (e) {
+                    console.warn(`Ligne ${index + 2} de la feuille ${langue.feuille.getName()}: Le JSON est invalide. Utilisation du type de la colonne B. Erreur: ${e.message}`);
+                }
+            }
+            creerItemFormulaire(form, final_type, id + ': ' + titre, options, description, params_json);
+            // ======================= FIN CORRECTION V4.3 =======================
+            
+            if (index === questionsData.length - 1) {
+                page.setGoToPage(FormApp.PageNavigationType.SUBMIT);
+            }
+        });
+      });
+      itemLangue.setChoices(choices);
+
+    } catch (e) {
+      throw new Error("Impossible de générer les questions. Erreur : " + e.message);
+    }
+
+    console.log("--- Création terminée avec succès ! ---");
+    return { formObject: form, formFile: formFile, sheetFile: sheetFile, nomFichierComplet: nomFichierComplet };
+
+  } catch(e) {
+    console.error("ERREUR (ligne " + rowIndex + ") : " + e.toString() + "\n" + e.stack);
+    SpreadsheetApp.getUi().alert("Une erreur est survenue lors de la création pour la ligne " + rowIndex + ": " + e.message);
+    throw e;
+  }
+}
+
+/**
+ * Orchestre le traitement de toutes les lignes "En construction".
+ */
+function orchestrateurCreationAutomatique() {
+  const ssConfig = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION);
+  const configSheet = ssConfig.getSheetByName("Paramètres Généraux");
+  if (!configSheet) {
+    throw new Error("L'onglet 'Paramètres Généraux' est introuvable.");
+  }
+
+  const data = configSheet.getDataRange().getValues();
+  const headers = data.shift();
+  const colIndex = {};
+  headers.forEach((header, i) => { if (header) colIndex[header] = i; });
+
+  const STATUT_COL = colIndex['Statut'];
+  const ID_UNIQUE_COL = colIndex['Id_Unique'];
+  const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
+  const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
+  const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
+
+  let lignesTraitees = 0;
+
+  data.forEach((row, index) => {
+    const rowIndex = index + 2;
+    if (row[STATUT_COL] === 'En construction') {
+      try {
+        Logger.log("Début du traitement pour la ligne " + rowIndex + "...");
+        const resultats = lancerCreationSysteme(rowIndex);
+
+        if (resultats) {
+            const idUnique = resultats.sheetFile.getId().slice(0, 8) + '-' + resultats.formFile.getId().slice(0, 8);
+            configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif');
+            configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
+            configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(resultats.nomFichierComplet);
+            if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(resultats.formFile.getId());
+            if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(resultats.sheetFile.getId());
+            
+            Logger.log("SUCCÈS ligne " + rowIndex + ". Statut mis à 'Actif'.");
+            lignesTraitees++;
+        }
+      } catch (e) {
+        configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('ERREUR');
+        Logger.log("ERREUR ligne " + rowIndex + ": " + e.toString());
+      }
+    }
+  });
+  SpreadsheetApp.flush();
+  return lignesTraitees;
+}
+
+/**
+ * Gère le déploiement complet (création + mise à jour du statut + lien public).
+ */
+function lancerDeploiementComplet(rowIndex) {
+  Logger.log(`Lancement du déploiement complet pour la ligne ${rowIndex}...`);
+  
+  const resultatsCreation = lancerCreationSysteme(rowIndex);
+  
+  if (!resultatsCreation) {
+    Logger.log(`La création pour la ligne ${rowIndex} a été ignorée (statut non valide).`);
+    return null; 
+  }
+  
+  Logger.log(`Kit créé pour la ligne ${rowIndex}. ID Sheet: ${resultatsCreation.sheetFile.getId()}`);
+
+  const formUrl = resultatsCreation.formObject.getPublishedUrl();
+  
+  const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("Paramètres Généraux");
+  const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
+  const colIndex = {};
+  headers.forEach((header, i) => { if (header) colIndex[header] = i; });
+
+  const STATUT_COL = colIndex['Statut'];
+  const ID_UNIQUE_COL = colIndex['Id_Unique'];
+  const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
+  const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
+  const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
+  const LIEN_FORM_COL = colIndex['Lien_Formulaire_Public'];
+
+  const idUnique = resultatsCreation.sheetFile.getId().slice(0, 8) + '-' + resultatsCreation.formFile.getId().slice(0, 8);
+  
+  configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif - Déclencheur à activer'); 
+  configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
+  configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(resultatsCreation.nomFichierComplet);
+  if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(resultatsCreation.formFile.getId());
+  if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(resultatsCreation.sheetFile.getId());
+  if (LIEN_FORM_COL !== undefined) configSheet.getRange(rowIndex, LIEN_FORM_COL + 1).setValue(formUrl);
+  
+  SpreadsheetApp.flush();
+  Logger.log(`Ligne ${rowIndex} mise à jour avec le statut 'Actif - Déclencheur à activer'.`);
+  
+  return {
+    nomFichier: resultatsCreation.nomFichierComplet,
+    urlSheet: resultatsCreation.sheetFile.getUrl(),
+    urlForm: formUrl
+  };
+}
+
+// --- Fin du fichier: MoteurV2.js ---
+
+// --- Début du fichier: UtilsV2.js ---
+// =================================================================================
+// FICHIER : Utils V2.gs (Projet MOTEUR)
+// RÔLE : Fonctions utilitaires pour le Moteur.
+// VERSION : 2.6 - Recherche dynamique de liens & fiabilisation du texte d'aide
+// =================================================================================
+
+// ID de la feuille de calcul centrale qui pilote toute l'usine.
+const ID_FEUILLE_CONFIGURATION = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
+
+/**
+ * Lit l'onglet 'sys_ID_Fichiers' de la feuille de configuration
+ * et retourne un objet avec tous les ID système.
+ * @returns {Object} Un objet où les clés sont les noms des ID et les valeurs sont les ID.
+ */
+function getSystemIds() {
+  try {
+    const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION);
+    const idSheet = configSS.getSheetByName('sys_ID_Fichiers');
+    if (!idSheet) {
+      throw new Error("L'onglet de configuration 'sys_ID_Fichiers' est introuvable.");
+    }
+    
+    const data = idSheet.getDataRange().getValues();
+    const ids = {};
+    
+    data.slice(1).forEach(row => {
+      const key = row[0];
+      const value = row[1];
+      if (key && value) {
+        ids[key] = value;
+      }
+    });
+    
+    return ids;
+  } catch (e) {
+    Logger.log("Impossible de charger les ID système : " + e.toString());
+    throw new Error("Impossible de charger les ID système. Vérifiez l'onglet 'sys_ID_Fichiers'. Erreur: " + e.message);
+  }
+}
+
+/**
+ * Récupère les données de configuration d'une ligne spécifique de manière robuste.
+ * @param {number} rowIndex Le numéro de la ligne à lire.
+ * @returns {Object} Un objet contenant la configuration, avec des clés correspondant exactement aux en-têtes.
+ */
+function getConfigurationFromRow(rowIndex) {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION);
+    const sheet = ss.getSheetByName('Paramètres Généraux');
+    if (!sheet) {
+      throw new Error("L'onglet 'Paramètres Généraux' est introuvable.");
+    }
+
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const rowValues = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    const config = {};
+    headers.forEach((header, i) => {
+        if (header) {
+            config[header] = rowValues[i];
+        }
+    });
+
+    Logger.log("Configuration lue depuis la ligne " + rowIndex + " : " + JSON.stringify(config, null, 2));
+    return config;
+}
+
+/**
+ * Mappe un code langue à son nom complet.
+ * @param {string} code Le code de la langue (ex: 'FR').
+ * @returns {string} Le nom complet de la langue.
+ */
+function getLangueFullName(code) {
+  const map = { 'FR': 'Français', 'EN': 'English', 'ES': 'Español', 'DE': 'Deutsch' };
+  return map[code.toUpperCase()] || code.toUpperCase();
+}
+
+/**
+ * Crée un item dans le formulaire Google en fonction de son type.
+ * Gère QCU (radio), QRM (checkbox) et les différentes sources d'options (JSON/V1).
+ * @param {GoogleAppsScript.Forms.Form} form L'objet formulaire auquel ajouter l'item.
+ * @param {string} type Le type de question (ex: 'QCU_CAT', 'TEXTE_EMAIL').
+ * @param {string} titre Le titre de la question.
+ * @param {string} optionsString Une chaîne de caractères contenant les options, séparées par ';'.
+ * @param {string} description Une chaîne de caractères pour la description / texte d'aide.
+ * @param {string} paramsJSONString Une chaîne de caractères contenant les paramètres V2 au format JSON.
+ */
+function creerItemFormulaire(form, type, titre, optionsString, description, paramsJSONString) {
+
+    // --- DÉBUT MODIFICATION V2.6 ---
+    let finalDescription = description;
+    const placeholderRegex = /\[LIEN_FICHIER:(.*?)\]/;
+    const match = description ? description.match(placeholderRegex) : null;
+
+    if (match && match[1]) {
+        const nomFichier = match[1].trim();
+        try {
+            const systemIds = getSystemIds();
+            const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+            const listeFichiersSheet = bdd.getSheetByName('Liste_Fichiers_Drive');
+
+            if (listeFichiersSheet) {
+                const data = listeFichiersSheet.getDataRange().getValues();
+                // Recherche la ligne où la première colonne correspond au nom du fichier
+                const fileRow = data.find(row => row[0].toString().trim() === nomFichier);
+
+                if (fileRow && fileRow[1]) {
+                    const fileId = fileRow[1].toString().trim();
+                    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                    finalDescription = description.replace(placeholderRegex, fileUrl);
+                } else {
+                    finalDescription = description.replace(placeholderRegex, `[ERREUR: Fichier '${nomFichier}' introuvable dans la BDD]`);
+                }
+            } else {
+                finalDescription = description.replace(placeholderRegex, `[ERREUR: Onglet 'Liste_Fichiers_Drive' introuvable]`);
+            }
+        } catch (e) {
+            Logger.log("Erreur lors de la recherche du lien de fichier : " + e.message);
+            finalDescription = description.replace(placeholderRegex, `[ERREUR SCRIPT: ${e.message}]`);
+        }
+    }
+    // --- FIN MODIFICATION V2.6 ---
+
+    let params = null;
+    let choices = [];
+    let item; // Variable pour stocker l'item créé
+
+    // 1. Essayer de parser le JSON s'il existe.
+    if (paramsJSONString && typeof paramsJSONString === 'string' && paramsJSONString.trim().startsWith('{')) {
+        try {
+            params = JSON.parse(paramsJSONString);
+        } catch (e) {
+            item = form.addParagraphTextItem().setTitle("[Erreur V2: JSON invalide] " + titre);
+            if(finalDescription) item.setHelpText(finalDescription);
+            return;
+        }
+    }
+
+    // 2. Déterminer la source des options (JSON V2 ou colonne V1).
+    if (params && params.options && Array.isArray(params.options) && params.options.length > 0) {
+        choices = params.options.map(opt => (typeof opt === 'object' && opt !== null) ? opt.libelle : opt);
+    } else if (optionsString) {
+        choices = optionsString.split(';').map(String);
+    }
+
+    const formItemType = type ? type.toUpperCase() : '';
+
+    // 3. Créer le bon type d'item dans le formulaire.
+    if (formItemType.startsWith('QRM')) {
+        if (choices.length > 0) {
+            item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+        } else {
+            item = form.addParagraphTextItem().setTitle("[Erreur QRM: Options manquantes] " + titre);
+        }
+    } else if (formItemType.startsWith('QCU')) {
+        if (choices.length > 0) {
+            item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+        } else {
+            item = form.addParagraphTextItem().setTitle("[Erreur QCU: Options manquantes] " + titre);
+        }
+    } else if (formItemType === 'ECHELLE') {
+        const libelles = description ? description.split(';') : [];
+        if (optionsString && optionsString.split(';').length >= 2) {
+            const bounds = optionsString.split(';').map(Number);
+            const scaleItem = form.addScaleItem().setTitle(titre).setBounds(bounds[0], bounds[bounds.length - 1]).setRequired(true);
+            if (libelles.length === 2) {
+                scaleItem.setLabels(libelles[0], libelles[1]);
+            }
+            item = scaleItem;
+        } else {
+            item = form.addParagraphTextItem().setTitle("[Erreur ECHELLE: Bornes manquantes] " + titre);
+        }
+    } else if (formItemType === 'TEXTE_EMAIL') {
+        const textItem = form.addTextItem().setTitle(titre).setRequired(true);
+        const emailValidation = FormApp.createTextValidation()
+            .setHelpText("Veuillez entrer une adresse e-mail valide.")
+            .requireTextIsEmail()
+            .build();
+        item = textItem.setValidation(emailValidation);
+    } else if (formItemType === 'TEXTE_COURT') {
+        item = form.addTextItem().setTitle(titre).setRequired(true);
+    } else {
+        item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + type + "] " + titre);
+    }
+
+    // 4. Appliquer la description (qui peut contenir le lien) à l'item créé.
+    if (finalDescription && item && typeof item.setHelpText === 'function') {
+        // Pour 'ECHELLE', la description est utilisée pour les labels, ne pas l'écraser.
+        if(formItemType !== 'ECHELLE') {
+             item.setHelpText(finalDescription);
+        }
+    }
+}
+// --- Fin du fichier: UtilsV2.js ---
+
+// --- Début du fichier: InterfaceV2.js ---
+// =================================================================================
+// FICHIER : Interface V2.js
+// RÔLE : Création du menu utilisateur et fonctions appelées par ce menu.
+// VERSION : 4.2 - Ajout de l'outil de migration V1 -> V2 dans le menu
+// =================================================================================
+
+/**
+ * Crée le menu personnalisé dans l'interface utilisateur de Google Sheets à l'ouverture.
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🏭 Usine à Tests')
+    .addItem("🚀 Déployer un test de A à Z...", "orchestrateurDeploiementComplet_UI")
+    .addSeparator()
+    .addItem("Générer un test (choisir la ligne)", "lancerCreationDepuisPilote_UI")
+    .addItem("Traiter TOUTES les nouvelles demandes", "orchestrateurCreationAutomatique_UI")
+    // --- AJOUT ---
+    .addSeparator()
+    .addItem("🔧 Migrer les Questions (V1 -> V2)", "lancerMigrationV1versV2")
+    .addToUi();
+}
+
+/**
+ * Orchestre le déploiement complet d'un test depuis l'UI.
+ * Gère la génération du kit ET guide l'utilisateur pour l'activation et le partage.
+ */
+function orchestrateurDeploiementComplet_UI() {
+  const ui = SpreadsheetApp.getUi();
+  
+  const response = ui.prompt(
+    '🚀 Déploiement de A à Z',
+    'Entrez le numéro de la ligne à déployer entièrement :',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK || response.getResponseText() === '') {
+    return;
+  }
+
+  const rowIndex = parseInt(response.getResponseText(), 10);
+  if (isNaN(rowIndex) || rowIndex <= 1) {
+    ui.alert('Numéro de ligne invalide. Veuillez entrer un nombre supérieur à 1.');
+    return;
+  }
+  
+  ui.alert('Lancement du déploiement complet... Cette opération peut prendre un moment.');
+
+  try {
+    const resultats = lancerDeploiementComplet(rowIndex);
+
+    if (resultats && resultats.urlSheet && resultats.urlForm) {
+      const htmlOutput = HtmlService.createHtmlOutput(
+        `<h4>✅ Déploiement Réussi !</h4>` +
+        `<p>Le kit "<b>${resultats.nomFichier}</b>" a été généré.</p><hr>` +
+        `<p><b>1. Voici le lien public du formulaire à partager :</b></p>` +
+        `<p style="margin-top:10px;"><a href="${resultats.urlForm}" target="_blank" style="background-color:#34A853; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">Copier ou ouvrir le lien du Formulaire</a></p><br>` +
+        `<p><b>2. ACTION FINALE REQUISE (pour que le test fonctionne) :</b></p>` +
+        `<p>Cliquez sur le lien ci-dessous, puis dans le menu :<br>` +
+        `<b>&nbsp;&nbsp;&nbsp;⚙️ Actions du Kit -> Activer le traitement des réponses</b>.</p>` +
+        `<p style="margin-top:10px;"><a href="${resultats.urlSheet}" target="_blank" style="background-color:#4285F4; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">Ouvrir le Kit pour l'activer</a></p>`
+      )
+      .setWidth(500)
+      .setHeight(320);
+      ui.showModalDialog(htmlOutput, "Déploiement Terminé");
+
+    } else {
+      ui.alert(`ℹ️ Le déploiement pour la ligne ${rowIndex} a été ignoré (le statut n'était probablement pas 'En construction').`);
+    }
+
+  } catch (e) {
+    Logger.log(`ERREUR Critique lors du déploiement complet (ligne ${rowIndex}) : ${e.toString()}`);
+    ui.alert(`❌ ERREUR : Le déploiement a échoué pour la ligne ${rowIndex}. Consultez les logs pour les détails. Message : ${e.message}`);
+  }
+}
+
+/**
+ * Fonction UI appelée par le menu pour lancer la création manuelle (une seule ligne).
+ */
+function lancerCreationDepuisPilote_UI() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt('Lancement de la création', 'Entrez le numéro de la ligne à utiliser :', ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  const rowIndex = parseInt(response.getResponseText(), 10);
+  if (isNaN(rowIndex) || rowIndex <= 1) {
+    ui.alert('Numéro de ligne invalide. Veuillez entrer un nombre supérieur à 1.');
+    return;
+  }
+
+  try {
+    ui.alert('Lancement de la création... Cette opération peut prendre un moment.');
+    
+    const resultats = lancerCreationSysteme(rowIndex);
+
+    if (resultats) {
+      const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("Paramètres Généraux");
+      
+      const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
+      const colIndex = {};
+      headers.forEach((header, i) => { if (header) colIndex[header] = i; });
+      
+      const STATUT_COL = colIndex['Statut'];
+      const ID_UNIQUE_COL = colIndex['Id_Unique'];
+      const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
+      const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
+      const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
+
+      const idUnique = resultats.sheetFile.getId().slice(0, 8) + '-' + resultats.formFile.getId().slice(0, 8);
+      configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif');
+      configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
+      configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(resultats.nomFichierComplet);
+      if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(resultats.formFile.getId());
+      if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(resultats.sheetFile.getId());
+      
+      SpreadsheetApp.flush();
+      ui.alert(`✅ SUCCÈS : Le test '${resultats.nomFichierComplet}' a été créé et la ligne ${rowIndex} a été mise à jour.`);
+      
+    } else {
+       ui.alert(`ℹ️ La création pour la ligne ${rowIndex} a été ignorée (le statut n'était probablement pas 'En construction').`);
+    }
+
+  } catch (e) {
+    try {
+        const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("Paramètres Généraux");
+        const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
+        const statutColIndex = headers.indexOf('Statut');
+        if (statutColIndex !== -1) {
+            configSheet.getRange(rowIndex, statutColIndex + 1).setValue('ERREUR');
+        }
+    } catch (err) {
+        Logger.log(`Impossible de mettre le statut à ERREUR pour la ligne ${rowIndex}. Erreur : ${err.message}`);
+    }
+
+    Logger.log(`ERREUR Critique lors de la création manuelle (ligne ${rowIndex}) : ${e.toString()}`);
+    ui.alert(`❌ ERREUR : Une erreur critique est survenue pour la ligne ${rowIndex}. Le statut a été mis à 'ERREUR'. Consultez les logs pour les détails. Message : ${e.message}`);
+  }
+}
+
+/**
+ * Fonction UI pour lancer le traitement en masse de toutes les demandes "En construction".
+ */
+function orchestrateurCreationAutomatique_UI() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const lignesTraitees = orchestrateurCreationAutomatique();
+    ui.alert(`Traitement terminé. ${lignesTraitees} nouvelle(s) demande(s) ont été traitée(s).`);
+  } catch (e) {
+    Logger.log(`ERREUR Critique dans l'orchestrateur : ${e.toString()}`);
+    ui.alert(`Une erreur critique est survenue : ${e.message}`);
+  }
+}
+// --- Fin du fichier: InterfaceV2.js ---
+
+// --- Début du fichier: MigrationV1.js ---
+// =================================================================================
+// FONCTION DE MIGRATION V1 -> V2 (JSON)
+// RÔLE : Convertit les questions d'un ancien format (Options/Logique)
+//         vers le nouveau format V2 (Paramètres (JSON)).
+// VERSION : 1.4 - Version finale et corrigée
+// =================================================================================
+
+/**
+ * Fonction principale appelée depuis le menu de l'interface utilisateur.
+ */
+function lancerMigrationV1versV2() {
+  try {
+    const ID_BDD = '1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8';
+
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.prompt(
+      'Outil de Migration V1 -> V2',
+      'Veuillez entrer le nom exact de l\'onglet dans la BDD à migrer :',
+      ui.ButtonSet.OK_CANCEL);
+
+    if (response.getSelectedButton() == ui.Button.OK && response.getResponseText() != '') {
+      const sheetName = response.getResponseText().trim();
+      
+      const bdd = SpreadsheetApp.openById(ID_BDD);
+      if (!bdd) { throw new Error(`Impossible d'ouvrir la BDD avec l'ID fourni.`); }
+      const sheet = bdd.getSheetByName(sheetName);
+
+      if (!sheet) { throw new Error(`L'onglet "${sheetName}" est introuvable dans la BDD.`); }
+
+      const resultat = convertirQuestionsEnJSON(sheet);
+      
+      ui.alert(
+        'Migration Terminée',
+        `Rapport pour l'onglet "${sheetName}":\n\n` +
+        `- Lignes traitées : ${resultat.lignesTraitees}\n` +
+        `- Questions converties : ${resultat.questionsConverties}\n` +
+        `- Lignes ignorées : ${resultat.lignesIgnorees}\n` +
+        `- Erreurs rencontrées : ${resultat.erreurs.length}` +
+        (resultat.erreurs.length > 0 ? `\n\nConsultez les logs ("Affichage > Journaux") pour le détail des erreurs.` : ''),
+        ui.ButtonSet.OK);
+    }
+  } catch (e) {
+    SpreadApp.getUi().alert(`Une erreur est survenue : ${e.message}`);
+    console.error(`Erreur lors du lancement de la migration : ${e.stack}`);
+  }
+}
+
+/**
+ * Cœur de la logique de conversion. Lit une feuille et met à jour les lignes.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet La feuille de calcul à traiter.
+ * @returns {object} Un objet contenant les statistiques de la migration.
+ */
+function convertirQuestionsEnJSON(sheet) {
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  const headers = values.shift(); 
+
+  const colIndex = {
+    type: headers.indexOf('TypeQuestion'),
+    options: headers.indexOf('Options'),
+    logique: headers.indexOf('Logique'),
+    description: headers.indexOf('Description'),
+    json: headers.indexOf('Paramètres (JSON)')
+  };
+
+  if (colIndex.type === -1 || colIndex.options === -1 || colIndex.logique === -1 || colIndex.json === -1) {
+    throw new Error("Colonnes requises ('TypeQuestion', 'Options', 'Logique', 'Paramètres (JSON)') manquantes.");
+  }
+  
+  let questionsConverties = 0;
+  let lignesIgnorees = 0;
+  const erreurs = [];
+
+  values.forEach((row, index) => {
+    const jsonCell = row[colIndex.json];
+    if (jsonCell) {
+      lignesIgnorees++;
+      return;
+    }
+
+    const typeQuestion = row[colIndex.type];
+    const optionsStr = row[colIndex.options];
+    const logiqueStr = row[colIndex.logique];
+    const descriptionStr = colIndex.description !== -1 ? row[colIndex.description] : "";
+    let jsonPayload = null;
+
+    try {
+      switch (typeQuestion) {
+        case 'CHOIX_BINAIRE':
+          if (optionsStr && logiqueStr) {
+            const optionsArray = optionsStr.toString().split(';').map(s => s.trim());
+            const logiqueArray = logiqueStr.toString().split(';').map(s => s.trim());
+            if (optionsArray.length !== logiqueArray.length) {
+              throw new Error(`CHOIX_BINAIRE: Le nombre d'options (${optionsArray.length}) et de logiques (${logiqueArray.length}) ne correspond pas.`);
+            }
+            jsonPayload = {
+              mode: 'QRM_CAT',
+              options: optionsArray.map((libelle, i) => ({ libelle: libelle, profil: logiqueArray[i], valeur: 1 }))
+            };
+          }
+          break;
+
+        case 'ECHELLE':
+          if (optionsStr && logiqueStr) { // La description n'est pas bloquante
+            const echelle = optionsStr.toString().split(';').map(s => parseInt(s.trim(), 10));
+            const labels = descriptionStr ? descriptionStr.toString().split(';').map(s => s.trim()) : ["", ""];
+            
+            jsonPayload = {
+              mode: 'ECHELLE_NOTE',
+              profil: logiqueStr.toString().trim(),
+              echelle_min: Math.min(...echelle),
+              echelle_max: Math.max(...echelle),
+              label_min: labels[0] || "",
+              label_max: labels[1] || ""
+            };
+          }
+          break;
+
+        default:
+          lignesIgnorees++;
+          break;
+      }
+
+      if (jsonPayload) {
+        sheet.getRange(index + 2, colIndex.json + 1).setValue(JSON.stringify(jsonPayload));
+        questionsConverties++;
+      } else {
+        lignesIgnorees++;
+      }
+
+    } catch (e) {
+      const errorMessage = `Erreur à la ligne ${index + 2}: ${e.message}`;
+      console.error(errorMessage);
+      erreurs.push(errorMessage);
+    }
+  });
+
+  return {
+    lignesTraitees: values.length,
+    questionsConverties: questionsConverties,
+    lignesIgnorees: lignesIgnorees,
+    erreurs: erreurs
+  };
+}
+// --- Fin du fichier: MigrationV1.js ---
+
+// --- Début du fichier: concat_scripts_rep.js ---
+const fs = require('fs');
+const path = require('path');
+
+// --- CONFIGURATION ---
+// Extensions de fichiers à inclure
+const scriptExtensions = [
+    '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less',
+    '.xml', '.php', '.rb', '.java', '.c', '.cpp', '.cs', '.go',
+    '.sh', '.ps1', '.bat', '.cmd', '.sql', '.vue', '.svelte', '.astro'
+];
+
+// Le dossier à scanner
+const folderToScan = './'; // À ajuster si besoin
+// --- FIN CONFIGURATION ---
+
+// Récupérer le nom du répertoire scanné
+const resolvedFolderPath = path.resolve(folderToScan);
+const dirName = path.basename(resolvedFolderPath);
+
+// Créer une date au format aammjj
+const now = new Date();
+const year = String(now.getFullYear()).slice(2); // 2 derniers chiffres de l'année
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const dateStamp = `${year}${month}${day}`;
+
+// Nom du fichier de sortie
+const outputFileName = `${dirName}_Script_${dateStamp}.txt`;
+
+// Créer une chaîne avec date et heure en français
+const dateTimeString = `// Fichier généré le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR')}\n\n`;
+
+// Initialiser la variable qui accumulera le contenu
+let allContent = dateTimeString;
+
+// Fonction récursive
+function readFilesRecursively(directory) {
+    fs.readdirSync(directory).forEach(file => {
+        const absolutePath = path.join(directory, file);
+        if (fs.statSync(absolutePath).isDirectory()) {
+            readFilesRecursively(absolutePath);
+        } else {
+            const fileExtension = path.extname(file).toLowerCase();
+            if (scriptExtensions.includes(fileExtension)) {
+                allContent += `// --- Début du fichier: ${absolutePath} ---\n`;
+                allContent += fs.readFileSync(absolutePath, 'utf8');
+                allContent += `\n// --- Fin du fichier: ${absolutePath} ---\n\n`;
+            }
+        }
+    });
+}
+
+// Supprimer le fichier de sortie existant
+if (fs.existsSync(outputFileName)) {
+    fs.unlinkSync(outputFileName);
+    console.log(`Ancien fichier '${outputFileName}' supprimé.`);
+}
+
+// Lancer le traitement
+try {
+    readFilesRecursively(folderToScan);
+    fs.writeFileSync(outputFileName, allContent, 'utf8');
+    console.log(`Succès : Tous les scripts ont été exportés dans '${outputFileName}'`);
+} catch (error) {
+    console.error(`Erreur lors de la lecture ou de l'écriture des fichiers : ${error.message}`);
+}
+
+// --- Fin du fichier: concat_scripts_rep.js ---
+
