@@ -1,0 +1,2082 @@
+// Fichier généré le 24/08/2025 à 14:40:22
+
+// --- Début du fichier: TraitementReponses.js ---
+// =================================================================================
+// == FICHIER : TraitementReponses.gs
+// == VERSION : 20.0 (Fusion Doc modèle → PDF personnalisé + PJ dynamique)
+// == RÔLE  : Gère la logique de traitement des réponses et aiguille vers le bon moteur.
+// =================================================================================
+
+/**
+ * Nettoie une chaîne de caractères pour la rendre utilisable comme nom de variable/placeholder.
+ */
+function _nettoyerEnTete(enTete) {
+  if (!enTete) return "";
+  const accents = 'ÀÁÂÃÄÅàáâãäåÒÓÔÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÿÑñ';
+  const sansAccents = 'AAAAAAaaaaaaOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuyNn';
+  return enTete.toString().split('').map((char) => {
+    const accentIndex = accents.indexOf(char);
+    return accentIndex !== -1 ? sansAccents[accentIndex] : char;
+  }).join('')
+  .replace(/[^a-zA-Z0-9_]/g, '_');
+}
+
+/**
+ * Crée un objet de réponse standardisé à partir d'un numéro de ligne.
+ */
+function _creerObjetReponse(rowIndex) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const rowValues = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const reponse = {};
+
+  headers.forEach((header, i) => {
+    let cle = header;
+    if (header && !header.includes(':')) {
+      cle = _nettoyerEnTete(header);
+    }
+    if (cle) {
+      reponse[cle] = rowValues[i];
+    }
+  });
+  return reponse;
+}
+
+/**
+ * Point d'entrée principal pour traiter une soumission de formulaire.
+ */
+function onFormSubmit(e) {
+  try {
+    const rowIndex = e.range.getRow();
+    traiterLigne(rowIndex, {});
+  } catch (err) {
+    Logger.log(`Erreur critique dans onFormSubmit pour la ligne ${e.range.getRow()}: ${err.toString()}\n${err.stack}`);
+  }
+}
+
+/**
+ * Envoie un e-mail de confirmation.
+ */
+function _envoyerEmailDeConfirmation(config, reponse, langueCible) {
+  try {
+    const nomColonneOverride = `ID_Gabarit_Email_Confirmation_${langueCible}`;
+    let idGabaritConfirmation = config[nomColonneOverride];
+    if (!idGabaritConfirmation || String(idGabaritConfirmation).trim() === '') {
+      const systemIds = getSystemIds();
+      const nomCleDefaut = `ID_GABARIT_CONFIRMATION_${langueCible}`;
+      idGabaritConfirmation = systemIds[nomCleDefaut];
+      Logger.log(`Utilisation du gabarit de confirmation PAR DÉFAUT pour la langue ${langueCible}.`);
+    } else {
+      Logger.log(`Utilisation du gabarit de confirmation SPÉCIFIQUE pour la langue ${langueCible}.`);
+    }
+    const emailRepondant = reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || reponse.emailRepondant;
+    if (!idGabaritConfirmation || String(idGabaritConfirmation).trim() === '' || !emailRepondant) {
+      Logger.log(`Aucun e-mail de confirmation à envoyer pour la langue ${langueCible}.`);
+      return;
+    }
+    const doc = DocumentApp.openById(idGabaritConfirmation);
+    let sujet = doc.getName();
+    const url = "https://docs.google.com/feeds/download/documents/export/Export?id=" + idGabaritConfirmation + "&exportFormat=html";
+    const token = ScriptApp.getOAuthToken();
+    const response = UrlFetchApp.fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    let corpsHtml = response.getContentText();
+    for (const key in reponse) {
+      if (reponse.hasOwnProperty(key)) {
+        const placeholder = `{{${key}}}`;
+        const valeur = reponse[key] || '';
+        const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
+        sujet = sujet.replace(regex, valeur);
+        corpsHtml = corpsHtml.replace(regex, valeur);
+      }
+    }
+    const mailOptions = { to: emailRepondant, subject: sujet, htmlBody: corpsHtml };
+    if (config.Email_Alias && config.Email_Alias.trim() !== '') {
+      mailOptions.from = config.Email_Alias;
+    }
+    GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions);
+    Logger.log(`E-mail de confirmation [${langueCible}] envoyé avec succès à ${emailRepondant}.`);
+  } catch (e) {
+    Logger.log(`ERREUR lors de l'envoi de l'e-mail de confirmation : ${e.toString()}\n${e.stack}`);
+  }
+}
+
+/* ============================================================================
+ *  NOUVEAU : Génération d'un PDF personnalisé depuis un modèle Google Doc
+ * ============================================================================
+ */
+/**
+ * Génère un PDF personnalisé à partir d’un Doc modèle contenant des {{placeholders}}.
+ * @param {string} templateId - ID du Google Doc modèle.
+ * @param {Object} variables - Clé/valeur pour remplacer les {{clés}} dans le document.
+ * @param {string} [nomFichier] - Nom du fichier final (sans extension).
+ * @returns {Blob} - Un blob PDF prêt à être attaché.
+ */
+function genererPdfDepuisModele(templateId, variables, nomFichier) {
+  if (!templateId) throw new Error("ID du modèle manquant.");
+  const templateFile = DriveApp.getFileById(templateId);
+  const tempCopy = templateFile.makeCopy((nomFichier || ("Rapport_" + new Date().toISOString().slice(0,10))) + " (temp)");
+  const doc = DocumentApp.openById(tempCopy.getId());
+  const body = doc.getBody();
+
+  // Remplacement simple des {{placeholders}}
+  for (const key in variables) {
+    const placeholder = "{{" + key + "}}";
+    // Échapper la regexp
+    const escaped = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    body.replaceText(escaped, String(variables[key] ?? ""));
+  }
+
+  doc.saveAndClose();
+
+  // Export PDF
+  const pdfBlob = tempCopy.getAs(MimeType.PDF);
+  // Nettoyage
+  tempCopy.setTrashed(true);
+  return pdfBlob;
+}
+
+/**
+ * COEUR LOGIQUE : Aiguille le traitement vers le moteur.
+ */
+function traiterLigne(rowIndex, optionsSurcharge = {}) {
+  try {
+    const config = getTestConfiguration();
+    const reponse = _creerObjetReponse(rowIndex);
+    
+    const langueOrigine = getOriginalLanguage(reponse);
+    const langueCible = optionsSurcharge.langue || langueOrigine;
+    
+    if (!optionsSurcharge.isRetraitement) {
+      _envoyerEmailDeConfirmation(config, reponse, langueCible);
+    }
+    
+    const resultats = calculerResultats(reponse, langueCible, config, langueOrigine);
+
+    if (optionsSurcharge.isRetraitement || config.Repondant_Quand === 'Immediat') {
+      if (config.Moteur_Calcul === 'Universel') {
+        Logger.log("Moteur UNIVERSEL détecté pour la ligne " + rowIndex + ". Envoi immédiat (retraitement ou configuration).");
+        assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge);
+      } else {
+        // Moteur legacy...
+      }
+    } else {
+      Logger.log(`Envoi différé détecté. Valeur : "${config.Repondant_Quand}". Lancement de la programmation.`);
+      programmerEnvoiResultats(rowIndex, langueCible, config.Repondant_Quand);
+    }
+
+  } catch (err) {
+    Logger.log("ERREUR FATALE dans traiterLigne: " + err.toString() + "\n" + err.stack);
+  }
+}
+
+// =================================================================================
+// == MOTEUR UNIVERSEL - FONCTION D'ENVOI D'EMAIL
+// =================================================================================
+/**
+ * Lit la BDD, assemble et envoie l'e-mail de résultats.
+ */
+function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}) {
+  const typeTest = config.Type_Test;
+  let codeNiveauEmail = config.ID_Gabarit_Email_Repondant.replace('RESULTATS_', '');
+
+  if (optionsSurcharge && optionsSurcharge.niveau && optionsSurcharge.niveau !== '') {
+    codeNiveauEmail = optionsSurcharge.niveau;
+  }
+
+  const profilFinal = resultats.profilFinal;
+  const systemIds = getSystemIds();
+  const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+  const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
+  const compoData = compoSheet.getDataRange().getValues();
+  const compoHeaders = compoData.shift();
+  const idx = {
+    typeTest: compoHeaders.indexOf('Type_Test'),
+    langue: compoHeaders.indexOf('Code_Langue'),
+    niveau: compoHeaders.indexOf('Code_Niveau_Email'),
+    profil: compoHeaders.indexOf('Code_Profil'),
+    element: compoHeaders.indexOf('Element'),
+    ordre: compoHeaders.indexOf('Ordre'),
+    contenu: compoHeaders.indexOf('Contenu / ID_Document')
+  };
+
+  let briquesDeContenu = compoData.filter(row => {
+    const typeLigne = (row[idx.typeTest] || '').trim();
+    const typeCible = (typeTest || '').trim();
+    const typeMatch = (typeLigne === typeCible || typeLigne === '');
+    const langMatch = row[idx.langue] === langueCible;
+    const levelMatch = row[idx.niveau].includes(codeNiveauEmail);
+    const profilLigne = (row[idx.profil] || '').trim();
+    const profilCible = (profilFinal || '').trim();
+    const profileMatch = (profilLigne === profilCible || profilLigne === '');
+    return typeMatch && langMatch && levelMatch && profileMatch;
+  });
+
+  briquesDeContenu.sort((a, b) => a[idx.ordre] - b[idx.ordre]);
+  
+  let contenuInfoCopie = null;
+  const indexInfoCopie = briquesDeContenu.findIndex(brique => (brique[idx.element] || '').trim() === 'Info_Copie');
+  if (indexInfoCopie > -1) {
+    contenuInfoCopie = briquesDeContenu[indexInfoCopie][idx.contenu];
+    briquesDeContenu.splice(indexInfoCopie, 1);
+  }
+
+  let sujet = `Résultats de votre test ${typeTest}`;
+  let corpsHtml = "";
+  const piecesJointesIds = new Set();
+
+  for (const brique of briquesDeContenu) {
+    const elementType = (brique[idx.element] || '').trim();
+    const contenu = brique[idx.contenu];
+    switch (elementType) {
+      case 'Sujet_Email': 
+        sujet = contenu; 
+        break;
+      case 'Introduction': 
+      case 'Corps_Texte': 
+        corpsHtml += contenu + "<br>"; 
+        break;
+      // On capture les IDs/Placeholders de documents à générer/attacher
+      case 'Document':
+        if (contenu && String(contenu).trim()) {
+          piecesJointesIds.add(String(contenu).trim());
+        }
+        break;
+      case 'Ligne_Score':
+        Object.entries(resultats.scoresData).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => {
+          let ligneScore = contenu
+            .replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code)
+            .replace(/{{score}}/g, score);
+          corpsHtml += ligneScore + "<br>";
+        });
+        break;
+    }
+  }
+
+  // Remplacement de variables dans sujet/corps/Info_Copie
+  const donneesPourEmail = { ...reponse, ...resultats };
+  for (const key in donneesPourEmail) {
+    if (donneesPourEmail.hasOwnProperty(key)) {
+      const placeholder = `{{${key}}}`;
+      const valeur = donneesPourEmail[key] || '';
+      const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
+      sujet = sujet.replace(regex, valeur);
+      corpsHtml = corpsHtml.replace(regex, valeur);
+      if (contenuInfoCopie) {
+        contenuInfoCopie = contenuInfoCopie.replace(regex, valeur);
+      }
+    }
+  }
+
+  // ============================================================================
+  // NOUVEAU : Résolution des documents → génération PDF personnalisée
+  //  - Si la brique 'Document' contient un placeholder (ex: {{ID_Document_Rapport_Expert}})
+  //    → on le résout via les variables (reponse/resultats).
+  //  - Si c’est un ID Drive (Doc), on fusionne et on exporte en PDF.
+  //  - En cas d’échec de fusion, on attache le fichier brut (fallback).
+  // ============================================================================
+  const variablesFusion = { ...reponse, ...resultats };
+  const piecesJointes = [];
+  for (const contenuDoc of Array.from(piecesJointesIds)) {
+    let candidate = contenuDoc;
+
+    // Placeholder → valeur
+    if (candidate.startsWith("{{") && candidate.endsWith("}}")) {
+      const cle = candidate.slice(2, -2);
+      candidate = variablesFusion[cle] || "";
+    }
+
+    // Si on a un ID Drive plausible (≥20 chars alphanum + _-)
+    if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) {
+      try {
+        // Tentative : générer un PDF depuis le modèle Doc
+        const nomRapport = (resultats.titreProfil || resultats.profilFinal || config.Type_Test || "Rapport");
+        const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport);
+        piecesJointes.push(pdf);
+        continue;
+      } catch(e) {
+        Logger.log("Fusion Doc->PDF échouée pour " + candidate + " : " + e.message);
+        // Fallback : attacher le fichier brut
+        try { piecesJointes.push(DriveApp.getFileById(candidate).getBlob()); } catch(_) {}
+        continue;
+      }
+    } else {
+      // Si ce n'est pas un ID, on ignore (ou on pourrait tenter une recherche par nom si besoin)
+      Logger.log("Ignoré (Document) : valeur non reconnue " + candidate);
+    }
+  }
+
+  // Envoi des e-mails
+  const T = loadTraductions(langueCible);
+  const adressesUniques = new Set();
+  const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || reponse.emailRepondant;
+  
+  const destinatairesSurcharge = optionsSurcharge.destinataires || {};
+  const useSurcharge = Object.keys(destinatairesSurcharge).length > 0;
+
+  if (useSurcharge) {
+    if (destinatairesSurcharge.repondant && emailRepondantPrincipal) { adressesUniques.add(emailRepondantPrincipal); }
+    if (destinatairesSurcharge.formateur && destinatairesSurcharge.formateurEmail) { adressesUniques.add(destinatairesSurcharge.formateurEmail); }
+    if (destinatairesSurcharge.patron && destinatairesSurcharge.patronEmail) { adressesUniques.add(destinatairesSurcharge.patronEmail); }
+    if (destinatairesSurcharge.test && destinatairesSurcharge.test.trim() !== '') {
+      destinatairesSurcharge.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
+    }
+  } else {
+    if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) { adressesUniques.add(emailRepondantPrincipal); }
+    if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) { adressesUniques.add(config.Patron_Email); }
+    if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) { adressesUniques.add(config.Formateur_Email); }
+  }
+  
+  if (config.Developpeur_Email) { adressesUniques.add(config.Developpeur_Email); }
+
+  adressesUniques.forEach(adresse => {
+    try {
+      let sujetFinal = sujet;
+      let corpsHtmlFinal = corpsHtml;
+      if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) {
+        sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet;
+        if (contenuInfoCopie) { corpsHtmlFinal = contenuInfoCopie + corpsHtml; }
+      }
+      const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes };
+      const aliasExpediteur = optionsSurcharge.alias || config.Email_Alias;
+      if (aliasExpediteur && aliasExpediteur.trim() !== '') {
+        mailOptions.from = aliasExpediteur;
+      }
+      GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions);
+      Logger.log(`E-mail de RÉSULTATS [${langueCible}] envoyé avec succès à ${adresse}.`);
+    } catch (e) {
+      Logger.log(`Echec de l'envoi des résultats à ${adresse}. Erreur: ${e.message}`);
+    }
+  });
+}
+
+// =================================================================================
+// == SECTION INTERFACE UTILISATEUR (UI)
+// =================================================================================
+
+function getDonneesPourRetraitement(rowIndex) {
+  try {
+    const config = getTestConfiguration();
+    const reponse = _creerObjetReponse(rowIndex);
+
+    const nomRepondant = reponse.Votre_nom_et_prenom || reponse.Nom_et_prenom || '';
+    const emailRepondant = reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || '';
+    
+    return {
+      nomRepondant: nomRepondant,
+      emailRepondant: emailRepondant,
+      langueOrigine: getOriginalLanguage(reponse),
+      repondantActif: config.Repondant_Email_Actif === 'Oui',
+      formateurActif: config.Formateur_Email_Actif === 'Oui',
+      patronActif: config.Patron_Email_Mode === 'Oui',
+      emailAlias: config.Email_Alias || ''
+    };
+  } catch (e) {
+    Logger.log(`ERREUR dans getDonneesPourRetraitement(${rowIndex}): ${e.toString()}`);
+    throw new Error("Impossible de récupérer les données pour la ligne " + rowIndex + ". " + e.message);
+  }
+}
+
+/**
+ * Lance le retraitement depuis l'interface utilisateur.
+ */
+function lancerRetraitementDepuisUI(options) {
+  if (!options || !options.rowIndex) {
+    throw new Error("Les options de retraitement sont invalides.");
+  }
+
+  options.isRetraitement = true; 
+  
+  traiterLigne(options.rowIndex, options);
+  
+  return "Retraitement pour la ligne " + options.rowIndex + " lancé avec succès !";
+}
+
+// --- Fin du fichier: TraitementReponses.js ---
+
+// --- Début du fichier: Utilities.js ---
+// =================================================================================
+// == FICHIER : Utilities.gs
+// == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clé→valeur)
+// == RÔLE  : Boîte à outils du Kit de Traitement.
+// =================================================================================
+
+const ID_FEUILLE_PILOTE = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
+
+/**
+ * Récupère la configuration du test en cours avec une stratégie multi-sources :
+ * 1) CONFIG global (ID_CONFIG) → onglet 'Paramètres Généraux'
+ * 2) Ancien template V2 (ID_TEMPLATE_TRAITEMENT_V2) → 'Paramètres Généraux'
+ * 3) Legacy "pilote" (ID_FEUILLE_PILOTE) mappant la sheet active via 'ID_Sheet_Cible'
+ */
+function getTestConfiguration() {
+  const ids = getSystemIds();
+
+  // 1) Préféré : CONFIG global
+  const cfgFromConfig = _tryReadKeyValueOrHorizontalConfig(ids.ID_CONFIG, [
+    'Paramètres Généraux','Parametres Generaux','Parameters','Parametres'
+  ]);
+  if (cfgFromConfig && String(cfgFromConfig.Type_Test || '').trim() !== '') {
+    return cfgFromConfig;
+  }
+
+  // 2) Fallback : ancien template V2
+  const cfgFromTemplateV2 = _tryReadKeyValueOrHorizontalConfig(ids.ID_TEMPLATE_TRAITEMENT_V2, [
+    'Paramètres Généraux','Parametres Generaux','Parameters','Parametres'
+  ]);
+  if (cfgFromTemplateV2 && String(cfgFromTemplateV2.Type_Test || '').trim() !== '') {
+    return cfgFromTemplateV2;
+  }
+
+  // 3) Dernier recours : logique legacy "pilote" (comportement historique)
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const idSheetActuelle = ss.getId();
+    const piloteSheet = SpreadsheetApp.openById(ID_FEUILLE_PILOTE);
+    const paramsSheet = piloteSheet.getSheetByName("Paramètres Généraux");
+    if (!paramsSheet) { throw new Error("L'onglet 'Paramètres Généraux' est introuvable dans la feuille pilote."); }
+    const data = paramsSheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idSheetColIndex = headers.indexOf('ID_Sheet_Cible');
+    if (idSheetColIndex === -1) { throw new Error("La colonne 'ID_Sheet_Cible' est introuvable dans la feuille pilote."); }
+    const configRow = data.find(row => row[idSheetColIndex] === idSheetActuelle);
+    if (!configRow) { throw new Error("Impossible de trouver la configuration pour ce test (ID: " + idSheetActuelle + ")."); }
+    const configuration = {};
+    headers.forEach((header, index) => {
+      if (header) { configuration[header] = configRow[index]; }
+    });
+    if (!configuration.Type_Test || String(configuration.Type_Test).trim() === '') {
+      throw new Error("Type_Test manquant dans la configuration legacy (feuille pilote).");
+    }
+    return configuration;
+  } catch (e) {
+    throw new Error("Impossible de trouver la configuration pour ce test (CONFIG, TEMPLATE_V2 et legacy ont échoué). Détail: " + e.message);
+  }
+}
+
+/**
+ * Lit une config depuis un fichier (ID Drive) et un des noms d’onglet possibles.
+ * Supporte 2 formats :
+ *  - Clé→Valeur (2 colonnes, ex. 'Type_Test' | 'r&K_Environnement')
+ *  - Tableau horizontal (1 ligne de données sous les entêtes, ex. 'Type_Test' est une colonne)
+ * Retourne null si le fichier/onglet n’existe pas ou si aucune ligne valide n’est trouvée.
+ */
+function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
+  try {
+    if (!fileId) return null;
+    const ss = SpreadsheetApp.openById(fileId);
+
+    // Trouver un onglet parmi ceux proposés
+    let sh = null;
+    for (const name of possibleSheetNames) {
+      sh = ss.getSheetByName(name);
+      if (sh) break;
+    }
+    if (!sh) return null;
+
+    const data = sh.getDataRange().getValues();
+    if (!data || data.length < 2) return null;
+
+    const headersRow = data[0].map(h => String(h || '').trim());
+    const nbCols = headersRow.length;
+
+    // Heuristique : format Clé→Valeur si 2 colonnes OU si la 1ère colonne s’appelle "Clé"/"Key"
+    const header0 = headersRow[0].toLowerCase();
+    const isKeyValue = (nbCols <= 3) && (header0.includes('clé') || header0.includes('cle') || header0.includes('key'));
+
+    if (isKeyValue) {
+      // Lecture Clé→Valeur
+      const cfg = {};
+      for (let i = 1; i < data.length; i++) {
+        const k = String(data[i][0] || '').trim();
+        const v = data[i][1];
+        if (k) cfg[k] = v;
+      }
+      return cfg;
+    }
+
+    // Sinon : format horizontal (entêtes en ligne 1, données sur une/des lignes)
+    const idx = {};
+    headersRow.forEach((h, i) => { if (h) idx[h] = i; });
+
+    // Choix de la ligne cible :
+    // 1) si 'ID_Sheet_Cible' présent, on essaie de matcher l'ID de la feuille active
+    const activeId = SpreadsheetApp.getActiveSpreadsheet().getId();
+    let target = null;
+    if (idx['ID_Sheet_Cible'] != null) {
+      target = data.slice(1).find(r => String(r[idx['ID_Sheet_Cible']] || '') === activeId);
+    }
+    // 2) sinon, première ligne où 'Type_Test' est non vide
+    if (!target && idx['Type_Test'] != null) {
+      target = data.slice(1).find(r => String(r[idx['Type_Test']] || '').trim() !== '');
+    }
+    // 3) sinon, première ligne non vide
+    if (!target) {
+      target = data.slice(1).find(r => r.some(c => String(c || '').trim() !== ''));
+    }
+    if (!target) return null;
+
+    const cfg = {};
+    headersRow.forEach((h, i) => { if (h) cfg[h] = target[i]; });
+    return cfg;
+
+  } catch (e) {
+    Logger.log('_tryReadKeyValueOrHorizontalConfig KO for ' + fileId + ' : ' + e.message);
+    return null;
+  }
+}
+
+/**
+ * Lit l'onglet 'sys_ID_Fichiers' de la feuille de configuration centrale (feuille pilote).
+ * Renvoie un dictionnaire { Clé → ID } (ex.: { ID_BDD: "...", ID_CONFIG: "...", ... }).
+ */
+function getSystemIds() {
+  try {
+    const configSS = SpreadsheetApp.openById(ID_FEUILLE_PILOTE);
+    const idSheet = configSS.getSheetByName('sys_ID_Fichiers');
+    if (!idSheet) { throw new Error("L'onglet 'sys_ID_Fichiers' est introuvable."); }
+    const data = idSheet.getDataRange().getValues();
+    const ids = {};
+    data.slice(1).forEach(row => {
+      if (row[0] && row[1]) { ids[row[0]] = row[1]; }
+    });
+    return ids;
+  } catch (e) {
+    Logger.log("Impossible de charger les ID système : " + e.toString());
+    throw new Error("Impossible de charger les ID système. Erreur: " + e.message);
+  }
+}
+
+/**
+ * Détecte correctement la langue de la réponse initiale de l'utilisateur.
+ */
+function getOriginalLanguage(reponses) {
+  const langueRepondantBrute = reponses['Langue___Language'] || reponses['Langue / Language'] || 'Français';
+  const mapLangue = { 'Français': 'FR', 'English': 'EN', 'Español': 'ES', 'Deutsch': 'DE' };
+  return mapLangue[langueRepondantBrute] || 'FR';
+}
+
+function getGabaritEmail(idGabarit, langueCode) {
+  const systemIds = getSystemIds();
+  const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+  const gabaritsSheet = bdd.getSheetByName("Gabarits_Emails");
+  if (!gabaritsSheet) throw new Error("L'onglet 'Gabarits_Emails' est introuvable.");
+  const data = gabaritsSheet.getDataRange().getValues();
+  const headers = data.shift();
+  const idCol = headers.indexOf('ID_Gabarit');
+  const langCol = headers.indexOf('Langue');
+  const gabaritRow = data.find(row => row[idCol] === idGabarit && row[langCol].toUpperCase() === langueCode.toUpperCase());
+  if (!gabaritRow) throw new Error(`Aucun gabarit trouvé pour l'ID '${idGabarit}' et la langue '${langueCode}'.`);
+
+  const gabarit = {};
+  headers.forEach((header, index) => {
+    if (header) { gabarit[header] = gabaritRow[index]; }
+  });
+  return gabarit;
+}
+
+function formatScoresDetails(resultats, niveauDetails, typeTest, langueCode) {
+  if (niveauDetails === 'Simple' || !resultats.scoresData || Object.keys(resultats.scoresData).length === 0) {
+    return "";
+  }
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const formatSheet = bdd.getSheetByName("sys_Formatage_Scores");
+    if (!formatSheet) return "Erreur: Onglet 'sys_Formatage_Scores' introuvable.\n";
+    const formatData = formatSheet.getDataRange().getValues();
+    const formatHeaders = formatData.shift();
+    const typeTestCol = formatHeaders.indexOf('Type_Test');
+    const regle = formatData.find(row => row[typeTestCol] === typeTest);
+    if (!regle) return `Aucune règle d'affichage trouvée pour le test '${typeTest}'.\n`;
+    const regleMap = {};
+    formatHeaders.forEach((h, i) => regleMap[h] = regle[i]);
+    const T = loadTraductions(langueCode);
+    let scoresText = (regleMap.Texte_Intro || "Voici le détail de vos scores :") + "\n";
+    if (regleMap.Mode_Affichage === 'Simple') {
+      let scoresArray = Object.entries(resultats.scoresData).map(([code, score]) => ({
+        code_profil: code,
+        nom_profil: resultats.mapCodeToName[code] || code,
+        score: score
+      }));
+      if (regleMap.Tri_Scores === 'Décroissant') {
+        scoresArray.sort((a, b) => b.score - a.score);
+      } else if (regleMap.Tri_Scores === 'Croissant') {
+        scoresArray.sort((a, b) => a.score - b.score);
+      }
+      scoresArray.forEach(item => {
+        let ligne = regleMap.Format_Ligne.replace(/{{nom_profil}}/g, item.nom_profil)
+          .replace(/{{score}}/g, item.score)
+          .replace(/{{suffixe_points}}/g, T.SUFFIXE_POINTS || 'points');
+        scoresText += ligne + "\n";
+      });
+    } else if (regleMap.Mode_Affichage === 'Dichotomie') {
+      const axes = [
+        { nom: (T.AXE_EI || "Extraversion (E) vs Introversion (I)"), p1: 'E', p2: 'I' },
+        { nom: (T.AXE_SN || "Sensation (S) vs Intuition (N)"),  p1: 'S', p2: 'N' },
+        { nom: (T.AXE_TF || "Pensée (T) vs Sentiment (F)"),    p1: 'T', p2: 'F' },
+        { nom: (T.AXE_JP || "Jugement (J) vs Perception (P)"),  p1: 'J', p2: 'P' }
+      ];
+      axes.forEach(axe => {
+        let ligne = regleMap.Format_Ligne.replace(/{{axe_nom}}/g, axe.nom)
+          .replace(/{{score1}}/g, resultats.scoresData[axe.p1] || 0)
+          .replace(/{{score2}}/g, resultats.scoresData[axe.p2] || 0);
+        scoresText += ligne + "\n";
+      });
+    }
+    return scoresText;
+  } catch (e) {
+    Logger.log(`ERREUR CRITIQUE DANS formatScoresDetails (universel): ${e.toString()}`);
+    return "Impossible d'afficher le détail des scores en raison d'une erreur.\n";
+  }
+}
+
+/**
+ * Charge les chaînes de caractères traduites pour une langue donnée.
+ * @version CORRIGÉE : Utilise .trim() pour ignorer les espaces dans les en-têtes.
+ */
+function loadTraductions(langueCode) {
+  if (!langueCode) {
+    throw new Error("Le code de langue fourni à loadTraductions est indéfini.");
+  }
+  const systemIds = getSystemIds();
+  const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+  const traductionsSheet = bdd.getSheetByName("traductions");
+  if (!traductionsSheet) throw new Error("L'onglet 'traductions' est introuvable.");
+  const data = traductionsSheet.getDataRange().getValues();
+  const headers = data.shift();
+  // MODIFICATION : Ajout de .trim() pour ignorer les espaces avant/après les noms de colonnes
+  const langColIndex = headers.findIndex(h => h && String(h).trim().toLowerCase() === langueCode.toLowerCase());
+  if (langColIndex === -1) throw new Error(`La colonne de langue '${langueCode}' est introuvable dans l'onglet "traductions".`);
+  const traductions = {};
+  const keyColIndex = 0;
+  data.forEach(row => {
+    if (row[keyColIndex]) { traductions[row[keyColIndex]] = row[langColIndex]; }
+  });
+  return traductions;
+}
+
+function buildAndSendEmails(config, reponse, resultats, langueCode, isDebugMode, destinatairesSurcharge = {}) {
+  try {
+    const idGabarit = config.ID_Gabarit_Email_Repondant;
+    if (!idGabarit) {
+      throw new Error("La colonne 'ID_Gabarit_Email_Repondant' n'est pas définie dans la configuration du test.");
+    }
+    const gabarit = getGabaritEmail(idGabarit, langueCode);
+    const T = loadTraductions(langueCode);
+    const variables = {
+      nom_repondant: reponse.nomRepondant || 'Participant',
+      Type_Test: config.Type_Test || '',
+      profil_titre: resultats.titreProfil || resultats.profilFinal || '',
+      profil_description: resultats.descriptionProfil || 'Aucune description disponible.',
+      scores_details: formatScoresDetails(resultats, gabarit.Niveau_Details_Resultats, config.Type_Test, langueCode).replace(/\n/g, '<br>'),
+      formateur_nom: config.Formateur_Nom || 'Votre Formateur',
+      formateur_consultant: gabarit.formateur_consultant || 'Votre Consultant Certifié'
+    };
+    let corpsHtml = gabarit.Corps_HTML;
+    if (!corpsHtml) {
+      throw new Error(`Le gabarit d'e-mail '${idGabarit}' n'a pas de contenu dans la colonne 'Corps_HTML'.`);
+    }
+
+    let sujet = gabarit.Sujet;
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`\\{${key}\\}`, 'g');
+      sujet = sujet.replace(regex, value);
+      corpsHtml = corpsHtml.replace(regex, value);
+    }
+
+    const piecesJointes = findAttachments(config.Type_Test, resultats.profilFinal, gabarit.Niveau_Pieces_Jointes, langueCode);
+    const adressesUniques = new Set();
+    const useSurcharge = destinatairesSurcharge && Object.keys(destinatairesSurcharge).length > 0;
+    if (useSurcharge) {
+      if (destinatairesSurcharge.repondant && reponse.emailRepondant) { adressesUniques.add(reponse.emailRepondant); }
+      if (destinatairesSurcharge.formateur && destinatairesSurcharge.formateurEmail) { adressesUniques.add(destinatairesSurcharge.formateurEmail); }
+      if (destinatairesSurcharge.patron && destinatairesSurcharge.patronEmail) { adressesUniques.add(destinatairesSurcharge.patronEmail); }
+      if (destinatairesSurcharge.test && destinatairesSurcharge.test.trim() !== '') {
+        destinatairesSurcharge.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
+      }
+    } else {
+      if (config.Repondant_Email_Actif === 'Oui' && reponse.emailRepondant) { adressesUniques.add(reponse.emailRepondant); }
+      if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) { adressesUniques.add(config.Patron_Email); }
+      if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) { adressesUniques.add(config.Formateur_Email); }
+    }
+    if (config.Developpeur_Email) { adressesUniques.add(config.Developpeur_Email); }
+    adressesUniques.forEach(adresse => {
+      try {
+        let sujetFinal = sujet;
+        if (adresse.toLowerCase() !== (reponse.emailRepondant || "").toLowerCase()) {
+          sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet;
+        }
+        MailApp.sendEmail({
+          to: adresse,
+          subject: sujetFinal,
+          htmlBody: corpsHtml,
+          attachments: piecesJointes
+        });
+      } catch (e) {
+        Logger.log(`Echec de l'envoi à ${adresse}. Erreur: ${e.message}`);
+      }
+    });
+  } catch (err) {
+    Logger.log("ERREUR CRITIQUE dans buildAndSendEmails : " + err.toString() + "\n" + err.stack);
+  }
+}
+
+function findAttachments(typeTest, profilCode, niveauPJ, langueCode) {
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const pjSheet = bdd.getSheetByName("sys_PiecesJointes");
+    if (!pjSheet) { return []; }
+    const data = pjSheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idx = {
+      type: headers.indexOf('Type_Test'),
+      profil: headers.indexOf('Profil_Code'),
+      niveau: headers.indexOf('Email_Niveau'),
+      langue: headers.indexOf('Langue'),
+      id: headers.indexOf('ID_Fichier_Drive')
+    };
+    if (Object.values(idx).some(i => i === -1)) {
+      Logger.log("Avertissement : une ou plusieurs colonnes sont manquantes dans 'sys_PiecesJointes'.");
+      return [];
+    }
+
+    const niveauNumRequis = parseInt(String(niveauPJ).replace(/[^0-9]/g, ''), 10) || 1;
+    const idsFichiersTrouves = new Set();
+    data.forEach(row => {
+      const typeSheet = row[idx.type] ? row[idx.type].toString().toUpperCase() : '';
+      const typeTestUpper = typeTest ? typeTest.toUpperCase() : '';
+      const typeMatch = (typeSheet === typeTestUpper);
+      const profilSheet = row[idx.profil] ? row[idx.profil].toString().toUpperCase() : '';
+      const profilCodeUpper = profilCode ? profilCode.toUpperCase() : '';
+      const profilMatch = (profilSheet === profilCodeUpper || profilSheet === 'TOUS');
+      const langueSheet = row[idx.langue] ? row[idx.langue].toString().toUpperCase() : '';
+      const langueCodeUpper = langueCode ? langueCode.toUpperCase() : '';
+      const langueMatch = (langueSheet === langueCodeUpper || langueSheet === 'TOUS');
+
+      const niveauMatch = (row[idx.niveau] > 0 && row[idx.niveau] <= niveauNumRequis);
+
+      if (typeMatch && profilMatch && niveauMatch && langueMatch && row[idx.id]) {
+        idsFichiersTrouves.add(row[idx.id]);
+      }
+    });
+    if (idsFichiersTrouves.size === 0) return [];
+    const fichiers = [];
+    idsFichiersTrouves.forEach(id => {
+      try {
+        fichiers.push(DriveApp.getFileById(id).getBlob());
+      } catch (e) {
+        Logger.log(`Impossible d'accéder au fichier Drive avec l'ID : ${id}`);
+      }
+    });
+    return fichiers;
+  } catch (e) {
+    Logger.log(`Erreur critique dans findAttachments : ${e.toString()}`);
+    return [];
+  }
+}
+
+function mapQuestionsById(bdd, nomFeuille) {
+  const sheet = bdd.getSheetByName(nomFeuille);
+  if (!sheet) { throw new Error(`Feuille de questions '${nomFeuille}' introuvable.`); }
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift();
+  const idCol = headers.indexOf('ID');
+  const paramsCol = headers.indexOf('Paramètres (JSON)');
+  const mapById = {};
+  data.forEach(row => {
+    const qId = row[idCol];
+    if (qId) {
+      mapById[qId] = { id: qId, params: row[paramsCol] };
+    }
+  });
+  return mapById;
+}
+
+// --- Fin du fichier: Utilities.js ---
+
+// --- Début du fichier: Logique_Universel.js ---
+// =================================================================================
+// == FICHIER : Logique_Universel.gs
+// == VERSION : 8.0 (Variables par thèmes Environnement + helper enrichirVariablesEnv)
+// == RÔLE  : Moteur de calcul universel capable de traiter n'importe quel test.
+// =================================================================================
+
+/**
+ * Fonction principale du moteur universel. Gère la logique multilingue.
+ * @param {object} reponsesUtilisateur - Les réponses lues depuis la feuille.
+ * @param {string} langueCible - La langue demandée pour le résultat (ex: 'EN').
+ * @param {object} config - La configuration du test.
+ * @param {string} langueOrigine - La langue dans laquelle l'utilisateur a répondu (ex: 'FR').
+ * @returns {object} Un objet contenant toutes les données du résultat, y compris les colonnes du profil.
+ */
+function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
+  // Initialisation simple de l'objet de résultats
+  let resultats = {
+    scoresData: {},
+    sousTotauxParMode: {}
+  };
+
+  const profilsMap = _chargerProfils(config.Type_Test, langueCible);
+  const questionsMapCible = _chargerQuestions(config.Type_Test, langueCible);
+  if (!questionsMapCible) return {}; // Sécurité
+
+  if (langueOrigine === langueCible) {
+    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats);
+  } else {
+    // La logique de traduction complexe reste inchangée...
+    const questionsMapOrigine = _chargerQuestions(config.Type_Test, langueOrigine);
+    if (!questionsMapOrigine) return {};
+
+    for (const enTeteComplet in reponsesUtilisateur) {
+      if (!enTeteComplet.includes(':')) continue;
+      const idQuestion = enTeteComplet.split(':')[0].trim();
+      const questionConfigCible = questionsMapCible[idQuestion];
+
+      if (questionConfigCible) {
+        if (questionConfigCible.parametres.mode === 'ECHELLE_NOTE') {
+          _aiguillerCalcul(questionConfigCible.parametres.mode, reponsesUtilisateur[enTeteComplet], questionConfigCible.parametres, resultats);
+        } else {
+          const questionConfigOrigine = questionsMapOrigine[idQuestion];
+          if (questionConfigOrigine && questionConfigOrigine.parametres && questionConfigOrigine.parametres.options) {
+            const reponseTexte = reponsesUtilisateur[enTeteComplet];
+            const reponsesArray = String(reponseTexte).split(',').map(r => r.trim());
+
+            reponsesArray.forEach(reponseSimple => {
+              const optionIndex = questionConfigOrigine.parametres.options.findIndex(opt => opt.libelle === reponseSimple);
+              if (optionIndex !== -1 && questionConfigCible.parametres.options && questionConfigCible.parametres.options[optionIndex]) {
+                const optionCible = questionConfigCible.parametres.options[optionIndex];
+                _aiguillerCalcul(questionConfigCible.parametres.mode, optionCible.libelle, questionConfigCible.parametres, resultats);
+              }
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // ==================== DÉBUT DE LA MODIFICATION FINALE ====================
+  // La détermination du profil final se fait une seule fois à la fin.
+  if (Object.keys(resultats.scoresData).length > 0) {
+    resultats.profilFinal = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langueCible);
+    
+    // On récupère TOUTES les données du profil final
+    const toutesLesDonneesDuProfil = profilsMap[resultats.profilFinal];
+
+    if (toutesLesDonneesDuProfil) {
+      // On fusionne les données du profil (Titre_Profil, Description_Profil, ConseilCarriere, etc.)
+      // avec l'objet de résultats existant.
+      resultats = { ...resultats, ...toutesLesDonneesDuProfil };
+    }
+    
+    // On garde cette map pour la brique Ligne_Score si besoin
+    resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
+  }
+  // ===================== FIN DE LA MODIFICATION FINALE =====================
+
+  // ===================== DÉBUT APPEL HELPER ENVIRONNEMENT ==================
+  // Option A (recommandée) : enrichir les variables par thème pour Environnement
+  try {
+    const typeTestLC = String(config.Type_Test || '').toLowerCase();
+    if (typeTestLC.indexOf('environnement') !== -1) {
+      resultats = enrichirVariablesEnv(resultats, reponsesUtilisateur, config, langueCible);
+    }
+  } catch (e) {
+    Logger.log('enrichirVariablesEnv non appliqué : ' + e.message);
+  }
+  // ====================== FIN APPEL HELPER ENVIRONNEMENT ===================
+
+  Logger.log("Calculs terminés. Résultats : " + JSON.stringify(resultats));
+  return resultats;
+}
+
+
+/**
+ * Exécute la logique de calcul sur un jeu de réponses et une configuration de questions.
+ */
+function _executerCalcul(reponses, questionsMap, resultats) {
+    for (const enTeteComplet in reponses) {
+        if (!enTeteComplet.includes(':')) continue;
+        const idQuestion = enTeteComplet.split(':')[0].trim();
+        const questionConfig = questionsMap[idQuestion];
+        if (questionConfig) {
+            const reponse = reponses[enTeteComplet];
+            const mode = questionConfig.parametres.mode;
+            const parametres = questionConfig.parametres;
+            _aiguillerCalcul(mode, reponse, parametres, resultats);
+        }
+    }
+}
+
+
+/**
+ * Aiguille le calcul vers la bonne sous-fonction en fonction du mode de traitement.
+ */
+function _aiguillerCalcul(mode, reponse, parametres, resultats) {
+    switch (mode) {
+      case 'QCU_DIRECT': _traiterQCU_DIRECT(reponse, parametres, resultats); break;
+      case 'QCU_CAT': _traiterQCU_CAT(reponse, parametres, resultats); break;
+      case 'QRM_CAT': _traiterQRM_CAT(reponse, parametres, resultats); break;
+      case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
+      default:
+        Logger.log(`Mode de traitement inconnu ou non implémenté : ${mode}`);
+        break;
+    }
+}
+
+// =================================================================================
+// == SOUS-FONCTIONS DE CALCUL (une par mode de traitement)
+// =================================================================================
+// CES FONCTIONS RESTENT INCHANGÉES...
+function _traiterQCU_DIRECT(reponseUtilisateur, parametres, resultats) {
+  if (!parametres || !parametres.profil) return;
+  resultats.scoresData[parametres.profil] = reponseUtilisateur;
+}
+
+function _traiterQCU_CAT(reponseUtilisateur, parametres, resultats) {
+  if (!reponseUtilisateur || !parametres || !parametres.options) return;
+  const optionTrouvee = parametres.options.find(opt => opt.libelle === reponseUtilisateur);
+  if (optionTrouvee && optionTrouvee.profil) {
+    const profil = optionTrouvee.profil;
+    const valeur = (typeof optionTrouvee.valeur === 'number') ? optionTrouvee.valeur : 1;
+    resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeur;
+  }
+}
+
+function _traiterQRM_CAT(reponseUtilisateur, parametres, resultats) {
+  if (!reponseUtilisateur || !parametres || !parametres.options) return;
+  const reponsesArray = String(reponseUtilisateur).split(',').map(r => r.trim());
+  reponsesArray.forEach(reponse => {
+    const optionTrouvee = parametres.options.find(opt => opt.libelle === reponse);
+    if (optionTrouvee && optionTrouvee.profil && typeof optionTrouvee.valeur === 'number') {
+      const profil = optionTrouvee.profil;
+      const valeur = optionTrouvee.valeur;
+      resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeur;
+    }
+  });
+}
+
+function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
+  if (!parametres || !parametres.profil) return;
+  const valeurNumerique = parseInt(reponseUtilisateur, 10);
+  if (!isNaN(valeurNumerique)) {
+    const profil = parametres.profil;
+    resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
+  }
+}
+
+// =================================================================================
+// == FONCTIONS UTILITAIRES INTERNES
+// =================================================================================
+// CES FONCTIONS RESTENT INCHANGÉES...
+function _determinerProfilFinalParSeuils(scoresData, typeTest, langue) {
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const nomFeuilleProfils = `Profils_${typeTest}_${langue}`;
+    const sheetProfils = bdd.getSheetByName(nomFeuilleProfils);
+    if (!sheetProfils) return "";
+    const dataProfils = sheetProfils.getRange("A2:C" + sheetProfils.getLastRow()).getValues();
+    const totalPoints = Object.values(scoresData).reduce((sum, val) => sum + val, 0);
+    if (totalPoints === 0) return "";
+    const profilMajoritaire = Object.keys(scoresData).reduce((a, b) => scoresData[a] > scoresData[b] ? a : b);
+    const scoreMajoritaire = scoresData[profilMajoritaire];
+    const pourcentage = (scoreMajoritaire / totalPoints) * 100;
+    for (const row of dataProfils) {
+      const nomProfil = row[0];
+      const conditionSeuil = row[1];
+      if (!nomProfil || !conditionSeuil) continue;
+      const codeProfilSeuil = conditionSeuil.split(' ')[0];
+      if (codeProfilSeuil.toUpperCase() !== profilMajoritaire.toUpperCase()) continue;
+      if (conditionSeuil.includes('>=')) {
+        const seuil = parseFloat(conditionSeuil.replace(/[^0-9.]/g, ''));
+        if (pourcentage >= seuil) return nomProfil;
+      } else if (conditionSeuil.includes('<=')) {
+        const seuil = parseFloat(conditionSeuil.replace(/[^0-9.]/g, ''));
+        if (pourcentage <= seuil) return nomProfil;
+      } else if (conditionSeuil.includes('-')) {
+        const parts = conditionSeuil.match(/(\d+)-(\d+)/);
+        if (parts) {
+          const min = parseInt(parts[1], 10);
+          const max = parseInt(parts[2], 10);
+          if (pourcentage >= min && pourcentage <= max) return nomProfil;
+        }
+      }
+    }
+    return profilMajoritaire;
+  } catch (e) {
+    Logger.log("Erreur dans _determinerProfilFinalParSeuils: " + e.message);
+    return "";
+  }
+}
+
+function _determinerProfilFinal(scoresData, typeTest, langue) {
+  if (!scoresData || Object.keys(scoresData).length === 0) return "";
+  const testsAvecSeuils = ["r&K_Adaptabilite", "r&K_Resilience", "r&K_Creativite"];
+  if (testsAvecSeuils.some(t => typeTest.toUpperCase() === t.toUpperCase())) {
+    return _determinerProfilFinalParSeuils(scoresData, typeTest, langue);
+  }
+  if (typeTest.toUpperCase() === 'MBTI') {
+    let profil = "";
+    profil += (scoresData.E || 0) > (scoresData.I || 0) ? 'E' : 'I';
+    profil += (scoresData.S || 0) > (scoresData.N || 0) ? 'S' : 'N';
+    profil += (scoresData.T || 0) > (scoresData.F || 0) ? 'T' : 'F';
+    profil += (scoresData.J || 0) > (scoresData.P || 0) ? 'J' : 'P';
+    return profil;
+  } else {
+    return Object.keys(scoresData).reduce((a, b) => scoresData[a] > scoresData[b] ? a : b);
+  }
+}
+
+function _creerMapCodeVersNom(profilsMap) {
+    const map = {};
+    for (const code in profilsMap) {
+        // MODIFIÉ : On cherche la clé 'Titre_Profil' ou une clé similaire
+        map[code] = profilsMap[code].Titre_Profil || profilsMap[code].titre || code;
+    }
+    return map;
+}
+
+function _chargerQuestions(typeTest, langue) {
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const nomFeuille = `Questions_${typeTest}_${langue}`;
+    const sheet = bdd.getSheetByName(nomFeuille);
+    if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idCol = headers.indexOf('ID');
+    const paramsCol = headers.indexOf('Paramètres (JSON)');
+    if (idCol === -1 || paramsCol === -1) throw new Error("Colonnes ID ou 'Paramètres (JSON)' manquantes.");
+    const questionsMap = {};
+    data.forEach(row => {
+      const id = row[idCol];
+      const paramsJSON = row[paramsCol];
+      if (id && paramsJSON) {
+        try {
+          const parametres = JSON.parse(paramsJSON);
+          if (parametres.mode) { questionsMap[id] = { id: id, parametres: parametres }; }
+        } catch (e) { Logger.log(`Erreur parsing JSON pour ID '${id}': ${e.message}`); }
+      }
+    });
+    return questionsMap;
+  } catch (e) {
+    Logger.log("Erreur critique _chargerQuestions: " + e.message);
+    return null;
+  }
+}
+
+// =================================================================================
+// == DÉBUT DE LA SECTION PRINCIPALE MODIFIÉE
+// =================================================================================
+
+/**
+ * Charge les profils depuis la BDD et retourne un objet où chaque clé est un code de profil
+ * et chaque valeur est un objet contenant TOUTES les données de la ligne correspondante.
+ * @param {string} typeTest Le type de test.
+ * @param {string} langue La langue des profils à charger.
+ * @returns {object} Une carte des profils avec toutes leurs données.
+ */
+function _chargerProfils(typeTest, langue) {
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const nomFeuille = `Profils_${typeTest}_${langue}`;
+    const sheet = bdd.getSheetByName(nomFeuille);
+    if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const profilsMap = {};
+
+    // Trouve la colonne qui sert de clé (Code_Profil ou Profil)
+    const codeColIndex = headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil');
+    if (codeColIndex === -1) throw new Error("Colonne 'Code_Profil' ou 'Profil' introuvable.");
+
+    data.forEach(row => {
+      const codeProfil = row[codeColIndex];
+      if (codeProfil) {
+        profilsMap[codeProfil] = {}; // Crée un objet pour ce profil
+        // Boucle sur toutes les colonnes pour remplir l'objet
+        headers.forEach((header, index) => {
+          if (header) {
+            profilsMap[codeProfil][header] = row[index];
+          }
+        });
+      }
+    });
+    
+    return profilsMap;
+  } catch (e) {
+      Logger.log("Erreur critique _chargerProfils: " + e.message + "\n" + e.stack);
+      return {};
+  }
+}
+// =================================================================================
+// == FIN DE LA SECTION MODIFIÉE
+// =================================================================================
+
+
+
+// =================================================================================
+// == HELPER ENVIRONNEMENT : enrichirVariablesEnv (Option A)
+// =================================================================================
+/**
+ * Enrichit `resultats` avec les variables par thème pour le test Environnement.
+ * - Lit l’onglet Questions_r&K_Environnement_[langue] pour mapper Titre -> (theme, dimension)
+ * - Récupère la valeur répondue depuis `reponses` (en-tête nettoyé)
+ * - Calcule moyennes par thème pour Stabilité et Vitesse (1..10)
+ * - Ajoute :
+ *    - resultats.themes = [{name, stabilite, vitesse, interpretStab, interpretVit, reco}]
+ *    - variables aplaties : Nom_Theme_1..15, Score_Stabilite_Theme_1..15, etc.
+ * - Si global non présent : calcule Score_Stabilite / Score_Vitesse + interprétations
+ *
+ * @param {Object} resultats   Objet de résultats existant (sera enrichi)
+ * @param {Object} reponses    Objet des réponses (clés = en-têtes nettoyés)
+ * @param {Object} config      Configuration du test
+ * @param {string} langueCible Code langue (ex. 'FR')
+ * @return {Object}            `resultats` enrichi
+ */
+function enrichirVariablesEnv(resultats, reponses, config, langueCible) {
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const sheetName = `Questions_${config.Type_Test}_${langueCible}`;
+    const sheet = bdd.getSheetByName(sheetName);
+    if (!sheet) {
+      Logger.log(`enrichirVariablesEnv: feuille introuvable: ${sheetName}`);
+      return resultats;
+    }
+
+    // Ordre canonique des 15 thèmes (doit matcher ceux utilisés dans Paramètres JSON)
+    const THEME_ORDER = [
+      'Concurrence & Pression du marché',
+      'Clients & Demande',
+      'Technologies & Innovation',
+      'Réglementation & Cadre juridique',
+      'Ressources humaines & Compétences',
+      'Financement & Accès aux capitaux',
+      'Fournisseurs & Logistique',
+      'Ressources & Infrastructures matérielles',
+      'Image & Réputation sectorielle',
+      'Partenariats & Réseaux',
+      'Territoire & Environnement géographique',
+      'Tendances sociétales & culturelles',
+      'Contexte économique global',
+      'Risques & Sécurité',
+      'Opportunités de croissance & Marchés'
+    ];
+
+    // Nettoyage d'en-tête (fallback si _nettoyerEnTete n'est pas accessible ici)
+    function sanitizeHeader(s) {
+      try { if (typeof _nettoyerEnTete === 'function') return _nettoyerEnTete(s); } catch(e){}
+      if (!s) return '';
+      var r = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return r.replace(/[^a-zA-Z0-9_]/g, '_');
+    }
+    function avg(list) { return (list && list.length) ? (list.reduce((a,b)=>a+Number(b||0),0)/list.length) : null; }
+    function round1(n) { return (n == null) ? '' : Number(n.toFixed(1)); }
+    function interpStab(v) { if (v==null) return ''; return v<=3?'Très r': v<=5?'r': v<=7?'K':'Très K'; }
+    function interpVit(v)  { if (v==null) return ''; return v<=3?'Très lent': v<=5?'Lent': v<=7?'Rapide':'Très rapide'; }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const colTitre = headers.indexOf('Titre');
+    const colParams = headers.indexOf('Paramètres (JSON)');
+    const colTypeQ = headers.indexOf('TypeQuestion');
+
+    // Agrégats par thème
+    const bucket = {}; // theme -> {stab:[], vit:[]}
+    for (let i=0;i<THEME_ORDER.length;i++) {
+      bucket[THEME_ORDER[i]] = { stab:[], vit:[] };
+    }
+
+    // Boucle questions : on mappe Titre nettoyé -> valeur de réponse
+    for (const row of data) {
+      const typeQ = (row[colTypeQ]||'').trim();
+      if (typeQ !== 'ECHELLE_NOTE') continue;
+
+      const titre = row[colTitre] || '';
+      const key = sanitizeHeader(titre);
+      const raw = reponses[key];
+      const val = Number(raw);
+      if (!isFinite(val)) continue;
+
+      let theme = '', dimension = '';
+      try {
+        const p = JSON.parse(row[colParams] || '{}');
+        theme = p.theme || '';
+        dimension = p.dimension || '';
+      } catch(e) {}
+
+      if (!theme || !bucket.hasOwnProperty(theme)) continue;
+      if (dimension === 'Stabilité') bucket[theme].stab.push(val);
+      else if (dimension === 'Vitesse') bucket[theme].vit.push(val);
+    }
+
+    // Projection dans resultats.themes + variables aplaties
+    resultats.themes = [];
+    let globStabVals = [], globVitVals = [];
+
+    for (let i=0;i<THEME_ORDER.length;i++) {
+      const tName = THEME_ORDER[i];
+      const stabAvg = avg(bucket[tName].stab);
+      const vitAvg  = avg(bucket[tName].vit);
+
+      if (stabAvg!=null) globStabVals = globStabVals.concat(bucket[tName].stab);
+      if (vitAvg!=null)  globVitVals  = globVitVals.concat(bucket[tName].vit);
+
+      const sScore = round1(stabAvg);
+      const vScore = round1(vitAvg);
+      const sInt = interpStab(stabAvg);
+      const vInt = interpVit(vitAvg);
+
+      // Recommandation par défaut (laisser vide pour être remplie plus tard depuis Profils si besoin)
+      const reco = '';
+
+      resultats.themes.push({
+        name: tName,
+        stabilite: sScore,
+        vitesse: vScore,
+        interpretStab: sInt,
+        interpretVit: vInt,
+        reco: reco
+      });
+
+      const j = i+1;
+      resultats['Nom_Theme_'+j] = tName;
+      resultats['Score_Stabilite_Theme_'+j] = sScore;
+      resultats['Interpretation_Stabilite_Theme_'+j] = sInt;
+      resultats['Score_Vitesse_Theme_'+j] = vScore;
+      resultats['Interpretation_Vitesse_Theme_'+j] = vInt;
+      resultats['Recommandations_Theme_'+j] = reco;
+    }
+
+    // Scores globaux si absents dans `resultats`
+    function maybeSet(obj, k, v) { if (obj[k] == null || obj[k] === '') obj[k] = v; }
+    const gStab = round1(avg(globStabVals));
+    const gVit  = round1(avg(globVitVals));
+    maybeSet(resultats, 'Score_Stabilite', gStab);
+    maybeSet(resultats, 'Interpretation_Stabilite', interpStab(gStab || null));
+    maybeSet(resultats, 'Score_Vitesse', gVit);
+    maybeSet(resultats, 'Interpretation_Vitesse', interpVit(gVit || null));
+
+  } catch(e) {
+    Logger.log('enrichirVariablesEnv() ERREUR: ' + e.message + '\n' + e.stack);
+  }
+  return resultats;
+}
+
+// --- Fin du fichier: Logique_Universel.js ---
+
+// --- Début du fichier: RetraitementUI.html ---
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: 'Roboto', Arial, sans-serif; padding: 0 20px; background-color: #f8f9fa; color: #3c4043; }
+      h3 { font-size: 20px; font-weight: 500; color: #1a73e8; border-bottom: 1px solid #dadce0; padding-bottom: 8px; margin-top: 24px; }
+      .form-group { margin-bottom: 16px; }
+      label { font-size: 12px; font-weight: 700; color: #5f6368; display: block; margin-bottom: 4px; }
+      input[type="text"], input[type="email"], select { width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+      input[type="text"][readonly] { background-color: #f1f3f4; color: #5f6368; }
+      .button-group { margin-top: 24px; display: flex; justify-content: space-between; }
+      button { padding: 10px 16px; border: none; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; }
+      #btn-lancer { background-color: #1a73e8; color: white; }
+      #btn-annuler { background-color: #e8eaed; color: #5f6368; }
+      #status { margin-top: 16px; font-size: 12px; color: #5f6368; padding: 8px; background-color: #e8f0fe; border-radius: 4px; text-align: center; display: none; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <input type="hidden" id="row-index-data" value="<?= ligneActive ?>">
+    
+    <h3>Retraitement de Réponse</h3>
+
+    <div id="info-section">
+      <div class="form-group"> <label for="nom">NOM DU RÉPONDANT</label> <input type="text" id="nom" readonly> </div>
+      <div class="form-group"> <label for="email">E-MAIL DU RÉPONDANT</label> <input type="text" id="email" readonly> </div>
+      <div class="form-group"> <label for="langue-origine">LANGUE D'ORIGINE</label> <input type="text" id="langue-origine" readonly> </div>
+    </div>
+    
+    <hr>
+    
+    <h3>Options</h3>
+    <div id="options-section">
+        <div class="form-group">
+          <label for="langue-cible">FORCER LA LANGUE DE L'E-MAIL</label>
+          <select id="langue-cible">
+            <option value="FR">Français (FR)</option> <option value="EN">English (EN)</option> <option value="ES">Español (ES)</option> <option value="DE">Deutsch (DE)</option>
+          </select>
+        </div>
+        <div class="form-group">
+         <label for="niveau-resultat">FORCER LE NIVEAU DE RÉSULTAT</label>
+         <select id="niveau-resultat">
+           <option value="">Automatique (par défaut)</option>
+           <option value="N1">Niveau 1</option>
+           <option value="N2">Niveau 2</option>
+           <option value="N3">Niveau 3</option>
+         </select>
+       </div>
+       
+       <div class="form-group">
+         <label for="alias-expediteur">ALIAS D'EXPÉDITION (LAISSER VIDE POUR DÉFAUT)</label>
+         <input type="email" id="alias-expediteur">
+       </div>
+       </div>
+    
+    <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
+    <div id="destinataires-section">
+      <div class="form-group">
+        <label style="display: flex; align-items: center; font-weight: normal;"> <input type="checkbox" id="check-repondant" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Répondant </label>
+        <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-formateur" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Formateur </label>
+        <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-patron" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Patron </label>
+      </div>
+      
+      <div id="formateur-email-group" class="form-group hidden">
+        <label for="email-formateur">E-MAIL DU FORMATEUR</label>
+        <input type="email" id="email-formateur" placeholder="adresse.formateur@example.com">
+      </div>
+      
+      <div id="patron-email-group" class="form-group hidden">
+        <label for="email-patron">E-MAIL DU PATRON</label>
+        <input type="email" id="email-patron" placeholder="adresse.patron@example.com">
+      </div>
+
+      <div class="form-group">
+          <label for="email-test">AJOUTER UNE ADRESSE DE TEST</label>
+          <input type="email" id="email-test" placeholder="adresse.test@example.com">
+      </div>
+    </div>
+
+    <div class="button-group"> <button id="btn-annuler">Annuler</button> <button id="btn-lancer">🚀 Lancer le Retraitement</button> </div>
+    <div id="status">Chargement...</div>
+
+    <script>
+      window.onload = function() {
+        const rowIndex = document.getElementById('row-index-data').value;
+        
+        const statusDiv = document.getElementById('status');
+        const lancerBtn = document.getElementById('btn-lancer');
+        
+        const checkFormateur = document.getElementById('check-formateur');
+        const formateurEmailGroup = document.getElementById('formateur-email-group');
+        const checkPatron = document.getElementById('check-patron');
+        const patronEmailGroup = document.getElementById('patron-email-group');
+
+        // Fonctions de rappel
+        function onDataReceived(data) {
+          document.getElementById('nom').value = data.nomRepondant || 'Non trouvé';
+          document.getElementById('email').value = data.emailRepondant || 'Non trouvé';
+          document.getElementById('langue-origine').value = data.langueOrigine || 'Non détectée';
+          document.getElementById('langue-cible').value = data.langueOrigine || 'FR';
+          
+          // ==================== DÉBUT MODIFICATION ====================
+          document.getElementById('alias-expediteur').value = data.emailAlias || '';
+          // ===================== FIN MODIFICATION =====================
+
+          document.getElementById('check-repondant').checked = data.repondantActif;
+          document.getElementById('check-formateur').checked = data.formateurActif;
+          document.getElementById('check-patron').checked = data.patronActif;
+          
+          if (data.formateurEmail) {
+            document.getElementById('email-formateur').value = data.formateurEmail;
+          }
+          formateurEmailGroup.classList.toggle('hidden', !data.formateurActif);
+          
+          if (data.patronEmail) {
+            document.getElementById('email-patron').value = data.patronEmail;
+          }
+          patronEmailGroup.classList.toggle('hidden', !data.patronActif);
+
+          statusDiv.style.display = 'none';
+          lancerBtn.disabled = false;
+        }
+
+        function onLaunchSuccess(message) {
+          statusDiv.textContent = message;
+          setTimeout(() => google.script.host.close(), 3000); 
+        }
+
+        function onFailure(error) {
+          statusDiv.textContent = "Erreur : " + error.message;
+          statusDiv.style.backgroundColor = '#fce8e6';
+          lancerBtn.disabled = false;
+        }
+
+        // Écouteurs d'événements
+        checkFormateur.addEventListener('change', function() {
+          formateurEmailGroup.classList.toggle('hidden', !this.checked);
+        });
+        checkPatron.addEventListener('change', function() {
+          patronEmailGroup.classList.toggle('hidden', !this.checked);
+        });
+        
+        document.getElementById('btn-lancer').addEventListener('click', function() {
+          lancerBtn.disabled = true;
+          statusDiv.style.display = 'block';
+          
+          const options = {
+            rowIndex: rowIndex,
+            langue: document.getElementById('langue-cible').value,
+            niveau: document.getElementById('niveau-resultat').value,
+            
+            // ==================== DÉBUT MODIFICATION ====================
+            alias: document.getElementById('alias-expediteur').value.trim(),
+            // ===================== FIN MODIFICATION =====================
+
+            destinataires: {
+              repondant: document.getElementById('check-repondant').checked,
+              formateur: document.getElementById('check-formateur').checked,
+              formateurEmail: document.getElementById('email-formateur').value.trim(),
+              patron: document.getElementById('check-patron').checked,
+              patronEmail: document.getElementById('email-patron').value.trim(),
+              test: document.getElementById('email-test').value.trim()
+            }
+          };
+          google.script.run.withSuccessHandler(onLaunchSuccess).withFailureHandler(onFailure).lancerRetraitementDepuisUI(options);
+        });
+
+        document.getElementById('btn-annuler').addEventListener('click', () => google.script.host.close());
+
+        // Appel initial pour charger les données
+        statusDiv.style.display = 'block';
+        google.script.run.withSuccessHandler(onDataReceived).withFailureHandler(onFailure).getDonneesPourRetraitement(rowIndex);
+      };
+    </script>
+  </body>
+</html>
+// --- Fin du fichier: RetraitementUI.html ---
+
+// --- Début du fichier: Menu.js ---
+// =================================================================================
+// == FICHIER : Menu.gs
+// == VERSION : 2.3 (Retour à la saisie manuelle systématique du N° de ligne)
+// == RÔLE : Crée le menu et gère l'ouverture de l'interface de retraitement.
+// =================================================================================
+
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+
+  // Menu principal existant
+  const main = ui.createMenu('⚙️ Actions Usine')
+    .addItem("Activer le traitement auto", "activerTraitementAutomatique")
+    .addSeparator()
+    .addItem("Retraiter une réponse...", "retraiterReponse_UI");
+
+  // Sous-menu Injecteur (ajout non intrusif)
+  // Si jamais les fonctions n'existent pas (ex: ancien fichier réponses), on saute proprement.
+  if (typeof injectScenarioStableLent === 'function') {
+    const inj = ui.createMenu('Injecteur')
+      .addItem('Stable & Lent',       'injectScenarioStableLent')
+      .addItem('Turbulent & Rapide',  'injectScenarioTurbulentRapide')
+      .addItem('Mixte',               'injectScenarioMixte')
+      .addSeparator()
+      .addItem('Stable & Rapide',     'injectScenarioStableRapide')
+      .addItem('Instable & Lent',     'injectScenarioInstableLent')
+      .addItem('Très K (stable fort)','injectScenarioKFort')
+      .addItem('Très r (turbulent)',  'injectScenarioRFort')
+      .addItem('Alterné',             'injectScenarioAlterne')
+      .addItem('Médian',              'injectScenarioMedian')
+      .addItem('Stress test x3',      'injectScenarioStressTest');
+    main.addSubMenu(inj);
+  }
+
+  main.addToUi();
+}
+
+
+/**
+ * Ouvre une boîte de dialogue pour demander le numéro de la ligne à retraiter.
+ * C'est maintenant la fonction par défaut appelée par le menu.
+ */
+function retraiterReponse_UI() {
+  const ui = SpreadsheetApp.getUi();
+  const htmlOutput = HtmlService.createHtmlOutputFromFile('DialogueLigne.html')
+    .setWidth(350)
+    .setHeight(160);
+  ui.showModalDialog(htmlOutput, 'Retraitement de Réponse');
+}
+
+/**
+ * Ouvre la barre latérale de retraitement pour une ligne donnée.
+ * Cette fonction est appelée par le code HTML de 'DialogueLigne.html'.
+ */
+function ouvrirSidebarPourLigne(rowIndex) {
+  const ui = SpreadsheetApp.getUi();
+  const template = HtmlService.createTemplateFromFile('RetraitementUI');
+  template.ligneActive = rowIndex;
+  const htmlOutput = template.evaluate()
+    .setTitle("Retraitement - Ligne " + rowIndex)
+    .setWidth(350);
+  ui.showSidebar(htmlOutput);
+}
+
+/**
+ * Crée le déclencheur "onFormSubmit" pour le traitement automatique.
+ */
+function activerTraitementAutomatique() {
+  const ss = SpreadsheetApp.getActive();
+  const triggers = ScriptApp.getUserTriggers(ss);
+  triggers.forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'onFormSubmit') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  ScriptApp.newTrigger('onFormSubmit')
+    .forSpreadsheet(ss)
+    .onFormSubmit()
+    .create();
+  SpreadsheetApp.getUi().alert('✅ Déclencheur activé ! Le traitement automatique des réponses est maintenant opérationnel.');
+}
+// --- Fin du fichier: Menu.js ---
+
+// --- Début du fichier: DialogueLigne.html ---
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <style>
+      body { padding: 20px; font-family: Arial, sans-serif; text-align: center; }
+      input { width: 100%; margin-bottom: 15px; }
+      button { margin-left: 10px; }
+    </style>
+  </head>
+  <body>
+    <p>Entrez le numéro de la ligne à retraiter :</p>
+    <input type="text" id="row-input" autofocus>
+    <div>
+      <button class="action" onclick="submitRow()">OK</button>
+      <button onclick="google.script.host.close()">Annuler</button>
+    </div>
+
+    <script>
+      // Permet d'utiliser la touche "Entrée"
+      document.getElementById('row-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitRow();
+        }
+      });
+
+      function submitRow() {
+        const rowNum = document.getElementById('row-input').value;
+        if (!isNaN(rowNum) && rowNum.trim() !== '' && parseInt(rowNum, 10) > 1) {
+          // Appelle la fonction côté serveur pour ouvrir la barre latérale
+          google.script.run.ouvrirSidebarPourLigne(parseInt(rowNum, 10));
+          google.script.host.close(); // Ferme ce dialogue
+        } else {
+          alert('Veuillez entrer un numéro de ligne valide (supérieur à 1).');
+        }
+      }
+    </script>
+  </body>
+</html>
+// --- Fin du fichier: DialogueLigne.html ---
+
+// --- Début du fichier: GestionTriggers.js ---
+// =================================================================================
+// == FICHIER : GestionTriggers.gs
+// == VERSION : 1.0 (Création initiale)
+// == RÔLE  : Gère la création et l'exécution des envois d'e-mails différés.
+// =================================================================================
+
+/**
+ * Calcule le délai en millisecondes à partir d'une chaîne de caractères (ex: "4h", "1j").
+ * @param {string} valeurDelai - La chaîne de caractères représentant le délai.
+ * @returns {number} Le délai en millisecondes. Retourne 0 si le format est invalide.
+ */
+function _calculerDelaiEnMs(valeurDelai) {
+  if (!valeurDelai || typeof valeurDelai !== 'string') return 0;
+
+  const valeurNumerique = parseInt(valeurDelai.replace(/[^0-9]/g, ''), 10);
+  if (isNaN(valeurNumerique)) return 0;
+
+  if (valeurDelai.includes('h')) {
+    return valeurNumerique * 60 * 60 * 1000; // Heures en millisecondes
+  } else if (valeurDelai.includes('j')) {
+    return valeurNumerique * 24 * 60 * 60 * 1000; // Jours en millisecondes
+  } else if (valeurDelai.includes('min')) {
+    return valeurNumerique * 60 * 1000; // Minutes en millisecondes
+  }
+
+  return 0; // Format non reconnu
+}
+
+
+/**
+ * Programme l'envoi différé de l'e-mail de résultats.
+ * Crée un déclencheur unique et sauvegarde les informations nécessaires.
+ */
+function programmerEnvoiResultats(rowIndex, langueCible, delai) {
+  try {
+    const delaiEnMs = _calculerDelaiEnMs(delai);
+    if (delaiEnMs <= 0) {
+      Logger.log(`Délai invalide ou nul (${delai}). Annulation de la programmation.`);
+      return;
+    }
+
+    // Identifiant unique pour ce déclencheur et ses données
+    const proprieteId = `envoiDiffere_${new Date().getTime()}_${rowIndex}`;
+
+    // 1. Sauvegarder les informations nécessaires pour l'envoi
+    const properties = PropertiesService.getScriptProperties();
+    properties.setProperty(proprieteId, JSON.stringify({
+      rowIndex: rowIndex,
+      langueCible: langueCible
+    }));
+
+    // 2. Créer le déclencheur qui s'exécutera après le délai
+    ScriptApp.newTrigger('envoyerEmailProgramme')
+      .timeBased()
+      .after(delaiEnMs)
+      .create();
+
+    Logger.log(`Envoi programmé avec succès pour la ligne ${rowIndex}. Délai : ${delai}. ID de propriété : ${proprieteId}`);
+
+  } catch (e) {
+    Logger.log(`ERREUR lors de la programmation de l'envoi pour la ligne ${rowIndex}: ${e.toString()}\n${e.stack}`);
+  }
+}
+
+/**
+ * Fonction exécutée par le déclencheur pour envoyer l'e-mail de résultats.
+ * @param {object} e - L'objet événement passé par le déclencheur.
+ */
+function envoyerEmailProgramme(e) {
+  const properties = PropertiesService.getScriptProperties();
+  const toutesLesProps = properties.getProperties();
+
+  // On cherche la première propriété correspondant à un envoi différé
+  const proprieteId = Object.keys(toutesLesProps).find(key => key.startsWith('envoiDiffere_'));
+
+  if (!proprieteId) {
+    Logger.log("Déclencheur d'envoi programmé exécuté, mais aucune propriété de tâche trouvée. Annulation.");
+    return;
+  }
+
+  try {
+    const donnees = JSON.parse(properties.getProperty(proprieteId));
+    const { rowIndex, langueCible } = donnees;
+
+    Logger.log(`Exécution de l'envoi programmé pour la ligne ${rowIndex} (ID: ${proprieteId})`);
+
+    // Reconstituer le contexte nécessaire
+    const config = getTestConfiguration(); // Assurez-vous que cette fonction est accessible
+    const reponse = _creerObjetReponse(rowIndex); // Et celle-ci aussi
+    const langueOrigine = getOriginalLanguage(reponse);
+    const resultats = calculerResultats(reponse, langueCible, config, langueOrigine);
+
+    // Envoyer l'e-mail
+    assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, {});
+
+    // Nettoyage : supprimer la propriété
+    properties.deleteProperty(proprieteId);
+    Logger.log(`Nettoyage de la propriété ${proprieteId} terminé.`);
+
+  } catch (err) {
+    Logger.log(`ERREUR FATALE lors de l'exécution de l'envoi programmé (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
+    // On supprime quand même la propriété pour éviter des erreurs en boucle
+    properties.deleteProperty(proprieteId);
+  } finally {
+    // Nettoyage : supprimer le déclencheur qui vient de s'exécuter
+    if (e && e.triggerUid) {
+      const allTriggers = ScriptApp.getProjectTriggers();
+      for (const trigger of allTriggers) {
+        if (trigger.getUniqueId() === e.triggerUid) {
+          ScriptApp.deleteTrigger(trigger);
+          Logger.log(`Déclencheur ${e.triggerUid} auto-détruit avec succès.`);
+          break;
+        }
+      }
+    }
+  }
+}
+// --- Fin du fichier: GestionTriggers.js ---
+
+// --- Début du fichier: TestFusionDoc.js ---
+function testFusionRapportFull() {
+  const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
+
+  const themes = [
+    'Concurrence & Marché','Clients & Demande','Technologies & Innovation',
+    'Réglementation & Cadre juridique','Ressources humaines & Compétences',
+    'Financement & Accès aux capitaux','Fournisseurs & Logistique',
+    'Ressources & Infrastructures matérielles','Image & Réputation sectorielle',
+    'Partenariats & Réseaux','Territoire & Environnement géographique',
+    'Tendances sociétales & culturelles','Contexte économique global',
+    'Risques & Sécurité','Opportunités de croissance & Marchés'
+  ];
+
+  const vars = {
+    Nom_Entreprise: 'ACME SA',
+    Score_Stabilite: 7,
+    Interpretation_Stabilite: 'Plutôt K (stable)',
+    Score_Vitesse: 4,
+    Interpretation_Vitesse: 'Changements lents'
+  };
+
+  // Remplir les 15 thèmes
+  for (let i = 0; i < themes.length; i++) {
+    const j = i + 1;
+    vars['Nom_Theme_' + j] = themes[i];
+    // exemples de scores ; mets tes vraies valeurs si dispo
+    vars['Score_Stabilite_Theme_' + j] = 5 + (i % 3);          // 5..7
+    vars['Interpretation_Stabilite_Theme_' + j] = ['Instable','Modéré','Assez stable'][(i)%3];
+    vars['Score_Vitesse_Theme_' + j] = 3 + ((i+1) % 5);        // 3..7
+    vars['Interpretation_Vitesse_Theme_' + j] = ['Lent','Modéré','Rapide','Très rapide','Modéré'][(i+1)%5];
+    vars['Recommandations_Theme_' + j] = 'Recommandations ciblées pour le thème ' + j + '.';
+  }
+
+  const pdf = genererPdfDepuisModele(templateId, vars, 'Test_Rapport_Expert_FULL');
+  DriveApp.createFile(pdf).setName('Test_Rapport_Expert_FULL.pdf');
+}
+
+// --- Fin du fichier: TestFusionDoc.js ---
+
+// --- Début du fichier: InjecteurScenarios.js ---
+/**********************************************
+ * Injecteur de scénarios — r&K_Environnement
+ * VERSION : 1.5
+ * - Retire onOpen (aucun menu autonome)
+ * - Corrige createResponse(...) pour LIST/MC (valeur string)
+ * - Plusieurs scénarios (stable_rapide, instable_lent, k_fort, r_fort, alterne, median, stress)
+ * - Alternance fiable par index d’échelle
+ * - Fallback sûr sur sélecteurs requis (auto-choix 1)
+ *
+ * Envoie des réponses au Google Form ciblé
+ * pour tester le pipeline (calculs, emails, PDF).
+ *
+ * Ouvre le CONFIG central par ID :
+ *  1) via getSystemIds().ID_CONFIG si dispo
+ *  2) sinon via la constante globale ID_FEUILLE_CONFIGURATION
+ * Supporte les questions échelle même si le titre
+ * ne contient pas l’ID "ENV001" (fallback par ordre).
+ **********************************************/
+
+// ========= Réglages rapides =========
+const INJECT_DEFAULT = {
+  rowIndex: 9,                     // ← n° de ligne dans l’onglet "Paramètres Généraux" (CONFIG)
+  nbSubmissions: 1,                // nombre de soumissions par clic
+  langue: 'FR',                    // valeur à injecter si un champ langue existe
+  emailTest: 'dev.scenario+rk@example.com'
+};
+
+// ========= API publique (fonctions appelables) =========
+function injectScenarioStableLent()      { _injectScenario({ type: 'stable_lent',      ...INJECT_DEFAULT }); }
+function injectScenarioTurbulentRapide() { _injectScenario({ type: 'turbulent_rapide', ...INJECT_DEFAULT }); }
+function injectScenarioMixte()           { _injectScenario({ type: 'mixte',            ...INJECT_DEFAULT }); }
+function injectScenarioStableRapide()    { _injectScenario({ type: 'stable_rapide',    ...INJECT_DEFAULT }); }
+function injectScenarioInstableLent()    { _injectScenario({ type: 'instable_lent',    ...INJECT_DEFAULT }); }
+function injectScenarioKFort()           { _injectScenario({ type: 'k_fort',           ...INJECT_DEFAULT }); }
+function injectScenarioRFort()           { _injectScenario({ type: 'r_fort',           ...INJECT_DEFAULT }); }
+function injectScenarioAlterne()         { _injectScenario({ type: 'alterne',          ...INJECT_DEFAULT }); }
+function injectScenarioMedian()          { _injectScenario({ type: 'median',           ...INJECT_DEFAULT }); }
+function injectScenarioStressTest()      { _injectScenario({ type: 'stress',           ...INJECT_DEFAULT, nbSubmissions: 3 }); }
+
+// ================== COEUR ==================
+function _injectScenario(opts) {
+  const scenario  = (opts && opts.type) || 'stable_lent';
+  const rowIndex  = (opts && opts.rowIndex) || INJECT_DEFAULT.rowIndex;
+  const nb        = (opts && opts.nbSubmissions) || 1;
+  const langue    = (opts && opts.langue) || 'FR';
+  const emailTest = (opts && opts.emailTest) || INJECT_DEFAULT.emailTest;
+
+  // 1) CONFIG (ouvre le bon fichier)
+  const cfg = _getCfgRow(rowIndex); // lit la ligne "Paramètres Généraux"
+  if (!cfg.ID_Formulaire_Cible) {
+    throw new Error("CONFIG ligne " + cfg._rowIndex + " : ID_Formulaire_Cible manquant.");
+  }
+
+  const form  = FormApp.openById(String(cfg.ID_Formulaire_Cible).trim());
+  const items = form.getItems();
+
+  // 2) BDD : profil de chaque ENVxxx (Stabilité / Vitesse)
+  const profilSequence = _getProfilSequenceFromBDD(); // ex: ['ENV_STABILITE','ENV_STABILITE','ENV_VITESSE',...]
+
+  // 3) FABRICATION/ENVOI
+  for (let k = 0; k < nb; k++) {
+    const resp = form.createResponse();
+    let scaleIndex = 0; // réinitialisé à chaque soumission
+
+    items.forEach(it => {
+      const t = it.getType();
+
+      // a) Échelles (SCALE)
+      if (t === FormApp.ItemType.SCALE) {
+        const scale = it.asScaleItem();
+        const title = scale.getTitle() || '';
+
+        // 1er essai : extraire ENVxxx du titre
+        let profil = null;
+        const idMatch = title.match(/(ENV\d{3,})/i);
+        if (idMatch) {
+          profil = _profilFromId(idMatch[1]);
+        }
+        // Fallback : prendre le profil à l'index courant
+        if (!profil) {
+          profil = profilSequence[scaleIndex] || 'ENV_STABILITE';
+        }
+
+        const min = scale.getLowerBound();
+        const max = scale.getUpperBound();
+        const val = _valueForScenario(profil, min, max, scenario, scaleIndex);
+        resp.withItemResponse(scale.createResponse(val));
+
+        scaleIndex++;
+
+      // b) Champs texte (email, nom/entreprise, langue libre)
+      } else if (t === FormApp.ItemType.TEXT) {
+        const ti = it.asTextItem();
+        const title = (ti.getTitle() || '').toLowerCase();
+
+        if (title.match(/mail|e-?mail/)) {
+          resp.withItemResponse(ti.createResponse(emailTest));
+        } else if (title.match(/nom|name|entreprise|company/)) {
+          const label =
+              scenario === 'stable_lent'       ? 'Entreprise ALPHA (Stable & Lent)' :
+              scenario === 'turbulent_rapide'  ? 'Entreprise BETA (Turbulent & Rapide)' :
+              scenario === 'stable_rapide'     ? 'Entreprise DELTA (Stable & Rapide)' :
+              scenario === 'instable_lent'     ? 'Entreprise EPSILON (Instable & Lent)' :
+              scenario === 'k_fort'            ? 'Entreprise KAPPA (Très K)' :
+              scenario === 'r_fort'            ? 'Entreprise RHO (Très r)' :
+              scenario === 'alterne'           ? 'Entreprise SIGMA (Alterné)' :
+              scenario === 'median'            ? 'Entreprise OMEGA (Médian)' :
+                                                  'Entreprise GAMMA (Mixte)';
+          resp.withItemResponse(ti.createResponse(label));
+        } else if (title.match(/langue|language/)) {
+          resp.withItemResponse(ti.createResponse(langue === 'FR' ? 'Français' : langue));
+        }
+
+      // c) Listes / Choix multiples (langue, consentement, etc.)
+      } else if (t === FormApp.ItemType.MULTIPLE_CHOICE || t === FormApp.ItemType.LIST) {
+        const sel   = (t === FormApp.ItemType.MULTIPLE_CHOICE) ? it.asMultipleChoiceItem() : it.asListItem();
+        const title = (sel.getTitle() || '').toLowerCase();
+        const choices = sel.getChoices() || [];
+
+        // Gestion d’un sélecteur de langue (FR/EN/ES/DE…)
+        if (title.match(/langue|language/)) {
+          const target = (langue || 'FR').toString();
+          const wanted = target.toUpperCase() === 'FR'
+            ? /(fran|français|\bFR\b)/i
+            : new RegExp(target, 'i');
+
+          const hit = choices.find(c => wanted.test(String(c.getValue && c.getValue())));
+          const value = hit ? hit.getValue() : (choices[0] ? choices[0].getValue() : 'Français');
+
+          // IMPORTANT : passer une *valeur string*, pas l’objet Choice
+          resp.withItemResponse(sel.createResponse(value));
+
+        } else {
+          // Fallback : si l’item est requis et non mappé, choisir la 1ère option
+          if (sel.isRequired && choices.length > 0) {
+            resp.withItemResponse(sel.createResponse(choices[0].getValue()));
+          }
+        }
+      }
+      // autres types ignorés
+    });
+
+    const submitted = resp.submit(); // déclenche onFormSubmit côté Sheet de réponses
+    Logger.log('[OK] Scenario %s → ResponseId=%s | EditUrl=%s',
+      scenario,
+      submitted.getId && submitted.getId(),
+      submitted.getEditResponseUrl && submitted.getEditResponseUrl());
+  }
+
+  Logger.log('Injection terminée : %s envoi(s) pour la ligne CONFIG %s.', nb, cfg._rowIndex);
+}
+
+// =============== Accès CONFIG & BDD ===============
+function _getCfgRow(rowIndex) {
+  const { ss, sheet } = _openConfig_();
+  const lastCol  = sheet.getLastColumn();
+  const headers  = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const values   = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+  if (!values || values.every(v => v === '' || v == null)) {
+    throw new Error('Ligne CONFIG vide ou invalide: ' + rowIndex);
+  }
+  const cfg = {};
+  headers.forEach((h, i) => { if (h) cfg[String(h)] = values[i]; });
+  cfg._rowIndex = rowIndex;
+  return cfg;
+}
+
+function _openConfig_() {
+  // 1) via getSystemIds().ID_CONFIG si dispo
+  try {
+    if (typeof getSystemIds === 'function') {
+      const ids = getSystemIds();
+      if (ids && ids.ID_CONFIG) {
+        const ss = SpreadsheetApp.openById(ids.ID_CONFIG);
+        const sheet = ss.getSheetByName('Paramètres Généraux');
+        if (!sheet) throw new Error("Onglet 'Paramètres Généraux' introuvable.");
+        return { ss, sheet };
+      }
+    }
+  } catch (e) {
+    // on retente via la constante
+  }
+  // 2) via constante globale ID_FEUILLE_CONFIGURATION
+  if (typeof ID_FEUILLE_CONFIGURATION === 'string' && ID_FEUILLE_CONFIGURATION.trim() !== '') {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION);
+    const sheet = ss.getSheetByName('Paramètres Généraux');
+    if (!sheet) throw new Error("Onglet 'Paramètres Généraux' introuvable.");
+    return { ss, sheet };
+  }
+  throw new Error('Impossible d’ouvrir la feuille CONFIG (ni ID_CONFIG ni ID_FEUILLE_CONFIGURATION).');
+}
+
+function _getProfilSequenceFromBDD() {
+  const ids = (typeof getSystemIds === 'function') ? getSystemIds() : null;
+  if (!ids || !ids.ID_BDD) throw new Error('ID_BDD introuvable dans sys_ID_Fichiers.');
+  const bdd = SpreadsheetApp.openById(ids.ID_BDD);
+  const qSheet = bdd.getSheetByName('Questions_r&K_Environnement_FR');
+  if (!qSheet) throw new Error("BDD: onglet Questions_r&K_Environnement_FR introuvable");
+
+  const qData = qSheet.getDataRange().getValues();
+  const headers = qData.shift();
+  const typeCol   = headers.indexOf('TypeQuestion');
+  const paramsCol = headers.indexOf('Paramètres (JSON)');
+
+  const seq = [];
+  qData.forEach(r => {
+    const type = r[typeCol];
+    const pj   = r[paramsCol];
+    if (String(type).toUpperCase() === 'ECHELLE_NOTE' && pj) {
+      try {
+        const p = JSON.parse(pj);
+        if (p && p.profil) seq.push(String(p.profil));
+      } catch (_) {}
+    }
+  });
+  return seq;
+}
+
+function _profilFromId(envId) {
+  try {
+    const ids = (typeof getSystemIds === 'function') ? getSystemIds() : null;
+    if (!ids || !ids.ID_BDD) return null;
+    const bdd = SpreadsheetApp.openById(ids.ID_BDD);
+    const qSheet = bdd.getSheetByName('Questions_r&K_Environnement_FR');
+    if (!qSheet) return null;
+
+    const qData = qSheet.getDataRange().getValues();
+    const headers = qData.shift();
+    const idCol     = headers.indexOf('ID');
+    const paramsCol = headers.indexOf('Paramètres (JSON)');
+    const row = qData.find(r => String(r[idCol]).toUpperCase() === String(envId).toUpperCase());
+    if (!row) return null;
+    const p = JSON.parse(row[paramsCol] || '{}');
+    return p.profil || null;
+  } catch(_) {
+    return null;
+  }
+}
+
+// =============== Génération de valeurs ===============
+function _valueForScenario(profil, min, max, scenario, idx /* index d’échelle */) {
+  const clamp = (v) => Math.max(min, Math.min(max, v));
+  const span  = max - min;
+  const rnd   = () => Math.random();
+
+  const hi  = () => clamp(Math.round(max - span * 0.05 * rnd()));                  // très haut
+  const lo  = () => clamp(Math.round(min + span * 0.05 * rnd()));                  // très bas
+  const mid = () => clamp(Math.round(min + span * (0.45 + 0.10 * (rnd() - 0.5)))); // milieu ±
+
+  const isStab    = String(profil || '').toUpperCase().indexOf('STABILITE') >= 0;
+  const isVitesse = String(profil || '').toUpperCase().indexOf('VITESSE')   >= 0;
+
+  switch (scenario) {
+    case 'stable_lent':
+      return isStab ? hi() : isVitesse ? lo() : mid();
+    case 'turbulent_rapide':
+      return isStab ? lo() : isVitesse ? hi() : mid();
+    case 'stable_rapide':
+      return isStab ? hi() : isVitesse ? hi() : mid();
+    case 'instable_lent':
+      return isStab ? lo() : isVitesse ? lo() : mid();
+    case 'k_fort':
+      return isStab ? hi() : mid();
+    case 'r_fort':
+      return isVitesse ? hi() : mid();
+    case 'alterne':
+      return (idx % 2 === 0) ? hi() : lo();
+    case 'median':
+      return mid();
+    case 'mixte':
+    default:
+      if (isStab)    return clamp(Math.round(min + span * (0.55 + 0.15 * (rnd() - 0.5))));
+      if (isVitesse) return clamp(Math.round(min + span * (0.50 + 0.20 * (rnd() - 0.5))));
+      return mid();
+  }
+}
+
+// --- Fin du fichier: InjecteurScenarios.js ---
+
+// --- Début du fichier: InjecteurMenuHook.js ---
+// ===================================================================
+// FICHIER : InjecteurMenuHook.gs
+// RÔLE   : Ajout non-intrusif du menu "Injecteur" (sans toucher onOpen())
+// VERSION : 1.0
+// ===================================================================
+
+// Affiche le menu "Injecteur" sans impacter tes autres menus
+function addInjectorMenu_() {
+  try {
+    SpreadsheetApp.getUi()
+      .createMenu('Injecteur')
+      .addItem('Stable & Lent', 'injectScenarioStableLent')
+      .addItem('Turbulent & Rapide', 'injectScenarioTurbulentRapide')
+      .addItem('Mixte', 'injectScenarioMixte')
+      .addToUi();
+  } catch (e) {
+    Logger.log('addInjectorMenu_ error: ' + e);
+  }
+}
+
+// Installe un trigger ON_OPEN qui appelle addInjectorMenu_
+// => évite de modifier/écraser ton onOpen() existant
+function installInjectorMenuTrigger() {
+  const ssId = SpreadsheetApp.getActive().getId();
+
+  // Nettoyage d'éventuels doublons
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'addInjectorMenu_' &&
+                 t.getEventType() === ScriptApp.EventType.ON_OPEN)
+    .forEach(t => ScriptApp.deleteTrigger(t));
+
+  ScriptApp.newTrigger('addInjectorMenu_')
+    .forSpreadsheet(ssId)
+    .onOpen()
+    .create();
+
+  Logger.log('Trigger du menu Injecteur installé pour le fichier : ' + ssId);
+}
+
+// (Optionnel) suppression du trigger si besoin
+function uninstallInjectorMenuTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'addInjectorMenu_')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  Logger.log('Trigger du menu Injecteur supprimé.');
+}
+
+// Petit helper de vérification
+function debugInjectorTarget_() {
+  try {
+    if (typeof INJECT_DEFAULT === 'object' && INJECT_DEFAULT.rowIndex) {
+      Logger.log('L’injecteur utilisera la ligne CONFIG n° ' + INJECT_DEFAULT.rowIndex);
+    } else {
+      Logger.log('INJECT_DEFAULT.rowIndex introuvable. Ouvre InjecteurScenarios.gs et renseigne-le.');
+    }
+  } catch (e) {
+    Logger.log('Impossible de lire INJECT_DEFAULT : ' + e);
+  }
+}
+
+// --- Fin du fichier: InjecteurMenuHook.js ---
+

@@ -1,35 +1,137 @@
 // =================================================================================
 // == FICHIER : Utilities.gs
-// == VERSION : 8.2 (Robustesse de la détection de colonne de langue)
+// == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clé→valeur)
 // == RÔLE  : Boîte à outils du Kit de Traitement.
 // =================================================================================
 
 const ID_FEUILLE_PILOTE = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
 
 /**
- * Récupère la ligne de configuration complète pour le test en cours.
+ * Récupère la configuration du test en cours avec une stratégie multi-sources :
+ * 1) CONFIG global (ID_CONFIG) → onglet 'Paramètres Généraux'
+ * 2) Ancien template V2 (ID_TEMPLATE_TRAITEMENT_V2) → 'Paramètres Généraux'
+ * 3) Legacy "pilote" (ID_FEUILLE_PILOTE) mappant la sheet active via 'ID_Sheet_Cible'
  */
 function getTestConfiguration() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const idSheetActuelle = ss.getId();
-  const piloteSheet = SpreadsheetApp.openById(ID_FEUILLE_PILOTE);
-  const paramsSheet = piloteSheet.getSheetByName("Paramètres Généraux");
-  if (!paramsSheet) { throw new Error("L'onglet 'Paramètres Généraux' est introuvable."); }
-  const data = paramsSheet.getDataRange().getValues();
-  const headers = data.shift();
-  const idSheetColIndex = headers.indexOf('ID_Sheet_Cible');
-  if (idSheetColIndex === -1) { throw new Error("La colonne 'ID_Sheet_Cible' est introuvable."); }
-  const configRow = data.find(row => row[idSheetColIndex] === idSheetActuelle);
-  if (!configRow) { throw new Error("Impossible de trouver la configuration pour ce test (ID: " + idSheetActuelle + ").");}
-  const configuration = {};
-  headers.forEach((header, index) => {
-    if (header) { configuration[header] = configRow[index]; }
-  });
-  return configuration;
+  const ids = getSystemIds();
+
+  // 1) Préféré : CONFIG global
+  const cfgFromConfig = _tryReadKeyValueOrHorizontalConfig(ids.ID_CONFIG, [
+    'Paramètres Généraux','Parametres Generaux','Parameters','Parametres'
+  ]);
+  if (cfgFromConfig && String(cfgFromConfig.Type_Test || '').trim() !== '') {
+    return cfgFromConfig;
+  }
+
+  // 2) Fallback : ancien template V2
+  const cfgFromTemplateV2 = _tryReadKeyValueOrHorizontalConfig(ids.ID_TEMPLATE_TRAITEMENT_V2, [
+    'Paramètres Généraux','Parametres Generaux','Parameters','Parametres'
+  ]);
+  if (cfgFromTemplateV2 && String(cfgFromTemplateV2.Type_Test || '').trim() !== '') {
+    return cfgFromTemplateV2;
+  }
+
+  // 3) Dernier recours : logique legacy "pilote" (comportement historique)
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const idSheetActuelle = ss.getId();
+    const piloteSheet = SpreadsheetApp.openById(ID_FEUILLE_PILOTE);
+    const paramsSheet = piloteSheet.getSheetByName("Paramètres Généraux");
+    if (!paramsSheet) { throw new Error("L'onglet 'Paramètres Généraux' est introuvable dans la feuille pilote."); }
+    const data = paramsSheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idSheetColIndex = headers.indexOf('ID_Sheet_Cible');
+    if (idSheetColIndex === -1) { throw new Error("La colonne 'ID_Sheet_Cible' est introuvable dans la feuille pilote."); }
+    const configRow = data.find(row => row[idSheetColIndex] === idSheetActuelle);
+    if (!configRow) { throw new Error("Impossible de trouver la configuration pour ce test (ID: " + idSheetActuelle + ")."); }
+    const configuration = {};
+    headers.forEach((header, index) => {
+      if (header) { configuration[header] = configRow[index]; }
+    });
+    if (!configuration.Type_Test || String(configuration.Type_Test).trim() === '') {
+      throw new Error("Type_Test manquant dans la configuration legacy (feuille pilote).");
+    }
+    return configuration;
+  } catch (e) {
+    throw new Error("Impossible de trouver la configuration pour ce test (CONFIG, TEMPLATE_V2 et legacy ont échoué). Détail: " + e.message);
+  }
 }
 
 /**
- * Lit l'onglet 'sys_ID_Fichiers' de la feuille de configuration centrale.
+ * Lit une config depuis un fichier (ID Drive) et un des noms d’onglet possibles.
+ * Supporte 2 formats :
+ *  - Clé→Valeur (2 colonnes, ex. 'Type_Test' | 'r&K_Environnement')
+ *  - Tableau horizontal (1 ligne de données sous les entêtes, ex. 'Type_Test' est une colonne)
+ * Retourne null si le fichier/onglet n’existe pas ou si aucune ligne valide n’est trouvée.
+ */
+function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
+  try {
+    if (!fileId) return null;
+    const ss = SpreadsheetApp.openById(fileId);
+
+    // Trouver un onglet parmi ceux proposés
+    let sh = null;
+    for (const name of possibleSheetNames) {
+      sh = ss.getSheetByName(name);
+      if (sh) break;
+    }
+    if (!sh) return null;
+
+    const data = sh.getDataRange().getValues();
+    if (!data || data.length < 2) return null;
+
+    const headersRow = data[0].map(h => String(h || '').trim());
+    const nbCols = headersRow.length;
+
+    // Heuristique : format Clé→Valeur si 2 colonnes OU si la 1ère colonne s’appelle "Clé"/"Key"
+    const header0 = headersRow[0].toLowerCase();
+    const isKeyValue = (nbCols <= 3) && (header0.includes('clé') || header0.includes('cle') || header0.includes('key'));
+
+    if (isKeyValue) {
+      // Lecture Clé→Valeur
+      const cfg = {};
+      for (let i = 1; i < data.length; i++) {
+        const k = String(data[i][0] || '').trim();
+        const v = data[i][1];
+        if (k) cfg[k] = v;
+      }
+      return cfg;
+    }
+
+    // Sinon : format horizontal (entêtes en ligne 1, données sur une/des lignes)
+    const idx = {};
+    headersRow.forEach((h, i) => { if (h) idx[h] = i; });
+
+    // Choix de la ligne cible :
+    // 1) si 'ID_Sheet_Cible' présent, on essaie de matcher l'ID de la feuille active
+    const activeId = SpreadsheetApp.getActiveSpreadsheet().getId();
+    let target = null;
+    if (idx['ID_Sheet_Cible'] != null) {
+      target = data.slice(1).find(r => String(r[idx['ID_Sheet_Cible']] || '') === activeId);
+    }
+    // 2) sinon, première ligne où 'Type_Test' est non vide
+    if (!target && idx['Type_Test'] != null) {
+      target = data.slice(1).find(r => String(r[idx['Type_Test']] || '').trim() !== '');
+    }
+    // 3) sinon, première ligne non vide
+    if (!target) {
+      target = data.slice(1).find(r => r.some(c => String(c || '').trim() !== ''));
+    }
+    if (!target) return null;
+
+    const cfg = {};
+    headersRow.forEach((h, i) => { if (h) cfg[h] = target[i]; });
+    return cfg;
+
+  } catch (e) {
+    Logger.log('_tryReadKeyValueOrHorizontalConfig KO for ' + fileId + ' : ' + e.message);
+    return null;
+  }
+}
+
+/**
+ * Lit l'onglet 'sys_ID_Fichiers' de la feuille de configuration centrale (feuille pilote).
+ * Renvoie un dictionnaire { Clé → ID } (ex.: { ID_BDD: "...", ID_CONFIG: "...", ... }).
  */
 function getSystemIds() {
   try {
@@ -146,8 +248,8 @@ function loadTraductions(langueCode) {
   if (!traductionsSheet) throw new Error("L'onglet 'traductions' est introuvable.");
   const data = traductionsSheet.getDataRange().getValues();
   const headers = data.shift();
-  // MODIFICATION : Ajout de .trim() pour ignorer les espaces avant/après les noms de colonnes (ex: " en " au lieu de "en")
-  const langColIndex = headers.findIndex(h => h && h.trim().toLowerCase() === langueCode.toLowerCase());
+  // MODIFICATION : Ajout de .trim() pour ignorer les espaces avant/après les noms de colonnes
+  const langColIndex = headers.findIndex(h => h && String(h).trim().toLowerCase() === langueCode.toLowerCase());
   if (langColIndex === -1) throw new Error(`La colonne de langue '${langueCode}' est introuvable dans l'onglet "traductions".`);
   const traductions = {};
   const keyColIndex = 0;
@@ -194,8 +296,7 @@ function buildAndSendEmails(config, reponse, resultats, langueCode, isDebugMode,
       if (destinatairesSurcharge.formateur && destinatairesSurcharge.formateurEmail) { adressesUniques.add(destinatairesSurcharge.formateurEmail); }
       if (destinatairesSurcharge.patron && destinatairesSurcharge.patronEmail) { adressesUniques.add(destinatairesSurcharge.patronEmail); }
       if (destinatairesSurcharge.test && destinatairesSurcharge.test.trim() !== '') {
-        const testEmails = destinatairesSurcharge.test.split(',').map(e => e.trim());
-        testEmails.forEach(email => adressesUniques.add(email));
+        destinatairesSurcharge.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
       }
     } else {
       if (config.Repondant_Email_Actif === 'Oui' && reponse.emailRepondant) { adressesUniques.add(reponse.emailRepondant); }

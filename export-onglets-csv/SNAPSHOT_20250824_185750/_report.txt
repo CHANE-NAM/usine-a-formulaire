@@ -1,0 +1,12 @@
+Exportateur Sheets → CSV
+Snapshot: SNAPSHOT_20250824_185750
+Date: 2025-08-24 18:57:50
+Dossiers sources: 4 (récursif=true)
+Classeur(s) total listés: 5
+Classeur(s) traités: 5
+Onglets exportés (CSV): 48
+ZIP par classeur: 5
+ZIP global snapshot: oui
+Inclure onglets masqués: oui
+Erreurs: 0
+Destination: https://drive.google.com/drive/folders/1Nc_7oFILYd9teC1hMrQZ1VVR1YIjgmVQ

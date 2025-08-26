@@ -1,0 +1,456 @@
+// Fichier généré le 25/08/2025 à 05:52:17
+
+// --- Début du fichier: Menu.js ---
+// =================================================================================
+// == FICHIER : menu.gs
+// == VERSION : 3.6 (Valeur par défaut "Universel" pour Moteur_Calcul)
+// == RÔLE  : Logique côté serveur pour l'application web de configuration.
+// =================================================================================
+
+const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
+
+// --- SECTION 1 : INTERFACE UTILISATEUR ---
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🚀 Actions Usine')
+    .addItem('Configurer un nouveau test...', 'showConfigurationSidebar')
+    .addToUi();
+}
+
+function showConfigurationSidebar() {
+  const html = HtmlService.createHtmlOutputFromFile('FormulaireUI')
+      .setTitle('Configuration Usine à Tests')
+      .setWidth(400);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+
+// --- SECTION 2 : FONCTIONS APPELÉES PAR L'INTERFACE HTML ---
+
+function getInitialData() {
+  const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+  const optionsSheet = ss.getSheetByName("sys_Options_Parametres");
+  if (!optionsSheet) {
+    throw new Error("L'onglet 'sys_Options_Parametres' est introuvable.");
+  }
+
+  const optionsData = optionsSheet.getDataRange().getValues();
+  const headers = optionsData.shift();
+  const optionsMap = {};
+  headers.forEach((header, i) => {
+    const options = optionsData.map(row => row[i]).filter(String);
+    optionsMap[header] = options;
+  });
+
+  // Charger la liste des blocs méta disponibles depuis la BDD
+  let availableMetaBlocks = [];
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const metaSheet = bdd.getSheetByName('Questions_META_FR');
+    if (metaSheet) {
+        const metaData = metaSheet.getRange(2, 1, metaSheet.getLastRow() - 1, 3).getValues(); // ID, Type, Titre
+        availableMetaBlocks = metaData.map(row => ({ id: row[0], title: row[2] })).filter(block => block.id && block.title);
+    }
+  } catch(e) {
+    console.error("Impossible de charger les blocs méta depuis la BDD : " + e.message);
+  }
+
+  return {
+    typesDeTest: optionsMap['Type_Test'] || [],
+    availableMetaBlocks: availableMetaBlocks,
+    options: {
+      Repondant_Quand: optionsMap['Repondant_Quand'] || [],
+      Repondant_Contenu: optionsMap['Repondant_Contenu'] || [],
+      Patron_Quand: optionsMap['Patron_Quand'] || [],
+      Patron_Contenu: optionsMap['Patron_Contenu'] || [],
+      Formateur_Quand: optionsMap['Formateur_Quand'] || [],
+      Formateur_Contenu: optionsMap['Formateur_Contenu'] || []
+    }
+  };
+}
+
+function getQuestionCountForTestType(typeTest) {
+  if (!typeTest) return 0;
+  try {
+    const systemIds = getSystemIds();
+    if (systemIds && systemIds.ID_BDD) {
+      const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+      const questionSheet = bdd.getSheets().find(s => s.getName().startsWith('Questions_' + typeTest));
+      if (questionSheet) {
+        return questionSheet.getLastRow() - 1;
+      }
+    }
+    return 0;
+  } catch (err) {
+    Logger.log('Erreur lors du calcul du nombre de questions pour ' + typeTest + ': ' + err.message);
+    return 0;
+  }
+}
+
+
+// --- SECTION 3 : TRAITEMENT DE LA SOUMISSION ---
+
+function processNewTestConfiguration(formObject) {
+  try {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const paramsSheet = ss.getSheetByName("Paramètres Généraux");
+    if (!paramsSheet) { throw new Error("L'onglet 'Paramètres Généraux' est introuvable."); }
+    
+    let headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
+    
+    // ==================== DÉBUT MODIFICATION ====================
+    // On s'assure que les colonnes requises, y compris Moteur_Calcul, existent.
+    const requiredHeaders = ['Blocs_Meta_A_Inclure', 'ID_Gabarit_Email_Repondant', 'Email_Alias', 'Moteur_Calcul'];
+    // ===================== FIN MODIFICATION =====================
+
+    requiredHeaders.forEach(headerName => {
+        if (headers.indexOf(headerName) === -1) {
+            paramsSheet.getRange(1, paramsSheet.getLastColumn() + 1).setValue(headerName);
+        }
+    });
+    headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
+    
+    let emailDev = formObject.devEmail;
+    if (!emailDev || emailDev.trim() === "") { emailDev = "chanenam@gmail.com"; }
+
+    const limiteLignes = getQuestionCountForTestType(formObject.type);
+    const blocsMetaString = formObject.blocsMeta.join(',');
+
+    let idGabaritRepondant = ''; // Valeur par défaut
+    if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau1')) {
+        idGabaritRepondant = 'RESULTATS_N1';
+    } else if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau2')) {
+        idGabaritRepondant = 'RESULTATS_N2';
+    } else if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau3')) {
+        idGabaritRepondant = 'RESULTATS_N3';
+    }
+
+    const dataRow = {
+      'Id_Unique': '',
+      'Titre_Formulaire_Utilisateur': formObject.titre,
+      'Nom_Fichier_Complet': '',
+      'Statut': 'En construction',
+      'Type_Test': formObject.type,
+      // ==================== DÉBUT MODIFICATION ====================
+      'Moteur_Calcul': 'Universel', // On force le moteur Universel par défaut
+      // ===================== FIN MODIFICATION =====================
+      'Blocs_Meta_A_Inclure': blocsMetaString,
+      'ID_Gabarit_Email_Repondant': idGabaritRepondant,
+      'ID_Dossier_Cible': '',
+      'Limite_Lignes_A_Traiter': limiteLignes,
+      'nbQuestions': formObject.nbQuestions,
+      'Repondant_Email_Actif': formObject.repondantActif ? "Oui" : "Non",
+      'Repondant_Quand': formObject.repondantQuand,
+      'Repondant_Contenu': formObject.repondantContenu,
+      'Patron_Email_Mode': formObject.patronActif ? "Oui" : "Non",
+      'Patron_Quand': formObject.patronQuand,
+      'Patron_Contenu': formObject.patronContenu,
+      'Patron_Email': formObject.patronEmail,
+      'Formateur_Email_Actif': formObject.formateurActif ? "Oui" : "Non",
+      'Formateur_Quand': formObject.formateurQuand,
+      'Formateur_Contenu': formObject.formateurContenu,
+      'Formateur_Email': formObject.formateurEmail,
+      'Developpeur_Email': emailDev,
+      'ID_Formulaire_Cible': '',
+      'ID_Sheet_Cible': '',
+      'Email_Alias': formObject.emailAlias
+    };
+    
+    const nouvelleLigne = headers.map(header => dataRow[header] !== undefined ? dataRow[header] : '');
+    paramsSheet.appendRow(nouvelleLigne);
+    return "Configuration enregistrée avec succès !";
+  } catch (e) {
+    Logger.log("ERREUR lors de la sauvegarde de la configuration: " + e.toString());
+    throw new Error("Une erreur interne est survenue lors de la sauvegarde. " + e.message);
+  }
+}
+
+
+// --- SECTION 4 : FONCTIONS UTILITAIRES ---
+
+function getSystemIds() {
+  const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+  const idSheet = configSS.getSheetByName('sys_ID_Fichiers');
+  if (!idSheet) { throw new Error("L'onglet 'sys_ID_Fichiers' est introuvable."); }
+  const data = idSheet.getDataRange().getValues();
+  const ids = {};
+  data.slice(1).forEach(row => {
+    if (row[0] && row[1]) ids[row[0]] = row[1];
+  });
+  return ids;
+}
+// --- Fin du fichier: Menu.js ---
+
+// --- Début du fichier: FormulaireUI.html ---
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .hidden-section { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out, opacity 0.3s ease-out; opacity: 0; }
+      .visible-section { max-height: 500px; opacity: 1; transition: max-height 0.5s ease-in, opacity 0.5s ease-in; }
+    </style>
+  </head>
+  <body class="bg-gray-100 p-4 font-sans">
+    <div id="main-form">
+      <h1 class="text-xl font-bold text-gray-800 mb-4">Configurer un Nouveau Test</h1>
+
+      <div class="mb-4">
+        <label for="titreTest" class="block text-sm font-medium text-gray-700">Titre du Test (pour l'utilisateur)</label>
+        <input type="text" id="titreTest" name="titreTest" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+
+      <div class="mb-4">
+        <label for="typeTest" class="block text-sm font-medium text-gray-700">Type de Test</label>
+        <select id="typeTest" name="typeTest" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+          <option value="">Chargement...</option>
+        </select>
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700">Questions Standards (Blocs Méta)</label>
+        <div id="meta-blocks-container" class="mt-2 p-3 bg-white border border-gray-300 rounded-md space-y-2">
+            <p class="text-xs text-gray-500">Chargement des options...</p>
+        </div>
+      </div>
+
+      <div id="questions-info" class="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-md hidden">
+        <p class="text-sm text-indigo-700">Nombre de questions disponibles : <span id="question-count" class="font-bold">...</span></p>
+      </div>
+
+      <div class="mb-4">
+        <label for="nbQuestions" class="block text-sm font-medium text-gray-700">Nombre de questions à utiliser</label>
+        <input type="number" id="nbQuestions" name="nbQuestions" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+
+      <hr class="my-6">
+
+      <div class="mb-2"><label class="flex items-center"><input type="checkbox" id="sendEmailRepondant" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><span class="ml-2 text-sm text-gray-700">Envoyer un email au répondant ?</span></label></div>
+      <div id="detailsRepondant" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
+      <div class="mb-2"><label class="flex items-center"><input type="checkbox" id="sendEmailPatron" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><span class="ml-2 text-sm text-gray-700">Envoyer un email au patron ?</span></label></div>
+      <div id="detailsPatron" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
+      <div class="mb-2"><label class="flex items-center"><input type="checkbox" id="sendEmailFormateur" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><span class="ml-2 text-sm text-gray-700">Envoyer un email au formateur ?</span></label></div>
+      <div id="detailsFormateur" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
+      <hr class="my-6">
+
+      <div class="mb-4">
+        <label for="emailAlias" class="block text-sm font-medium text-gray-700">Alias d'expédition (optionnel)</label>
+        <input type="email" id="emailAlias" name="emailAlias" placeholder="contact@mon-entreprise.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+      <div class="mb-4"><label for="emailDev" class="block text-sm font-medium text-gray-700">Email du Développeur (notifications)</label><input type="email" id="emailDev" name="emailDev" placeholder="Défaut : chanenam@gmail.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
+      <button id="submit-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">Créer la Configuration</button>
+    </div>
+    <div id="feedback-screen" class="hidden text-center py-10"><p id="feedback-message" class="text-lg text-gray-700"></p></div>
+
+    <script>
+      // --- INITIALISATION & GESTION DYNAMIQUE ---
+      document.addEventListener('DOMContentLoaded', function() {
+        google.script.run.withSuccessHandler(populateInitialData).getInitialData();
+        setupEventListeners();
+      });
+
+      function populateInitialData(data) {
+        const typeTestSelect = document.getElementById('typeTest');
+        typeTestSelect.innerHTML = '<option value="">-- Choisissez un type --</option>';
+        data.typesDeTest.forEach(type => {
+          const option = document.createElement('option');
+          option.value = type; option.textContent = type;
+          typeTestSelect.appendChild(option);
+        });
+        
+        const metaContainer = document.getElementById('meta-blocks-container');
+        if (data.availableMetaBlocks && data.availableMetaBlocks.length > 0) {
+            metaContainer.innerHTML = '';
+            data.availableMetaBlocks.forEach(block => {
+                const isChecked = (block.id === 'META_EMAIL' || block.id === 'META_NOM_COMPLET');
+                const label = document.createElement('label');
+                label.className = 'flex items-center text-sm text-gray-800';
+                label.innerHTML = `
+                    <input type="checkbox" value="${block.id}" class="meta-block-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" ${isChecked ? 'checked' : ''}>
+                    <span class="ml-2">${block.title}</span>
+                `;
+                metaContainer.appendChild(label);
+            });
+        } else {
+            metaContainer.innerHTML = '<p class="text-xs text-gray-500">Aucun bloc méta trouvé dans la BDD.</p>';
+        }
+
+        populateEmailOptions('detailsRepondant', 'Repondant', data.options);
+        populateEmailOptions('detailsPatron', 'Patron', data.options);
+        populateEmailOptions('detailsFormateur', 'Formateur', data.options);
+      }
+
+      function setupEventListeners() {
+        document.getElementById('typeTest').addEventListener('change', function() {
+            const selectedType = this.value;
+            const infoDiv = document.getElementById('questions-info');
+            const countSpan = document.getElementById('question-count');
+
+            if (selectedType) {
+                infoDiv.classList.remove('hidden');
+                countSpan.textContent = 'Chargement...';
+                google.script.run.withSuccessHandler(updateQuestionCount).getQuestionCountForTestType(selectedType);
+            } else {
+                infoDiv.classList.add('hidden');
+            }
+        });
+        setupEmailSectionToggle('sendEmailRepondant', 'detailsRepondant');
+        setupEmailSectionToggle('sendEmailPatron', 'detailsPatron');
+        setupEmailSectionToggle('sendEmailFormateur', 'detailsFormateur');
+        document.getElementById('submit-button').addEventListener('click', submitForm);
+      }
+
+      function submitForm(e) {
+        e.preventDefault();
+        if (!document.getElementById('titreTest').value || !document.getElementById('typeTest').value || !document.getElementById('nbQuestions').value) {
+            alert('Veuillez remplir tous les champs obligatoires (Titre, Type, Nombre de questions).');
+            return;
+        }
+        
+        const selectedMetaBlocks = [];
+        document.querySelectorAll('.meta-block-checkbox:checked').forEach(checkbox => {
+            selectedMetaBlocks.push(checkbox.value);
+        });
+
+        const formObject = {
+          titre: document.getElementById('titreTest').value,
+          type: document.getElementById('typeTest').value,
+          blocsMeta: selectedMetaBlocks,
+          nbQuestions: document.getElementById('nbQuestions').value,
+          repondantActif: document.getElementById('sendEmailRepondant').checked,
+          repondantQuand: document.getElementById('sendEmailRepondant').checked ? document.getElementById('quandRepondant').value : '',
+          repondantContenu: document.getElementById('sendEmailRepondant').checked ? document.getElementById('contenuRepondant').value : '',
+          patronActif: document.getElementById('sendEmailPatron').checked,
+          patronEmail: document.getElementById('sendEmailPatron').checked ? document.getElementById('emailPatron').value : '',
+          patronQuand: document.getElementById('sendEmailPatron').checked ? document.getElementById('quandPatron').value : '',
+          patronContenu: document.getElementById('sendEmailPatron').checked ? document.getElementById('contenuPatron').value : '',
+          formateurActif: document.getElementById('sendEmailFormateur').checked,
+          formateurEmail: document.getElementById('sendEmailFormateur').checked ? document.getElementById('emailFormateur').value : '',
+          formateurQuand: document.getElementById('sendEmailFormateur').checked ? document.getElementById('quandFormateur').value : '',
+          formateurContenu: document.getElementById('sendEmailFormateur').checked ? document.getElementById('contenuFormateur').value : '',
+          devEmail: document.getElementById('emailDev').value,
+          // ==================== DÉBUT MODIFICATION ====================
+          emailAlias: document.getElementById('emailAlias').value.trim()
+          // ===================== FIN MODIFICATION =====================
+        };
+
+        showFeedbackScreen('Enregistrement en cours...');
+        document.getElementById('submit-button').disabled = true;
+        google.script.run.withSuccessHandler(onSaveSuccess).withFailureHandler(onSaveFailure).processNewTestConfiguration(formObject);
+      }
+      
+      // --- FONCTIONS UTILITAIRES ---
+      function populateEmailOptions(containerId, prefix, options) {
+          const container = document.getElementById(containerId);
+          let html = '';
+          if (prefix === 'Patron' || prefix === 'Formateur') {
+              html += `<div class="mt-2 mb-3"><label for="email${prefix}" class="block text-sm font-medium text-gray-600">Adresse e-mail du ${prefix}</label><input type="email" id="email${prefix}" required class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>`;
+          }
+          html += `<div class="mt-2 mb-3"><label for="quand${prefix}" class="block text-sm font-medium text-gray-600">Quand envoyer l'email ?</label><select id="quand${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">${options[`${prefix}_Quand`].map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
+          html += `<div class="mt-2 mb-3"><label for="contenu${prefix}" class="block text-sm font-medium text-gray-600">Quel niveau de contenu ?</label><select id="contenu${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">${options[`${prefix}_Contenu`].map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
+          container.innerHTML = html;
+      }
+
+      function updateQuestionCount(count) {
+          document.getElementById('question-count').textContent = count;
+      }
+
+      function setupEmailSectionToggle(checkboxId, sectionId) {
+          document.getElementById(checkboxId).addEventListener('change', function() {
+              const section = document.getElementById(sectionId);
+              if (this.checked) {
+                  section.classList.remove('hidden-section');
+                  section.classList.add('visible-section');
+              } else {
+                  section.classList.remove('visible-section');
+                  section.classList.add('hidden-section');
+              }
+          });
+      }
+
+      function onSaveSuccess(message) {
+          showFeedbackScreen(message);
+          setTimeout(function() {
+              google.script.host.close();
+          }, 2000);
+      }
+
+      function onSaveFailure(error) {
+          showFeedbackScreen('Erreur : ' + error.message);
+          document.getElementById('submit-button').disabled = false;
+      }
+
+      function showFeedbackScreen(message) {
+          document.getElementById('main-form').classList.add('hidden');
+          const feedbackScreen = document.getElementById('feedback-screen');
+          document.getElementById('feedback-message').textContent = message;
+          feedbackScreen.classList.remove('hidden');
+      }
+    </script>
+  </body>
+</html>
+// --- Fin du fichier: FormulaireUI.html ---
+
+// --- Début du fichier: UtilitaireConversion.js ---
+// Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine à Tests.
+// const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
+
+/**
+ * Fonction à usage unique pour convertir toutes les URLs de formulaires existantes
+ * dans l'onglet 'Paramètres Généraux' en leurs versions courtes (forms.gle).
+ */
+function convertirLiensExistantsEnCourts() {
+  const nomOnglet = "Paramètres Généraux";
+  
+  try {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const sheet = ss.getSheetByName(nomOnglet);
+    
+    if (!sheet) {
+      throw new Error(`L'onglet "${nomOnglet}" est introuvable.`);
+    }
+    
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    const headers = values[0];
+    
+    // Trouve automatiquement la colonne contenant les liens
+    const linkColumnIndex = headers.indexOf("Lien_Formulaire_Public");
+    if (linkColumnIndex === -1) {
+      throw new Error("La colonne 'Lien_Formulaire_Public' est introuvable.");
+    }
+
+    // Boucle sur chaque ligne (en sautant l'en-tête)
+    for (let i = 1; i < values.length; i++) {
+      const longUrl = values[i][linkColumnIndex];
+      
+      // Ne traite que les URLs longues et non vides
+      if (longUrl && typeof longUrl === 'string' && longUrl.includes("docs.google.com/forms")) {
+        // Extrait l'ID du formulaire à partir de l'URL longue
+        const formId = longUrl.split('/d/')[1].split('/')[0];
+        
+        if (formId) {
+          // Ouvre le formulaire par son ID et obtient l'URL courte
+          const form = FormApp.openById(formId);
+          const shortUrl = form.getShortUrl();
+          
+          // Met à jour la cellule avec la nouvelle URL courte
+          // Les indices de range commencent à 1, donc i+1 et linkColumnIndex+1
+          sheet.getRange(i + 1, linkColumnIndex + 1).setValue(shortUrl);
+          Logger.log(`Ligne ${i + 1}: URL convertie pour le formulaire ${formId}`);
+        }
+      }
+    }
+    
+    SpreadsheetApp.getUi().alert("Conversion terminée avec succès !");
+    
+  } catch (e) {
+    Logger.log(`Erreur lors de la conversion : ${e.toString()}`);
+    SpreadsheetApp.getUi().alert(`Une erreur est survenue : ${e.message}`);
+  }
+}
+// --- Fin du fichier: UtilitaireConversion.js ---
+

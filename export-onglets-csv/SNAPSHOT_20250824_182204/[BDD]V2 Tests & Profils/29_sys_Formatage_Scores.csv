@@ -1,0 +1,4 @@
+﻿"Type_Test";"Mode_Affichage";"Texte_Intro";"Format_Ligne";"Tri_Scores"
+"Couleurs";"Simple";"Voici le détail de vos scores :";"- {{nom_profil}} : {{score}} points";"Décroissant"
+"Ancres";"Simple";"Voici le détail de vos ancres de carrière :";"- {{nom_profil}} : {{score}} points";"Décroissant"
+"MBTI";"Dichotomie";"Voici le détail de vos préférences :";"- {{axe_nom}} : {{score1}} vs {{score2}}";"Aucun"
