@@ -1,0 +1,5 @@
+TypeQuestion,TitreQuestion,Options,Logique,Description / Libellés
+CHOIX_BINAIRE,Préférez-vous...,Travailler seul;Travailler en groupe,I;E,La description de la question si besoin.
+CHOIX_MULTIPLE,Quelles activités vous ressourcent ?,Lire un livre;Voir des amis;Faire du sport;Regarder un film,I;E;E;I,L'utilisateur peut cocher plusieurs cases.
+ECHELLE,"Sur une échelle de 1 à 5, à quel point êtes-vous organisé ?",1;5,J,"Libellés : ""Pas du tout organisé;Très organisé"""
+CLASSEMENT,Classez ces valeurs par ordre d'importance pour vous.,Harmonie;Justice;Efficacité,F;T;T,Les options à classer (génère une grille).
