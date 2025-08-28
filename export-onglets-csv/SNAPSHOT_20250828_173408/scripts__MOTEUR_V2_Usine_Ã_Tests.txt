@@ -1,0 +1,972 @@
+﻿=== Projet: [MOTEUR]V2 Usine Ã  Tests (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur) ===
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\MoteurV2.js ---
+
+// =================================================================================
+// FICHIER : Moteur V2.js
+// RÃ”LE : Fonctions principales de crÃ©ation et d'orchestration des tests.
+// VERSION : 6.1 - Utilisation de getPublishedUrl() pour une fiabilitÃ© maximale.
+// =================================================================================
+
+/**
+Â * GÃ¨re le dÃ©ploiement complet (crÃ©ation + mise Ã  jour du statut + lien public).
+Â */
+function lancerDeploiementComplet(rowIndex) {
+Â  Logger.log(`Lancement du dÃ©ploiement complet pour la ligne ${rowIndex}...`);
+Â  
+Â  try {
+Â  Â  const config = getConfigurationFromRow(rowIndex);
+
+Â  Â  if (config['Statut'].toLowerCase() !== 'en construction') {
+Â  Â  Â  Logger.log(`La crÃ©ation pour la ligne ${rowIndex} a Ã©tÃ© ignorÃ©e (statut non valide).`);
+Â  Â  Â  return null;
+Â  Â  }
+
+Â  Â  const nomFichierComplet = "[" + config['Type_Test'] + "] " + config['Titre_Formulaire_Utilisateur'];
+Â  Â  const systemIds = getSystemIds();
+Â  Â  if (!systemIds.ID_TEMPLATE_TRAITEMENT_V2) throw new Error("ID_TEMPLATE_TRAITEMENT_V2 introuvable.");
+
+Â  Â  let dossierCible;
+Â  Â  if (config['ID_Dossier_Cible']) {
+Â  Â  Â  dossierCible = DriveApp.getFolderById(config['ID_Dossier_Cible']);
+Â  Â  } else {
+Â  Â  Â  if (!systemIds.ID_DOSSIER_CIBLE_GEN) throw new Error("ID_DOSSIER_CIBLE_GEN introuvable.");
+Â  Â  Â  dossierCible = DriveApp.getFolderById(systemIds.ID_DOSSIER_CIBLE_GEN);
+Â  Â  }
+
+Â  Â  const templateFile = DriveApp.getFileById(systemIds.ID_TEMPLATE_TRAITEMENT_V2);
+Â  Â  const sheetFile = templateFile.makeCopy(nomFichierComplet, dossierCible);
+Â  Â  const reponsesSheetId = sheetFile.getId();
+
+Â  Â  const form = FormApp.create(nomFichierComplet);
+Â  Â  form.setDestination(FormApp.DestinationType.SPREADSHEET, reponsesSheetId);
+Â  Â  form.setProgressBar(true);
+Â  Â  
+Â  Â  const sousTitre = config['Sous-Titre_Formulaire']; 
+Â  Â  form.setDescription(sousTitre || ""); 
+
+Â  Â  const formFile = DriveApp.getFileById(form.getId());
+Â  Â  formFile.moveTo(dossierCible);
+
+    // ======================= CORRECTION DÃ‰FINITIVE =======================
+    // On utilise la fonction getPublishedUrl() qui est garantie de fonctionner
+    // dans votre environnement, comme l'a prouvÃ© notre diagnostic.
+    const formUrl = form.getPublishedUrl();
+    Logger.log("URL longue obtenue avec succÃ¨s via getPublishedUrl() : " + formUrl);
+    // ====================================================================
+
+Â  Â  // --- GÃ©nÃ©ration des questions ---
+Â  Â  if (!systemIds.ID_BDD) throw new Error("ID_BDD introuvable.");
+Â  Â  const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+Â  Â  
+Â  Â  const blocsMetaConfig = config['Blocs_Meta_A_Inclure'];
+Â  Â  if (blocsMetaConfig && blocsMetaConfig.trim() !== '') {
+Â  Â  Â  const metaIds = blocsMetaConfig.split(',').map(id => id.trim());
+Â  Â  Â  const metaSheet = bdd.getSheetByName('Questions_META_FR'); 
+Â  Â  Â  if (metaSheet) {
+Â  Â  Â  Â  const metaData = metaSheet.getDataRange().getValues();
+Â  Â  Â  Â  const metaHeaders = metaData.shift();
+Â  Â  Â  Â  const idCol = metaHeaders.indexOf('ID');
+Â  Â  Â  Â  const metaQuestionsMap = metaData.reduce((acc, row) => { acc[row[idCol]] = row; return acc; }, {});
+Â  Â  Â  Â  metaIds.forEach(id => {
+Â  Â  Â  Â  Â  if (metaQuestionsMap[id]) {
+Â  Â  Â  Â  Â  Â  const [q_id, q_type_old, q_titre, q_options, q_logique, q_description, q_params_json] = metaQuestionsMap[id];
+Â  Â  Â  Â  Â  Â  let final_meta_type = q_type_old;
+Â  Â  Â  Â  Â  Â  if (q_params_json) { try { const p = JSON.parse(q_params_json); if(p.mode) final_meta_type = p.mode; } catch(e){} }
+Â  Â  Â  Â  Â  Â  creerItemFormulaire(form, final_meta_type, q_titre, q_options, q_description, q_params_json);
+Â  Â  Â  Â  Â  }
+Â  Â  Â  Â  });
+Â  Â  Â  }
+Â  Â  }
+
+Â  Â  const toutesLesFeuillesBDD = bdd.getSheets();
+Â  Â  const regexLangues = new RegExp('^Questions_' + config['Type_Test'] + '_([A-Z]{2})$', 'i');
+Â  Â  const languesAInclure = [];
+Â  Â  toutesLesFeuillesBDD.forEach(feuille => {
+Â  Â  Â  const match = feuille.getName().match(regexLangues);
+Â  Â  Â  if (match && match[1]) languesAInclure.push({ code: match[1].toUpperCase(), nomComplet: getLangueFullName(match[1]), feuille: feuille });
+Â  Â  });
+
+Â  Â  if (languesAInclure.length === 0) throw new Error("Aucune feuille de questions trouvÃ©e pour le type '" + config['Type_Test'] + "'.");
+Â  Â  
+Â  Â  const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
+Â  Â  const choices = [];
+Â  Â  languesAInclure.forEach(langue => {
+Â  Â  Â  const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
+Â  Â  Â  choices.push(itemLangue.createChoice(langue.nomComplet, page));
+Â  Â  Â  
+Â  Â  Â  const nbQuestionsDisponibles = langue.feuille.getLastRow() - 1;
+Â  Â  Â  let nbQuestionsAUtiliser = (config['nbQuestions'] && config['nbQuestions'] > 0) ? Math.min(config['nbQuestions'], nbQuestionsDisponibles) : nbQuestionsDisponibles;
+Â  Â  Â  if (nbQuestionsAUtiliser <= 0) return;
+
+Â  Â  Â  const questionsData = langue.feuille.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
+Â  Â  Â  questionsData.forEach((q_data, index) => {
+Â  Â  Â  Â  const [id, type_old, titre, options, logique, description, params_json] = q_data;
+Â  Â  Â  Â  let final_type = type_old;
+Â  Â  Â  Â  if (params_json) { try { const p = JSON.parse(params_json); if(p.mode) final_type = p.mode; } catch(e){} }
+Â  Â  Â  Â  creerItemFormulaire(form, final_type, id + ': ' + titre, options, description, params_json);
+Â  Â  Â  Â  if (index === questionsData.length - 1) page.setGoToPage(FormApp.PageNavigationType.SUBMIT);
+Â  Â  Â  });
+Â  Â  });
+Â  Â  itemLangue.setChoices(choices);
+
+Â  Â  // --- MISE Ã€ JOUR DANS LA FEUILLE CONFIG ---
+Â  Â  const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+Â  Â  const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
+Â  Â  const colIndex = {};
+Â  Â  headers.forEach((header, i) => { if (header) colIndex[header] = i; });
+
+Â  Â  const STATUT_COL = colIndex['Statut'];
+Â  Â  const ID_UNIQUE_COL = colIndex['Id_Unique'];
+Â  Â  const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
+Â  Â  const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
+Â  Â  const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
+Â  Â  const LIEN_FORM_COL = colIndex['Lien_Formulaire_Public'];
+
+Â  Â  const idUnique = sheetFile.getId().slice(0, 8) + '-' + formFile.getId().slice(0, 8);
+Â  Â  
+Â  Â  configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif - DÃ©clencheur Ã  activer'); 
+Â  Â  configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
+Â  Â  configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(nomFichierComplet);
+Â  Â  if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(formFile.getId());
+Â  Â  if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(sheetFile.getId());
+Â  Â  if (LIEN_FORM_COL !== undefined) configSheet.getRange(rowIndex, LIEN_FORM_COL + 1).setValue(formUrl);
+Â  Â  
+Â  Â  SpreadsheetApp.flush();
+Â  Â  Logger.log(`Ligne ${rowIndex} mise Ã  jour avec le statut 'Actif - DÃ©clencheur Ã  activer'.`);
+Â  Â  
+Â  Â  return { nomFichier: nomFichierComplet, urlSheet: sheetFile.getUrl(), urlForm: formUrl };
+
+Â  } catch(e) {
+Â  Â  console.error("ERREUR (ligne " + rowIndex + ") : " + e.toString() + "\n" + e.stack);
+Â  Â  SpreadsheetApp.getUi().alert("Une erreur est survenue lors du dÃ©ploiement pour la ligne " + rowIndex + ": " + e.message);
+Â  Â  return null;
+Â  }
+}
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\appsscript.json ---
+
+{
+  "timeZone": "Indian/Mauritius",
+  "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Drive",
+        "version": "v3",
+        "serviceId": "drive"
+      }
+    ]
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8"
+}
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV2.js ---
+
+// =================================================================================
+// FICHIER : Utils V2.gs (Projet MOTEUR)
+// RÃ”LE    : Fonctions utilitaires pour le Moteur / Usine
+// VERSION : 3.1 - getConfigurationFromRow tolÃ©rant (rÃ©solution sheet/ID/nom) + ECHELLE_NOTE robuste
+// =================================================================================
+
+// âš™ï¸ ID de la feuille de configuration centrale (CONFIG)
+const ID_FEUILLE_CONFIGURATION = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
+
+// ------------------------------------
+// Helpers gÃ©nÃ©riques
+// ------------------------------------
+function _normHeader(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // enlÃ¨ve les accents
+    .trim();
+}
+function _normKey(s) {
+  return _normHeader(s).toLowerCase();
+}
+function _normLabel(s){ return _normHeader(s).toLowerCase(); }
+
+// RÃ©sout une "feuille de config" depuis : Sheet | Spreadsheet | nom dâ€™onglet | ID spreadsheet | null
+function _resolveConfigSheet(sheetLike) {
+  // 1) Si on a dÃ©jÃ  une Sheet
+  if (sheetLike && typeof sheetLike.getLastColumn === 'function' && typeof sheetLike.getRange === 'function') {
+    return sheetLike; // c'est bien une Sheet
+  }
+
+  // Liste des noms possibles de lâ€™onglet "ParamÃ¨tres GÃ©nÃ©raux"
+  const CANDIDATE_NAMES = ['ParamÃ¨tres GÃ©nÃ©raux','Parametres Generaux','Parameters','Parametres'];
+
+  // 2) Si on a un Spreadsheet
+  if (sheetLike && typeof sheetLike.getSheetByName === 'function') {
+    for (const name of CANDIDATE_NAMES) {
+      const sh = sheetLike.getSheetByName(name);
+      if (sh) return sh;
+    }
+    throw new Error("Onglet 'ParamÃ¨tres GÃ©nÃ©raux' introuvable dans le Spreadsheet transmis.");
+  }
+
+  // 3) Si on a une chaÃ®ne : essayer dâ€™abord comme ID de spreadsheet, sinon comme nom dâ€™onglet dans la CONFIG
+  if (typeof sheetLike === 'string' && sheetLike.trim() !== '') {
+    const val = sheetLike.trim();
+
+    // a) Essai comme ID de Spreadsheet
+    try {
+      const ss = SpreadsheetApp.openById(val);
+      for (const name of CANDIDATE_NAMES) {
+        const sh = ss.getSheetByName(name);
+        if (sh) return sh;
+      }
+      throw new Error("Onglet 'ParamÃ¨tres GÃ©nÃ©raux' introuvable dans le spreadsheet " + val);
+    } catch (e) {
+      // b) Essai comme nom dâ€™onglet dans la CONFIG centrale
+      const cfgSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION);
+      const sh = cfgSS.getSheetByName(val);
+      if (sh) return sh;
+      // c) fallback : on continuera vers CONFIG + noms candidats
+    }
+  }
+
+  // 4) Fallback : CONFIG centrale + noms candidats
+  const cfgSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION);
+  for (const name of CANDIDATE_NAMES) {
+    const sh = cfgSS.getSheetByName(name);
+    if (sh) return sh;
+  }
+  throw new Error("Impossible de localiser l'onglet 'ParamÃ¨tres GÃ©nÃ©raux' dans la CONFIG centrale.");
+}
+
+// ------------------------------------
+// IDs systÃ¨me (CONFIG â†’ onglet sys_ID_Fichiers)
+// ------------------------------------
+function getSystemIds() {
+  const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION);
+  const idSheet = configSS.getSheetByName('sys_ID_Fichiers');
+  if (!idSheet) throw new Error("L'onglet 'sys_ID_Fichiers' est introuvable dans CONFIG.");
+  const data = idSheet.getDataRange().getValues();
+  const ids = {};
+  data.slice(1).forEach(row => {
+    if (row[0] && row[1]) ids[row[0]] = row[1];
+  });
+  return ids;
+}
+
+// ------------------------------------
+// Lecture d'une ligne de CONFIG (format horizontal)
+//  - Accepte rowIndex numÃ©rique OU chaÃ®ne ("9", "Ligne 9", etc.)
+//  - Si invalide, choisit automatiquement une ligne "En construction"
+//    (prioritÃ© Ã  la derniÃ¨re SANS ID_Formulaire_Cible), sinon la derniÃ¨re.
+//  - Retourne un objet { en-tÃªte -> valeur } + cfg._rowIndex pour le logging.
+// ------------------------------------
+function getConfigurationFromRow(sheetLike, rowIndex) {
+  const sheet = _resolveConfigSheet(sheetLike);
+
+  // 1) Normaliser la valeur reÃ§ue (nombre, string, etc.)
+  let idx = rowIndex;
+  if (idx !== 0 && !idx) idx = ''; // null/undefined -> ''
+
+  // Essayer dâ€™extraire un entier (ex: "9", " 9 ", "Ligne 9" -> 9)
+  if (typeof idx !== 'number') {
+    const m = String(idx).match(/\d+/);
+    idx = m ? Number(m[0]) : NaN;
+  }
+
+  // 2) Lecture des en-tÃªtes
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
+  const mapIdx = {};
+  headers.forEach((h,i) => { mapIdx[_normLabel(h)] = i; });
+
+  const iStatut = mapIdx[_normLabel('Statut')];
+  const iIdForm = mapIdx[_normLabel('ID_Formulaire_Cible')];
+
+  // 3) Si lâ€™index nâ€™est pas exploitable, sÃ©lectionner automatiquement une ligne "En construction"
+  if (!idx || isNaN(idx) || idx < 2) {
+    const rowCount = Math.max(0, sheet.getLastRow() - 1);
+    if (rowCount === 0) throw new Error('getConfigurationFromRow: la feuille CONFIG est vide.');
+
+    const data = sheet.getRange(2, 1, rowCount, lastCol).getValues();
+
+    // a) collecter les lignes "En construction"
+    const lignesEC = [];
+    data.forEach((row, k) => {
+      const statut = (iStatut != null) ? String(row[iStatut] || '').trim().toLowerCase() : '';
+      if (statut === 'en construction') {
+        const hasIdForm = (iIdForm != null) && String(row[iIdForm] || '').trim() !== '';
+        lignesEC.push({ rowIndex: k + 2, hasIdForm, row });
+      }
+    });
+
+    if (lignesEC.length === 0) {
+      throw new Error('getConfigurationFromRow: aucune ligne "En construction" trouvÃ©e et rowIndex fourni invalide.');
+    }
+
+    // b) PrioritÃ© : la DERNIÃˆRE sans ID_Formulaire_Cible, sinon la DERNIÃˆRE tout court
+    let pick = lignesEC.filter(r => !r.hasIdForm).pop();
+    if (!pick) pick = lignesEC.pop();
+
+    idx = pick.rowIndex;
+  }
+
+  // 4) Index final validÃ©
+  if (!idx || isNaN(idx) || idx < 2) {
+    throw new Error('getConfigurationFromRow: rowIndex invalide (' + rowIndex + ')');
+  }
+
+  // 5) Renvoi de la config de la ligne choisie
+  const values = sheet.getRange(idx, 1, 1, lastCol).getValues()[0];
+  const cfg = {};
+  headers.forEach((h, i) => { if (h) cfg[h] = values[i]; });
+  cfg._rowIndex = idx;
+  return cfg;
+}
+
+// ------------------------------------
+// Langues
+// ------------------------------------
+function getLangueFullName(code) {
+  const map = { FR: 'FranÃ§ais', EN: 'English', ES: 'EspaÃ±ol', DE: 'Deutsch' };
+  return map[String(code || '').toUpperCase()] || code;
+}
+
+// ------------------------------------
+// Options pour QCU/QRM
+// ------------------------------------
+function buildChoices(optionsString, params) {
+  if (params && Array.isArray(params.options) && params.options.length > 0) {
+    return params.options.map(o => (o && o.libelle) ? String(o.libelle) : '').filter(Boolean);
+  }
+  if (!optionsString) return [];
+  return String(optionsString).split(';').map(s => s.trim()).filter(Boolean);
+}
+
+// ------------------------------------
+// CrÃ©ation d'items dans le Google Form
+//  - gÃ¨re QRM, QCU, ECHELLE, ECHELLE_NOTE (robuste), EMAIL, TEXTE_COURT
+//  - remplace [LIEN_FICHIER:Nom] dans la description si prÃ©sent
+// ------------------------------------
+function creerItemFormulaire(form, type, titre, optionsString, description, paramsJSONString) {
+  // 1) RÃ©solution [LIEN_FICHIER:...]
+  let finalDescription = description;
+  const placeholderRegex = /\[LIEN_FICHIER:(.*?)\]/;
+  const match = description ? description.match(placeholderRegex) : null;
+
+  if (match && match[1]) {
+    const nomFichier = match[1].trim();
+    try {
+      const systemIds = getSystemIds();
+      const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+      const listeFichiersSheet = bdd.getSheetByName('Liste_Fichiers_Drive');
+
+      if (listeFichiersSheet) {
+        const data = listeFichiersSheet.getDataRange().getValues();
+        const fileRow = data.find(row => String(row[0] || '').trim() === nomFichier);
+        if (fileRow && fileRow[1]) {
+          const fileId = String(fileRow[1]).trim();
+          const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+          finalDescription = description.replace(placeholderRegex, fileUrl);
+        } else {
+          finalDescription = description.replace(placeholderRegex, `[ERREUR: Fichier '${nomFichier}' introuvable dans la BDD]`);
+        }
+      } else {
+        finalDescription = description.replace(placeholderRegex, `[ERREUR: Onglet 'Liste_Fichiers_Drive' introuvable]`);
+      }
+    } catch (e) {
+      Logger.log("Erreur lien fichier : " + e.message);
+      finalDescription = description.replace(placeholderRegex, `[ERREUR SCRIPT: ${e.message}]`);
+    }
+  }
+
+  // 2) Parsing JSON souple
+  let params = null;
+  if (paramsJSONString && String(paramsJSONString).trim() !== '') {
+    try { params = JSON.parse(paramsJSONString); } catch (e) { params = null; }
+  }
+
+  // 3) Construction des choix si nÃ©cessaire
+  const choices = buildChoices(optionsString, params);
+
+  // 4) CrÃ©ation de l'item selon le type
+  let item = null;
+  const formItemType = type ? String(type).toUpperCase() : '';
+
+  if (formItemType.startsWith('QRM')) {
+    if (choices.length > 0) {
+      item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+    } else {
+      item = form.addParagraphTextItem().setTitle("[Erreur QRM: Options manquantes] " + titre);
+    }
+
+  } else if (formItemType.startsWith('QCU')) {
+    if (choices.length > 0) {
+      item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+    } else {
+      item = form.addParagraphTextItem().setTitle("[Erreur QCU: Options manquantes] " + titre);
+    }
+
+  } else if (formItemType === 'ECHELLE_NOTE') { // âœ… v3.1 robuste : min/max OU echelle_min/echelle_max + labels tolÃ©rants
+    if (params) {
+      const eMin = (params.echelle_min ?? params.min);
+      const eMax = (params.echelle_max ?? params.max);
+      if (eMin != null && eMax != null) {
+        const scaleItem = form.addScaleItem()
+          .setTitle(titre)
+          .setBounds(Number(eMin), Number(eMax))
+          .setRequired(true);
+
+        // Labels : label_min / libelle_min / labelMin  (idem pour _max)
+        const lmin = (params.label_min ?? params.libelle_min ?? params.labelMin);
+        const lmax = (params.label_max ?? params.libelle_max ?? params.labelMax);
+        if (lmin && lmax) scaleItem.setLabels(String(lmin), String(lmax));
+
+        item = scaleItem;
+      } else {
+        item = form.addParagraphTextItem()
+          .setTitle("[Erreur ECHELLE_NOTE: ParamÃ¨tres JSON incomplets (min/max)] " + titre);
+      }
+    } else {
+      item = form.addParagraphTextItem()
+        .setTitle("[Erreur ECHELLE_NOTE: ParamÃ¨tres JSON absents] " + titre);
+    }
+
+  } else if (formItemType === 'ECHELLE') { // compat historique
+    const parts = optionsString ? optionsString.split(';').map(s => s.trim()) : [];
+    const min = parts[0] ? Number(parts[0]) : 1;
+    const max = parts[parts.length - 1] ? Number(parts[parts.length - 1]) : 5;
+    const scaleItem = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(true);
+    item = scaleItem;
+
+  } else if (formItemType === 'EMAIL') {
+    const textItem = form.addTextItem().setTitle(titre).setRequired(true);
+    const emailValidation = FormApp.createTextValidation().requireTextIsEmail().build();
+    item = textItem.setValidation(emailValidation);
+
+  } else if (formItemType === 'TEXTE_COURT') {
+    item = form.addTextItem().setTitle(titre).setRequired(true);
+
+  } else {
+    item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + type + "] " + titre);
+  }
+
+  // 5) HelpText (Ã©vite dâ€™Ã©craser les labels dâ€™Ã©chelle)
+  if (finalDescription && item && typeof item.setHelpText === 'function') {
+    if (formItemType !== 'ECHELLE' && formItemType !== 'ECHELLE_NOTE') {
+      item.setHelpText(finalDescription);
+    }
+  }
+}
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\InterfaceV2.js ---
+
+// =================================================================================
+// FICHIER : Interface V2.js
+// RÃ”LE : CrÃ©ation du menu utilisateur et fonctions appelÃ©es par ce menu.
+// VERSION : 4.2 - Ajout de l'outil de migration V1 -> V2 dans le menu
+// =================================================================================
+
+/**
+Â * CrÃ©e le menu personnalisÃ© dans l'interface utilisateur de Google Sheets Ã  l'ouverture.
+Â */
+function onOpen() {
+Â  SpreadsheetApp.getUi()
+Â  Â  .createMenu('ðŸ­ Usine Ã  Tests')
+Â  Â  .addItem("ðŸš€ DÃ©ployer un test de A Ã  Z...", "orchestrateurDeploiementComplet_UI")
+Â  Â  .addSeparator()
+Â  Â  .addItem("GÃ©nÃ©rer un test (choisir la ligne)", "lancerCreationDepuisPilote_UI")
+Â  Â  .addItem("Traiter TOUTES les nouvelles demandes", "orchestrateurCreationAutomatique_UI")
+    // --- AJOUT ---
+Â  Â  .addSeparator()
+Â  Â  .addItem("ðŸ”§ Migrer les Questions (V1 -> V2)", "lancerMigrationV1versV2")
+Â  Â  .addToUi();
+}
+
+/**
+Â * Orchestre le dÃ©ploiement complet d'un test depuis l'UI.
+Â * GÃ¨re la gÃ©nÃ©ration du kit ET guide l'utilisateur pour l'activation et le partage.
+Â */
+function orchestrateurDeploiementComplet_UI() {
+Â  const ui = SpreadsheetApp.getUi();
+Â  
+Â  const response = ui.prompt(
+Â  Â  'ðŸš€ DÃ©ploiement de A Ã  Z',
+Â  Â  'Entrez le numÃ©ro de la ligne Ã  dÃ©ployer entiÃ¨rement :',
+Â  Â  ui.ButtonSet.OK_CANCEL
+Â  );
+
+Â  if (response.getSelectedButton() !== ui.Button.OK || response.getResponseText() === '') {
+Â  Â  return;
+Â  }
+
+Â  const rowIndex = parseInt(response.getResponseText(), 10);
+Â  if (isNaN(rowIndex) || rowIndex <= 1) {
+Â  Â  ui.alert('NumÃ©ro de ligne invalide. Veuillez entrer un nombre supÃ©rieur Ã  1.');
+Â  Â  return;
+Â  }
+Â  
+Â  ui.alert('Lancement du dÃ©ploiement complet... Cette opÃ©ration peut prendre un moment.');
+
+Â  try {
+Â  Â  const resultats = lancerDeploiementComplet(rowIndex);
+
+Â  Â  if (resultats && resultats.urlSheet && resultats.urlForm) {
+Â  Â  Â  const htmlOutput = HtmlService.createHtmlOutput(
+Â  Â  Â  Â  `<h4>âœ… DÃ©ploiement RÃ©ussi !</h4>` +
+Â  Â  Â  Â  `<p>Le kit "<b>${resultats.nomFichier}</b>" a Ã©tÃ© gÃ©nÃ©rÃ©.</p><hr>` +
+Â  Â  Â  Â  `<p><b>1. Voici le lien public du formulaire Ã  partager :</b></p>` +
+Â  Â  Â  Â  `<p style="margin-top:10px;"><a href="${resultats.urlForm}" target="_blank" style="background-color:#34A853; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">Copier ou ouvrir le lien du Formulaire</a></p><br>` +
+Â  Â  Â  Â  `<p><b>2. ACTION FINALE REQUISE (pour que le test fonctionne) :</b></p>` +
+Â  Â  Â  Â  `<p>Cliquez sur le lien ci-dessous, puis dans le menu :<br>` +
+Â  Â  Â  Â  `<b>&nbsp;&nbsp;&nbsp;âš™ï¸ Actions du Kit -> Activer le traitement des rÃ©ponses</b>.</p>` +
+Â  Â  Â  Â  `<p style="margin-top:10px;"><a href="${resultats.urlSheet}" target="_blank" style="background-color:#4285F4; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">Ouvrir le Kit pour l'activer</a></p>`
+Â  Â  Â  )
+Â  Â  Â  .setWidth(500)
+Â  Â  Â  .setHeight(320);
+Â  Â  Â  ui.showModalDialog(htmlOutput, "DÃ©ploiement TerminÃ©");
+
+Â  Â  } else {
+Â  Â  Â  ui.alert(`â„¹ï¸ Le dÃ©ploiement pour la ligne ${rowIndex} a Ã©tÃ© ignorÃ© (le statut n'Ã©tait probablement pas 'En construction').`);
+Â  Â  }
+
+Â  } catch (e) {
+Â  Â  Logger.log(`ERREUR Critique lors du dÃ©ploiement complet (ligne ${rowIndex}) : ${e.toString()}`);
+Â  Â  ui.alert(`âŒ ERREUR : Le dÃ©ploiement a Ã©chouÃ© pour la ligne ${rowIndex}. Consultez les logs pour les dÃ©tails. Message : ${e.message}`);
+Â  }
+}
+
+/**
+Â * Fonction UI appelÃ©e par le menu pour lancer la crÃ©ation manuelle (une seule ligne).
+Â */
+function lancerCreationDepuisPilote_UI() {
+Â  const ui = SpreadsheetApp.getUi();
+Â  const response = ui.prompt('Lancement de la crÃ©ation', 'Entrez le numÃ©ro de la ligne Ã  utiliser :', ui.ButtonSet.OK_CANCEL);
+
+Â  if (response.getSelectedButton() !== ui.Button.OK) {
+Â  Â  return;
+Â  }
+
+Â  const rowIndex = parseInt(response.getResponseText(), 10);
+Â  if (isNaN(rowIndex) || rowIndex <= 1) {
+Â  Â  ui.alert('NumÃ©ro de ligne invalide. Veuillez entrer un nombre supÃ©rieur Ã  1.');
+Â  Â  return;
+Â  }
+
+Â  try {
+Â  Â  ui.alert('Lancement de la crÃ©ation... Cette opÃ©ration peut prendre un moment.');
+Â  Â  
+Â  Â  const resultats = lancerCreationSysteme(rowIndex);
+
+Â  Â  if (resultats) {
+Â  Â  Â  const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+Â  Â  Â  
+Â  Â  Â  const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
+Â  Â  Â  const colIndex = {};
+Â  Â  Â  headers.forEach((header, i) => { if (header) colIndex[header] = i; });
+Â  Â  Â  
+Â  Â  Â  const STATUT_COL = colIndex['Statut'];
+Â  Â  Â  const ID_UNIQUE_COL = colIndex['Id_Unique'];
+Â  Â  Â  const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
+Â  Â  Â  const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
+Â  Â  Â  const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
+
+Â  Â  Â  const idUnique = resultats.sheetFile.getId().slice(0, 8) + '-' + resultats.formFile.getId().slice(0, 8);
+Â  Â  Â  configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif');
+Â  Â  Â  configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
+Â  Â  Â  configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(resultats.nomFichierComplet);
+Â  Â  Â  if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(resultats.formFile.getId());
+Â  Â  Â  if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(resultats.sheetFile.getId());
+Â  Â  Â  
+Â  Â  Â  SpreadsheetApp.flush();
+Â  Â  Â  ui.alert(`âœ… SUCCÃˆS : Le test '${resultats.nomFichierComplet}' a Ã©tÃ© crÃ©Ã© et la ligne ${rowIndex} a Ã©tÃ© mise Ã  jour.`);
+Â  Â  Â  
+Â  Â  } else {
+Â  Â  Â  Â ui.alert(`â„¹ï¸ La crÃ©ation pour la ligne ${rowIndex} a Ã©tÃ© ignorÃ©e (le statut n'Ã©tait probablement pas 'En construction').`);
+Â  Â  }
+
+Â  } catch (e) {
+Â  Â  try {
+Â  Â  Â  Â  const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+Â  Â  Â  Â  const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
+Â  Â  Â  Â  const statutColIndex = headers.indexOf('Statut');
+Â  Â  Â  Â  if (statutColIndex !== -1) {
+Â  Â  Â  Â  Â  Â  configSheet.getRange(rowIndex, statutColIndex + 1).setValue('ERREUR');
+Â  Â  Â  Â  }
+Â  Â  } catch (err) {
+Â  Â  Â  Â  Logger.log(`Impossible de mettre le statut Ã  ERREUR pour la ligne ${rowIndex}. Erreur : ${err.message}`);
+Â  Â  }
+
+Â  Â  Logger.log(`ERREUR Critique lors de la crÃ©ation manuelle (ligne ${rowIndex}) : ${e.toString()}`);
+Â  Â  ui.alert(`âŒ ERREUR : Une erreur critique est survenue pour la ligne ${rowIndex}. Le statut a Ã©tÃ© mis Ã  'ERREUR'. Consultez les logs pour les dÃ©tails. Message : ${e.message}`);
+Â  }
+}
+
+/**
+Â * Fonction UI pour lancer le traitement en masse de toutes les demandes "En construction".
+Â */
+function orchestrateurCreationAutomatique_UI() {
+Â  const ui = SpreadsheetApp.getUi();
+Â  try {
+Â  Â  const lignesTraitees = orchestrateurCreationAutomatique();
+Â  Â  ui.alert(`Traitement terminÃ©. ${lignesTraitees} nouvelle(s) demande(s) ont Ã©tÃ© traitÃ©e(s).`);
+Â  } catch (e) {
+Â  Â  Logger.log(`ERREUR Critique dans l'orchestrateur : ${e.toString()}`);
+Â  Â  ui.alert(`Une erreur critique est survenue : ${e.message}`);
+Â  }
+}
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\MigrationV1.js ---
+
+// =================================================================================
+// FONCTION DE MIGRATION V1 -> V2 (JSON)
+// RÃ”LE : Convertit les questions d'un ancien format (Options/Logique)
+//         vers le nouveau format V2 (ParamÃ¨tres (JSON)).
+// VERSION : 1.4 - Version finale et corrigÃ©e
+// =================================================================================
+
+/**
+ * Fonction principale appelÃ©e depuis le menu de l'interface utilisateur.
+ */
+function lancerMigrationV1versV2() {
+  try {
+    const ID_BDD = '1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8';
+
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.prompt(
+      'Outil de Migration V1 -> V2',
+      'Veuillez entrer le nom exact de l\'onglet dans la BDD Ã  migrer :',
+      ui.ButtonSet.OK_CANCEL);
+
+    if (response.getSelectedButton() == ui.Button.OK && response.getResponseText() != '') {
+      const sheetName = response.getResponseText().trim();
+      
+      const bdd = SpreadsheetApp.openById(ID_BDD);
+      if (!bdd) { throw new Error(`Impossible d'ouvrir la BDD avec l'ID fourni.`); }
+      const sheet = bdd.getSheetByName(sheetName);
+
+      if (!sheet) { throw new Error(`L'onglet "${sheetName}" est introuvable dans la BDD.`); }
+
+      const resultat = convertirQuestionsEnJSON(sheet);
+      
+      ui.alert(
+        'Migration TerminÃ©e',
+        `Rapport pour l'onglet "${sheetName}":\n\n` +
+        `- Lignes traitÃ©es : ${resultat.lignesTraitees}\n` +
+        `- Questions converties : ${resultat.questionsConverties}\n` +
+        `- Lignes ignorÃ©es : ${resultat.lignesIgnorees}\n` +
+        `- Erreurs rencontrÃ©es : ${resultat.erreurs.length}` +
+        (resultat.erreurs.length > 0 ? `\n\nConsultez les logs ("Affichage > Journaux") pour le dÃ©tail des erreurs.` : ''),
+        ui.ButtonSet.OK);
+    }
+  } catch (e) {
+    SpreadApp.getUi().alert(`Une erreur est survenue : ${e.message}`);
+    console.error(`Erreur lors du lancement de la migration : ${e.stack}`);
+  }
+}
+
+/**
+ * CÅ“ur de la logique de conversion. Lit une feuille et met Ã  jour les lignes.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet La feuille de calcul Ã  traiter.
+ * @returns {object} Un objet contenant les statistiques de la migration.
+ */
+function convertirQuestionsEnJSON(sheet) {
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  const headers = values.shift(); 
+
+  const colIndex = {
+    type: headers.indexOf('TypeQuestion'),
+    options: headers.indexOf('Options'),
+    logique: headers.indexOf('Logique'),
+    description: headers.indexOf('Description'),
+    json: headers.indexOf('ParamÃ¨tres (JSON)')
+  };
+
+  if (colIndex.type === -1 || colIndex.options === -1 || colIndex.logique === -1 || colIndex.json === -1) {
+    throw new Error("Colonnes requises ('TypeQuestion', 'Options', 'Logique', 'ParamÃ¨tres (JSON)') manquantes.");
+  }
+  
+  let questionsConverties = 0;
+  let lignesIgnorees = 0;
+  const erreurs = [];
+
+  values.forEach((row, index) => {
+    const jsonCell = row[colIndex.json];
+    if (jsonCell) {
+      lignesIgnorees++;
+      return;
+    }
+
+    const typeQuestion = row[colIndex.type];
+    const optionsStr = row[colIndex.options];
+    const logiqueStr = row[colIndex.logique];
+    const descriptionStr = colIndex.description !== -1 ? row[colIndex.description] : "";
+    let jsonPayload = null;
+
+    try {
+      switch (typeQuestion) {
+        case 'CHOIX_BINAIRE':
+          if (optionsStr && logiqueStr) {
+            const optionsArray = optionsStr.toString().split(';').map(s => s.trim());
+            const logiqueArray = logiqueStr.toString().split(';').map(s => s.trim());
+            if (optionsArray.length !== logiqueArray.length) {
+              throw new Error(`CHOIX_BINAIRE: Le nombre d'options (${optionsArray.length}) et de logiques (${logiqueArray.length}) ne correspond pas.`);
+            }
+            jsonPayload = {
+              mode: 'QRM_CAT',
+              options: optionsArray.map((libelle, i) => ({ libelle: libelle, profil: logiqueArray[i], valeur: 1 }))
+            };
+          }
+          break;
+
+        case 'ECHELLE':
+          if (optionsStr && logiqueStr) { // La description n'est pas bloquante
+            const echelle = optionsStr.toString().split(';').map(s => parseInt(s.trim(), 10));
+            const labels = descriptionStr ? descriptionStr.toString().split(';').map(s => s.trim()) : ["", ""];
+            
+            jsonPayload = {
+              mode: 'ECHELLE_NOTE',
+              profil: logiqueStr.toString().trim(),
+              echelle_min: Math.min(...echelle),
+              echelle_max: Math.max(...echelle),
+              label_min: labels[0] || "",
+              label_max: labels[1] || ""
+            };
+          }
+          break;
+
+        default:
+          lignesIgnorees++;
+          break;
+      }
+
+      if (jsonPayload) {
+        sheet.getRange(index + 2, colIndex.json + 1).setValue(JSON.stringify(jsonPayload));
+        questionsConverties++;
+      } else {
+        lignesIgnorees++;
+      }
+
+    } catch (e) {
+      const errorMessage = `Erreur Ã  la ligne ${index + 2}: ${e.message}`;
+      console.error(errorMessage);
+      erreurs.push(errorMessage);
+    }
+  });
+
+  return {
+    lignesTraitees: values.length,
+    questionsConverties: questionsConverties,
+    lignesIgnorees: lignesIgnorees,
+    erreurs: erreurs
+  };
+}
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\concat_scripts_rep.js ---
+
+const fs = require('fs');
+const path = require('path');
+
+// --- CONFIGURATION ---
+// Extensions de fichiers Ã  inclure
+const scriptExtensions = [
+    '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less',
+    '.xml', '.php', '.rb', '.java', '.c', '.cpp', '.cs', '.go',
+    '.sh', '.ps1', '.bat', '.cmd', '.sql', '.vue', '.svelte', '.astro'
+];
+
+// Le dossier Ã  scanner
+const folderToScan = './'; // Ã€ ajuster si besoin
+// --- FIN CONFIGURATION ---
+
+// RÃ©cupÃ©rer le nom du rÃ©pertoire scannÃ©
+const resolvedFolderPath = path.resolve(folderToScan);
+const dirName = path.basename(resolvedFolderPath);
+
+// CrÃ©er une date au format aammjj
+const now = new Date();
+const year = String(now.getFullYear()).slice(2); // 2 derniers chiffres de l'annÃ©e
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const dateStamp = `${year}${month}${day}`;
+
+// Nom du fichier de sortie
+const outputFileName = `${dirName}_Script_${dateStamp}.txt`;
+
+// CrÃ©er une chaÃ®ne avec date et heure en franÃ§ais
+const dateTimeString = `// Fichier gÃ©nÃ©rÃ© le ${now.toLocaleDateString('fr-FR')} Ã  ${now.toLocaleTimeString('fr-FR')}\n\n`;
+
+// Initialiser la variable qui accumulera le contenu
+let allContent = dateTimeString;
+
+// Fonction rÃ©cursive
+function readFilesRecursively(directory) {
+    fs.readdirSync(directory).forEach(file => {
+        const absolutePath = path.join(directory, file);
+        if (fs.statSync(absolutePath).isDirectory()) {
+            readFilesRecursively(absolutePath);
+        } else {
+            const fileExtension = path.extname(file).toLowerCase();
+            if (scriptExtensions.includes(fileExtension)) {
+                allContent += `// --- DÃ©but du fichier: ${absolutePath} ---\n`;
+                allContent += fs.readFileSync(absolutePath, 'utf8');
+                allContent += `\n// --- Fin du fichier: ${absolutePath} ---\n\n`;
+            }
+        }
+    });
+}
+
+// Supprimer le fichier de sortie existant
+if (fs.existsSync(outputFileName)) {
+    fs.unlinkSync(outputFileName);
+    console.log(`Ancien fichier '${outputFileName}' supprimÃ©.`);
+}
+
+// Lancer le traitement
+try {
+    readFilesRecursively(folderToScan);
+    fs.writeFileSync(outputFileName, allContent, 'utf8');
+    console.log(`SuccÃ¨s : Tous les scripts ont Ã©tÃ© exportÃ©s dans '${outputFileName}'`);
+} catch (error) {
+    console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
+}
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\concat_scripts_repvic.js ---
+
+const fs = require('fs');
+const path = require('path');
+
+// --- CONFIGURATION ---
+// Extensions de fichiers Ã  inclure
+const scriptExtensions = [
+    '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less',
+    '.xml', '.php', '.rb', '.java', '.c', '.cpp', '.cs', '.go',
+    '.sh', '.ps1', '.bat', '.cmd', '.sql', '.vue', '.svelte', '.astro'
+];
+
+// Le dossier Ã  scanner
+const folderToScan = './'; // Ã€ ajuster si besoin
+// --- FIN CONFIGURATION ---
+
+// RÃ©cupÃ©rer le nom du rÃ©pertoire scannÃ©
+const resolvedFolderPath = path.resolve(folderToScan);
+const dirName = path.basename(resolvedFolderPath);
+
+// CrÃ©er une date au format aammjj
+const now = new Date();
+const year = String(now.getFullYear()).slice(2); // 2 derniers chiffres de l'annÃ©e
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const dateStamp = `${year}${month}${day}`;
+
+// Nom du fichier de sortie
+const outputFileName = `${dirName}_Script_${dateStamp}.txt`;
+
+// CrÃ©er une chaÃ®ne avec date et heure en franÃ§ais
+const dateTimeString = `// Fichier gÃ©nÃ©rÃ© le ${now.toLocaleDateString('fr-FR')} Ã  ${now.toLocaleTimeString('fr-FR')}\n\n`;
+
+// Initialiser la variable qui accumulera le contenu
+let allContent = dateTimeString;
+
+// Fonction rÃ©cursive
+function readFilesRecursively(directory) {
+    fs.readdirSync(directory).forEach(file => {
+        const absolutePath = path.join(directory, file);
+        if (fs.statSync(absolutePath).isDirectory()) {
+            readFilesRecursively(absolutePath);
+        } else {
+            const fileExtension = path.extname(file).toLowerCase();
+            // --- MODIFICATION ICI ---
+            // On vÃ©rifie l'extension ET on exclut les fichiers commenÃ§ant par 'concat_scripts'
+            if (scriptExtensions.includes(fileExtension) && !file.startsWith('concat_scripts')) {
+                allContent += `// --- DÃ©but du fichier: ${absolutePath} ---\n`;
+                allContent += fs.readFileSync(absolutePath, 'utf8');
+                allContent += `\n// --- Fin du fichier: ${absolutePath} ---\n\n`;
+            }
+        }
+    });
+}
+
+// Supprimer le fichier de sortie existant
+if (fs.existsSync(outputFileName)) {
+    fs.unlinkSync(outputFileName);
+    console.log(`Ancien fichier '${outputFileName}' supprimÃ©.`);
+}
+
+// Lancer le traitement
+try {
+    readFilesRecursively(folderToScan);
+    fs.writeFileSync(outputFileName, allContent, 'utf8');
+    console.log(`SuccÃ¨s : Tous les scripts ont Ã©tÃ© exportÃ©s dans '${outputFileName}'`);
+} catch (error) {
+    console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
+}
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\Diagnostic.js ---
+
+/**
+ * Ce script est un outil de diagnostic Ã  usage unique.
+ * Il va crÃ©er un formulaire et inspecter l'objet retournÃ© pour
+ * comprendre pourquoi la fonction .getShortUrl() n'est pas trouvÃ©e.
+ */
+function testCreationFormulaire() {
+  try {
+    Logger.log("--- DÃ©but du test de diagnostic de crÃ©ation de formulaire ---");
+    
+    // Ã‰tape 1 : On crÃ©e un formulaire de test.
+    const form = FormApp.create("Test de Diagnostic Ultime");
+    Logger.log("Objet 'form' crÃ©Ã©.");
+
+    // Ã‰tape 2 : On vÃ©rifie si la fonction qui pose problÃ¨me existe VRAIMENT sur cet objet.
+    if (form && typeof form.getShortUrl === 'function') {
+      Logger.log("--> RÃ‰SULTAT POSITIF : La fonction .getShortUrl() a Ã©tÃ© trouvÃ©e !");
+      Logger.log("    Lien court obtenu : " + form.getShortUrl());
+    } else {
+      Logger.log("--> RÃ‰SULTAT NÃ‰GATIF : La fonction .getShortUrl() est INTROUVABLE sur l'objet 'form'.");
+    }
+    
+    // Ã‰tape 3 : On liste toutes les propriÃ©tÃ©s et mÃ©thodes que l'on trouve sur l'objet.
+    // Cela nous dira ce qu'est rÃ©ellement l'objet 'form'.
+    let properties = [];
+    for (var name in form) {
+      properties.push(name);
+    }
+    Logger.log("Liste de toutes les propriÃ©tÃ©s trouvÃ©es sur l'objet : " + properties.join(', '));
+
+    // On supprime le formulaire de test pour ne pas polluer votre Drive.
+    DriveApp.getFileById(form.getId()).setTrashed(true);
+    Logger.log("Formulaire de test supprimÃ©.");
+
+  } catch (e) {
+    Logger.log("ERREUR CATASTROPHIQUE lors du test de diagnostic : " + e.toString());
+    Logger.log(e.stack);
+  }
+  Logger.log("--- Fin du test de diagnostic ---");
+}
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\EmailCompositionUtils.js ---
+
+function normalizeAndDedupeCompositionEmails_(rows) {
+  const seen = new Set();
+  return rows
+    .map(r => {
+      const out = Object.assign({}, r);
+      out.Element = (out.Element || '').toString().trim();
+      return out;
+    })
+    .filter(r => {
+      const key = [
+        r.Type_Test || '',
+        r.Code_Langue || '',
+        r.Code_Niveau_Email || '',
+        r.Code_Profil || '',
+        r.Element || '',
+        r.Ordre || ''
+      ].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+

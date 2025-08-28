@@ -1,0 +1,51 @@
+ID,TypeQuestion,TitreQuestion,Options,Logique,description/libélés
+Q01,CHOIX_BINAIRE,"Face à un nouveau projet, je suis plus susceptible de...",Me lancer directement pour voir les premiers résultats.;Planifier méticuleusement chaque étape avant de commencer.,R;B,Initiative
+Q02,CHOIX_BINAIRE,"Dans une discussion de groupe, je tends à...",Animer la conversation et partager de nombreuses idées.;Écouter attentivement les autres avant de donner mon avis.,J;V,Communication
+Q03,CHOIX_BINAIRE,"Ce qui me motive le plus, c'est...",Atteindre un objectif ambitieux et gagner.;Maintenir une ambiance de travail stable et harmonieuse.,R;V,Motivation
+Q04,CHOIX_BINAIRE,"Quand je prends une décision importante, je me base sur...",Des données factuelles et une analyse logique.;Mon intuition et les opportunités que je ressens.,B;J,Décision
+Q05,CHOIX_BINAIRE,Mes collègues me décriraient probablement comme...,Quelqu'un de fiable et un bon soutien.;Quelqu'un d'énergique et d'inspirant.,V;J,Perception externe
+Q06,CHOIX_BINAIRE,"Dans mon travail, on dit souvent que je suis...",Me focaliser sur une tâche jusqu’à son accomplissement total.;Passer rapidement d’une tâche à l’autre selon l’urgence.,B;V,Concentration
+Q07,CHOIX_BINAIRE,"Dans mon travail, je suis motivé(e) par...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,R;B,Travail en équipe
+Q08,CHOIX_BINAIRE,"Dans mon travail, je réagis mieux à...",M’adapter rapidement aux changements imprévus.;Avoir un cadre clair pour mieux gérer le changement.,R;B,Adaptabilité
+Q09,CHOIX_BINAIRE,"Dans mon travail, je me sens à l’aise quand...",M’adapter rapidement aux changements imprévus.;Avoir un cadre clair pour mieux gérer le changement.,V;R,Adaptabilité
+Q10,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...",Trouver des idées originales pour résoudre les problèmes.;Améliorer l’existant par des ajustements précis et efficaces.,V;R,Innovation
+Q11,CHOIX_BINAIRE,"Dans mon travail, je réagis mieux à...",Canaliser mon stress en planifiant précisément mes actions.;Évacuer mon stress par l’action immédiate.,B;J,Stress
+Q12,CHOIX_BINAIRE,"Dans mon travail, on dit souvent que je suis...",Me focaliser sur une tâche jusqu’à son accomplissement total.;Passer rapidement d’une tâche à l’autre selon l’urgence.,J;V,Concentration
+Q13,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...","Rester calme et maîtriser mes émotions en toutes circonstances.;Exprimer librement ce que je ressens, même spontanément.",B;V,Émotion
+Q14,CHOIX_BINAIRE,"Dans mon travail, je préfère...",Canaliser mon stress en planifiant précisément mes actions.;Évacuer mon stress par l’action immédiate.,R;B,Stress
+Q15,CHOIX_BINAIRE,"Dans mon travail, je donne le meilleur de moi quand...",Structurer mes tâches avec rigueur et méthode.;Avancer de manière plus spontanée et adaptable.,V;R,Organisation
+Q16,CHOIX_BINAIRE,"Dans mon travail, je me sens à l’aise quand...",Donner des directives claires et aller droit au but.;Fédérer les autres autour d’une vision commune.,J;B,Leadership
+Q17,CHOIX_BINAIRE,"Dans mon travail, je prends mes décisions en...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,B;J,Travail en équipe
+Q18,CHOIX_BINAIRE,"Dans mon travail, je préfère...",Donner des directives claires et aller droit au but.;Fédérer les autres autour d’une vision commune.,B;J,Leadership
+Q19,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...","Rester calme et maîtriser mes émotions en toutes circonstances.;Exprimer librement ce que je ressens, même spontanément.",B;J,Émotion
+Q20,CHOIX_BINAIRE,"Dans mon travail, je donne le meilleur de moi quand...",Donner des directives claires et aller droit au but.;Fédérer les autres autour d’une vision commune.,R;B,Leadership
+Q21,CHOIX_BINAIRE,"Dans mon travail, je suis plus efficace quand...",Me focaliser sur une tâche jusqu’à son accomplissement total.;Passer rapidement d’une tâche à l’autre selon l’urgence.,J;B,Concentration
+Q22,CHOIX_BINAIRE,"Dans mon travail, je donne le meilleur de moi quand...",Structurer mes tâches avec rigueur et méthode.;Avancer de manière plus spontanée et adaptable.,B;J,Organisation
+Q23,CHOIX_BINAIRE,"Dans mon travail, je préfère...",Donner des directives claires et aller droit au but.;Fédérer les autres autour d’une vision commune.,B;J,Leadership
+Q24,CHOIX_BINAIRE,"Dans mon travail, je suis plus efficace quand...",Me focaliser sur une tâche jusqu’à son accomplissement total.;Passer rapidement d’une tâche à l’autre selon l’urgence.,V;R,Concentration
+Q25,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...",Me focaliser sur une tâche jusqu’à son accomplissement total.;Passer rapidement d’une tâche à l’autre selon l’urgence.,V;R,Concentration
+Q26,CHOIX_BINAIRE,"Dans mon travail, je gère les conflits en...",Canaliser mon stress en planifiant précisément mes actions.;Évacuer mon stress par l’action immédiate.,B;J,Stress
+Q27,CHOIX_BINAIRE,"Dans mon travail, je suis plus efficace quand...",Trouver des idées originales pour résoudre les problèmes.;Améliorer l’existant par des ajustements précis et efficaces.,R;B,Innovation
+Q28,CHOIX_BINAIRE,"Dans mon travail, je préfère...","Rester calme et maîtriser mes émotions en toutes circonstances.;Exprimer librement ce que je ressens, même spontanément.",R;B,Émotion
+Q29,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,B;J,Travail en équipe
+Q30,CHOIX_BINAIRE,"Dans mon travail, je donne le meilleur de moi quand...",Structurer mes tâches avec rigueur et méthode.;Avancer de manière plus spontanée et adaptable.,V;B,Organisation
+Q31,CHOIX_BINAIRE,"Dans mon travail, je préfère...",M’adapter rapidement aux changements imprévus.;Avoir un cadre clair pour mieux gérer le changement.,V;B,Adaptabilité
+Q32,CHOIX_BINAIRE,"Dans mon travail, je réagis mieux à...",Canaliser mon stress en planifiant précisément mes actions.;Évacuer mon stress par l’action immédiate.,J;B,Stress
+Q33,CHOIX_BINAIRE,"Dans mon travail, je prends mes décisions en...",Trouver des idées originales pour résoudre les problèmes.;Améliorer l’existant par des ajustements précis et efficaces.,R;J,Innovation
+Q34,CHOIX_BINAIRE,"Dans mon travail, je réagis mieux à...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,V;B,Travail en équipe
+Q35,CHOIX_BINAIRE,"Dans mon travail, je suis motivé(e) par...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,J;B,Travail en équipe
+Q36,CHOIX_BINAIRE,"Dans mon travail, je préfère...",M’adapter rapidement aux changements imprévus.;Avoir un cadre clair pour mieux gérer le changement.,J;B,Adaptabilité
+Q37,CHOIX_BINAIRE,"Dans mon travail, je me sens à l’aise quand...",Trouver des idées originales pour résoudre les problèmes.;Améliorer l’existant par des ajustements précis et efficaces.,B;V,Innovation
+Q38,CHOIX_BINAIRE,"Dans mon travail, je suis motivé(e) par...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,J;V,Travail en équipe
+Q39,CHOIX_BINAIRE,"Dans mon travail, je préfère...","Rester calme et maîtriser mes émotions en toutes circonstances.;Exprimer librement ce que je ressens, même spontanément.",R;J,Émotion
+Q40,CHOIX_BINAIRE,"Dans mon travail, je gère les conflits en...",Donner des directives claires et aller droit au but.;Fédérer les autres autour d’une vision commune.,R;B,Leadership
+Q41,CHOIX_BINAIRE,"Dans mon travail, je donne le meilleur de moi quand...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,V;B,Travail en équipe
+Q42,CHOIX_BINAIRE,"Dans mon travail, je suis motivé(e) par...",Canaliser mon stress en planifiant précisément mes actions.;Évacuer mon stress par l’action immédiate.,V;B,Stress
+Q43,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...",Canaliser mon stress en planifiant précisément mes actions.;Évacuer mon stress par l’action immédiate.,J;V,Stress
+Q44,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...",Trouver des idées originales pour résoudre les problèmes.;Améliorer l’existant par des ajustements précis et efficaces.,V;B,Innovation
+Q45,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...",Donner des directives claires et aller droit au but.;Fédérer les autres autour d’une vision commune.,B;J,Leadership
+Q46,CHOIX_BINAIRE,"Dans mon travail, je prends mes décisions en...",M’adapter rapidement aux changements imprévus.;Avoir un cadre clair pour mieux gérer le changement.,B;V,Adaptabilité
+Q47,CHOIX_BINAIRE,"Dans mon travail, je donne le meilleur de moi quand...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,B;V,Travail en équipe
+Q48,CHOIX_BINAIRE,"Dans mon travail, on dit souvent que je suis...",Structurer mes tâches avec rigueur et méthode.;Avancer de manière plus spontanée et adaptable.,J;V,Organisation
+Q49,CHOIX_BINAIRE,"Dans mon travail, j’apprécie...",Favoriser la collaboration et le respect entre collègues.;Stimuler le groupe pour qu’il dépasse ses limites.,J;V,Travail en équipe
+Q50,CHOIX_BINAIRE,"Dans mon travail, je donne le meilleur de moi quand...",Trouver des idées originales pour résoudre les problèmes.;Améliorer l’existant par des ajustements précis et efficaces.,V;R,Innovation

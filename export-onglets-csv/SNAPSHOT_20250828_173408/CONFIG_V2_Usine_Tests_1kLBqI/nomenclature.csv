@@ -1,0 +1,70 @@
+Paramètres Généraux
+,ID_Gabarit_Email_Repondant,Id_Unique,Titre_Formulaire_Utilisateur,Nom_Fichier_Complet,Statut,Lien_Formulaire_Public,Type_Test,Blocs_Meta_A_Inclure,ID_Dossier_Cible,Limite_Lignes_A_Traiter,nbQuestions,Repondant_Quand,Patron_Email_Mode,Patron_Quand,Patron_Contenu,Patron_Email,Formateur_Email_Actif,Formateur_Nom,Formateur_Quand,Formateur_Contenu,Formateur_Email,Developpeur_Email,ID_Formulaire_Cible,ID_Sheet_Cible,Developpeur_Contenu,Developpeur_Email,JSON_Questions
+
+sys_Options_Parametres
+,Statut,Type_Test,Repondant_Email_Actif,Repondant_Quand,Repondant_Contenu,Patron_Email_Mode,Patron_Quand,Patron_Contenu,Formateur_Email_Actif,Formateur_Quand,Formateur_Contenu
+
+
+
+
+[CONFIG]V2 Usine à Tests
+Paramètres Généraux
+ID_Gabarit_Email_Repondant
+Id_Unique
+Titre_Formulaire_Utilisateur
+Nom_Fichier_Complet
+Statut
+Lien_Formulaire_Public
+Type_Test
+Blocs_Meta_A_Inclure
+ID_Dossier_Cible
+Limite_Lignes_A_Traiter
+nbQuestions
+Repondant_Quand
+Patron_Email_Mode
+Patron_Quand
+Patron_Contenu
+Patron_Email
+Formateur_Email_Actif
+Formateur_Nom
+Formateur_Quand
+Formateur_Contenu
+Formateur_Email
+Developpeur_Email
+ID_Formulaire_Cible
+ID_Sheet_Cible
+Developpeur_Contenu
+Developpeur_Email
+JSON_Questions
+
+sys_Options_Parametres
+Statut
+Type_Test
+Repondant_Email_Actif
+Repondant_Quand
+Repondant_Contenu
+Patron_Email_Mode
+Patron_Quand
+Patron_Contenu
+Formateur_Email_Actif
+Formateur_Quand
+Formateur_Contenu
+
+sys_Contenu_Emails
+Type_Test
+Niveau_Contenu
+Sujet_Email
+Corps_Email
+
+sys_ID_Fichiers
+Clé
+ID
+ID Script
+nom_fich_google_Sheet
+
+ref_Modes_Traitement
+Code_Unique
+Mode_Questionnement
+Mode_Traitement
+Description Longue
+Paramètres Nécessaires (Exemple de structure JSON pour une question)
