@@ -9,10 +9,23 @@ const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
 // --- SECTION 1 : INTERFACE UTILISATEUR ---
 
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('🚀 Actions Usine')
-    .addItem('Configurer un nouveau test...', 'showConfigurationSidebar')
-    .addToUi();
+  const ui = SpreadsheetApp.getUi();
+
+  // Menu principal unique
+  const main = ui.createMenu('🏭 Usine');
+
+  // Sous-menu Configuration
+  const conf = ui.createMenu('Configuration')
+    .addItem('Configurer un nouveau test...', 'showConfigurationSidebar');
+
+  // Sous-menu Validation (appel de la fonction utilitaire du runner)
+  // -> si tu préfères deux top-level menus séparés, commente les 3 lignes suivantes
+  const val = ui.createMenu('Validation')
+    .addItem('Vérifier les en-têtes (CONFIG, BDD, TEMPLATE)', 'validateAllHeaders');
+
+  main.addSubMenu(conf);
+  main.addSubMenu(val);
+  main.addToUi();
 }
 
 function showConfigurationSidebar() {
