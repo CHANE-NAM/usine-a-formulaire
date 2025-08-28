@@ -1,10 +1,10 @@
-# Tools\snapshot_rk.ps1
+﻿# Tools\snapshot_rk.ps1
 # === Snapshot complet : GAS + CSV + ZIP ===
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
 # -----------------------------
-# 0) DIAGNOSTIC "ESPION" (peut être désactivé)
+# 0) DIAGNOSTIC "ESPION" (peut Ãªtre dÃ©sactivÃ©)
 # -----------------------------
 $EnableSpy = $true
 if ($EnableSpy) {
@@ -63,8 +63,8 @@ Write-Host "[1/4] CLASP pull (via backup_gas.ps1) ..."
 Write-Host ""
 Write-Host "[2/4] Concat des scripts par projet ..."
 
-# BDD : gère le nom avec/sans accents (affectation classique)
-$bdd1 = Join-Path $Repo "03_BaseDeDonnées"
+# BDD : gÃ¨re le nom avec/sans accents (affectation classique)
+$bdd1 = Join-Path $Repo "03_BaseDeDonnÃ©es"
 $bdd2 = Join-Path $Repo "03_BaseDeDonnees"
 if (Test-Path $bdd1) {
   $bddDir = $bdd1
@@ -74,14 +74,14 @@ if (Test-Path $bdd1) {
   $bddDir = $null
 }
 
-# Liste des projets : paires [0]=name ; [1]=dir (évite @{...})
+# Liste des projets : paires [0]=name ; [1]=dir (Ã©vite @{...})
 $Projets = @()
-$Projets += ,@("[MOTEUR]V2 Usine à Tests",        (Join-Path $Repo "01_Moteur"))
-$Projets += ,@("[CONFIG]V2 Usine à Tests",        (Join-Path $Repo "02_configuration"))
+$Projets += ,@("[MOTEUR]V2 Usine Ã  Tests",        (Join-Path $Repo "01_Moteur"))
+$Projets += ,@("[CONFIG]V2 Usine Ã  Tests",        (Join-Path $Repo "02_configuration"))
 if ($bddDir) {
   $Projets += ,@("[BDD]V2 Tests & Profils",      $bddDir)
 } else {
-  Write-Warning "Dossier BDD introuvable (03_BaseDeDonnées / 03_BaseDeDonnees)."
+  Write-Warning "Dossier BDD introuvable (03_BaseDeDonnÃ©es / 03_BaseDeDonnees)."
 }
 $Projets += ,@("[TEMPLATE]V2 Kit de Traitement",  (Join-Path $Repo "04_Templates"))
 
@@ -128,9 +128,9 @@ Write-Host ""
 Write-Host "[3/4] Export des onglets -> CSV ..."
 $Ids = @(
   "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8", # [BDD]V2 Tests & Profils
-  "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ", # [CONFIG] Usine à Tests
+  "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ", # [CONFIG] Usine Ã  Tests
   "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU", # [TEMPLATE]V2 Kit de Traitement
-  "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests
+  "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine Ã  Tests
 )
 
 $nodeArgs = @("--out", $SnapDir) + ($Ids | ForEach-Object { @("--id", $_) })

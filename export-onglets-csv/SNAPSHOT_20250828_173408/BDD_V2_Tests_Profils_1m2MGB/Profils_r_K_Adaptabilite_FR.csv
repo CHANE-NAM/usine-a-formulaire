@@ -1,0 +1,46 @@
+Profil,Seuil_Score,Destinataire,Axe,Recommandation
+Très r,R >= 80%,Répondant,Développer potentiel,Exploitez votre rapidité d'action tout en renforçant vos validations avant décision.
+Très r,R >= 80%,Répondant,Sous stress,Canalisez votre énergie en priorisant vos actions.
+Très r,R >= 80%,Répondant,Surmonter difficultés,Cherchez un mentor ou un partenaire plus orienté stabilité.
+Très r,R >= 80%,Manager,Développer potentiel,Confiez-lui des missions à court terme à fort impact.
+Très r,R >= 80%,Manager,Sous stress,Fournissez un cadre clair pour éviter la dispersion.
+Très r,R >= 80%,Manager,Surmonter difficultés,Aidez-le à analyser les causes profondes des échecs.
+Très r,R >= 80%,Entourage,Développer potentiel,Encouragez ses initiatives rapides.
+Très r,R >= 80%,Entourage,Sous stress,Offrez-lui un espace pour évacuer la pression.
+Très r,R >= 80%,Entourage,Surmonter difficultés,Rassurez-le sur la valeur de ses essais même s'ils échouent.
+R modéré,R 60-79%,Répondant,Développer potentiel,Renforcez votre capacité à planifier sans perdre votre réactivité.
+R modéré,R 60-79%,Répondant,Sous stress,Concentrez-vous sur les priorités clés.
+R modéré,R 60-79%,Répondant,Surmonter difficultés,Utilisez vos acquis pour ajuster vos décisions.
+R modéré,R 60-79%,Manager,Développer potentiel,Mettez-le sur des projets nécessitant réactivité et suivi.
+R modéré,R 60-79%,Manager,Sous stress,Aidez-le à trier les urgences réelles des fausses alertes.
+R modéré,R 60-79%,Manager,Surmonter difficultés,Encouragez l'apprentissage par itérations.
+R modéré,R 60-79%,Entourage,Développer potentiel,Proposez-lui des challenges stimulants.
+R modéré,R 60-79%,Entourage,Sous stress,Aidez-le à prendre du recul.
+R modéré,R 60-79%,Entourage,Surmonter difficultés,Soutenez-le dans ses choix.
+Mixte équilibré,R 41-59%,Répondant,Développer potentiel,Exploitez votre polyvalence pour naviguer entre agilité et stabilité.
+Mixte équilibré,R 41-59%,Répondant,Sous stress,Choisissez un style clair selon la situation.
+Mixte équilibré,R 41-59%,Répondant,Surmonter difficultés,Appuyez-vous sur vos deux forces.
+Mixte équilibré,R 41-59%,Manager,Développer potentiel,Utilisez sa capacité d'adaptation dans des contextes variés.
+Mixte équilibré,R 41-59%,Manager,Sous stress,Aidez-le à clarifier son mode d'action.
+Mixte équilibré,R 41-59%,Manager,Surmonter difficultés,Renforcez ses points d'équilibre.
+Mixte équilibré,R 41-59%,Entourage,Développer potentiel,Encouragez l'exploration de projets variés.
+Mixte équilibré,R 41-59%,Entourage,Sous stress,Offrez une oreille attentive.
+Mixte équilibré,R 41-59%,Entourage,Surmonter difficultés,Rappelez-lui ses succès passés.
+K modéré,K 60-79%,Répondant,Développer potentiel,Conservez votre rigueur tout en ajoutant de la flexibilité.
+K modéré,K 60-79%,Répondant,Sous stress,Faites de petites expérimentations pour alléger la pression.
+K modéré,K 60-79%,Répondant,Surmonter difficultés,Appuyez-vous sur votre méthode.
+K modéré,K 60-79%,Manager,Développer potentiel,Attribuez-lui des tâches nécessitant précision et suivi.
+K modéré,K 60-79%,Manager,Sous stress,Réduisez la charge cognitive par des priorités claires.
+K modéré,K 60-79%,Manager,Surmonter difficultés,Proposez un accompagnement méthodologique.
+K modéré,K 60-79%,Entourage,Développer potentiel,Appréciez sa fiabilité.
+K modéré,K 60-79%,Entourage,Sous stress,Proposez de petites pauses régénérantes.
+K modéré,K 60-79%,Entourage,Surmonter difficultés,Valorisez sa constance.
+Très K,K >= 80%,Répondant,Développer potentiel,Gardez votre sens de la stabilité mais osez plus d'expérimentation.
+Très K,K >= 80%,Répondant,Sous stress,Privilégiez les routines rassurantes.
+Très K,K >= 80%,Répondant,Surmonter difficultés,Fractionnez les problèmes pour les résoudre.
+Très K,K >= 80%,Manager,Développer potentiel,Confiez-lui la gestion de projets critiques à long terme.
+Très K,K >= 80%,Manager,Sous stress,Maintenez un environnement prévisible.
+Très K,K >= 80%,Manager,Surmonter difficultés,Offrez des ressources supplémentaires.
+Très K,K >= 80%,Entourage,Développer potentiel,Encouragez l'ouverture à la nouveauté.
+Très K,K >= 80%,Entourage,Sous stress,Créez un environnement calme.
+Très K,K >= 80%,Entourage,Surmonter difficultés,Aidez-le à trouver des solutions simples.

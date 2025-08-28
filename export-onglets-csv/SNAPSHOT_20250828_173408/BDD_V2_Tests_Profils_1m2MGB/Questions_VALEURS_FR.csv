@@ -1,0 +1,3 @@
+ID,TypeQuestion,Titre,Options,Logique,Description,Paramètres (JSON)
+VQ01,QCU_CAT,Quelle est votre valeur ?,(vide),(vide),(vide),"{""options"": [{""libelle"": ""La stabilité de l'emploi"", ""categorie"": ""SECURITE"", ""valeur"": 1}, {""libelle"": ""L'opportunité de créer"", ""categorie"": ""CREATION"", ""valeur"": 1}]}"
+VQ02,QCU_CAT,Quelle est votre motivation ?,(vide),(vide),(vide),"{""options"": [{""libelle"": ""Avoir une grande autonomie"", ""categorie"": ""AUTONOMIE"", ""valeur"": 1}, {""libelle"": ""Être au service des autres"", ""categorie"": ""SERVICE"", ""valeur"": 1}]}"
