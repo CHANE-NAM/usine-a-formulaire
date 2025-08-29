@@ -1,12 +1,59 @@
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 20.4
+// == VERSION : 20.6
 // == RÔLE  : Gère la logique de traitement des réponses et aiguille vers le bon moteur.
 // == CHANGES v20.1 : Normalisation + dédoublonnage sys_Composition_Emails, comparaisons robustes
 // == CHANGES v20.2 : Mode test (dry-run) + override destinataires + ignore dev
 // == CHANGES v20.3 : Résolution automatique de la feuille de réponses (plus d'ActiveSpreadsheet null)
 // == CHANGES v20.4 : Sélection automatique de la dernière réponse si rowIndex est absent/incorrect
+// == CHANGES v20.5 : Alias robustes pour nom/prénom et e-mail (Votre_adresse_e_mail <-> Votre_adresse_email)
+// == CHANGES v20.6 : Garde-fou _sheetLooksLikeResponses_ + refus explicite si la feuille ne ressemble pas à des réponses de test
 // =================================================================================
+
+// ====== DEBUG / ESPIONS ======
+var __DBG = true; // ← mets false pour couper les logs
+
+function DBG() {
+  if (!__DBG) return;
+  const parts = [].slice.call(arguments).map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x)));
+  Logger.log('[DBG] ' + parts.join(' '));
+}
+
+// Dump non normalisé d'une ligne (entêtes EXACTES -> valeurs)
+function _spyDumpRow_(sheet, rowIndex) {
+  try {
+    const lastCol = sheet.getLastColumn();
+    if (!lastCol) return null;
+    const H = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    const V = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+    const subset = {};
+    for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i]; // 25 1res colonnes
+    DBG('DUMP row', rowIndex, 'subset=', subset);
+    return { headers: H, values: V };
+  } catch (e) { DBG('spyDumpRow ERROR', e.message); }
+  return null;
+}
+
+// Cherche "nom complet" et "email" dans un objet réponse (seulement clés autorisées)
+function _spyFindNomEmail_(reponse) {
+  const keys = Object.keys(reponse || {});
+  const norm = k => _nettoyerEnTete(k).toLowerCase();
+
+  const allowedName = new Set([
+    'votre_nom_et_prenom','nom_et_prenom','nom_prenom','nomprenom'
+  ]);
+  const allowedEmail = new Set([
+    'votre_adresse_e_mail','votre_adresse_email','adresse_e_mail','email','email_repondant','email_du_repondant'
+  ]);
+
+  let nom = '', email = '';
+  for (const k of keys) {
+    const n = norm(k);
+    if (!nom && allowedName.has(n))  nom = reponse[k];
+    if (!email && allowedEmail.has(n)) email = reponse[k];
+  }
+  return { nom, email };
+}
 
 /** Nettoie une chaîne pour l'utiliser comme clé/placeholder. */
 function _nettoyerEnTete(enTete) {
@@ -17,6 +64,40 @@ function _nettoyerEnTete(enTete) {
     const i = accents.indexOf(char);
     return i !== -1 ? sansAccents[i] : char;
   }).join('').replace(/[^a-zA-Z0-9_]/g, '_');
+}
+
+// ====== Garde-fou : une feuille "ressemble-t-elle" à des réponses de test ? ======
+function _sheetLooksLikeResponses_(sheet) {
+  try {
+    const lastCol = sheet.getLastColumn();
+    if (!lastCol) return false;
+    const rawHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
+    const norm = h => _nettoyerEnTete(h).toLowerCase();
+
+    const Hn = rawHeaders.map(norm);
+
+    // Signaux "positifs"
+    const hasName  = Hn.includes('votre_nom_et_prenom') || Hn.includes('nom_et_prenom');
+    const hasEmail = Hn.includes('votre_adresse_e_mail') || Hn.includes('votre_adresse_email') || Hn.includes('adresse_e_mail') || Hn.includes('email');
+
+    // Présence d'au moins une question codée (ex: "Q12: …", "ENV001 …", "ADA123: …")
+    const hasQuestionId = rawHeaders.some(h =>
+      /(^|\s)Q\d+\s*:/.test(h) ||                    // Q12:
+      /^ENV\s*\d{3}/i.test(h) ||                     // ENV001
+      /^[A-Z]{2,4}\d{2,3}\s*:/.test(h)               // ADA123:, RES045:, CRE010:, etc.
+    );
+
+    // Heuristique : on veut éviter les feuilles CONFIG (paramétrage)
+    // On valide si on a (nom & email) OU si on voit des questions codées.
+    const ok = (hasName && hasEmail) || hasQuestionId;
+
+    if (!ok) {
+      DBG('sheetLooksLikeResponses=FALSE name=', sheet.getName(), 'headersSample=', rawHeaders.slice(0, 15));
+    }
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 /* ===================== Résolution de la feuille de réponses ===================== */
@@ -36,7 +117,7 @@ function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
   return sheets[0];
 }
 
-// v20.5 — Résolution prioritaire via Script Properties (RESPONSES_SSID)
+// v20.6 — Résolution prioritaire via Script Properties (RESPONSES_SSID) + garde-fou
 function _getReponsesSheet_(config, options) {
   options = options || {};
   const sys   = (typeof getSystemIds === 'function') ? getSystemIds() : {};
@@ -45,46 +126,73 @@ function _getReponsesSheet_(config, options) {
 
   let ss = null, used = '';
 
-  try {
-    if (options.reponsesSpreadsheetId) {
-      ss = SpreadsheetApp.openById(options.reponsesSpreadsheetId);
-      used = `ById(options:${options.reponsesSpreadsheetId})`;
-    } else if (ssidProp) {
-      ss = SpreadsheetApp.openById(ssidProp);
-      used = `ScriptProp(${ssidProp})`;
-    } else if (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) {
-      const id = config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET;
-      ss = SpreadsheetApp.openById(id);
-      used = `CONFIG(${id})`;
-    } else if (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) {
-      const id2 = sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET;
-      ss = SpreadsheetApp.openById(id2);
-      used = `SYS(${id2})`;
-    } else if (sys?.ID_CONFIG) {
-      ss = SpreadsheetApp.openById(sys.ID_CONFIG);
-      used = `CONFIG(${sys.ID_CONFIG})`;
-    }
-  } catch (_) {}
+  // 1) Ordre de priorité pour ouvrir un SPREADSHEET
+  function tryOpenById(id, tag) {
+    if (!id) return null;
+    try {
+      const ssp = SpreadsheetApp.openById(id);
+      DBG('tryOpenById OK', tag, id);
+      return { ss: ssp, used: `${tag}(${id})` };
+    } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
+  }
+
+  let pick =
+    (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) ||
+    (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
+    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) &&
+      tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+    ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) &&
+      tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
+
+  if (pick) { ss = pick.ss; used = pick.used; }
+
+  // ⚠️ On NE BASCULE PLUS AUTOMATIQUEMENT sur ID_CONFIG sans validation
+  // Ancien fallback retiré : else if (sys?.ID_CONFIG) { ... }
+  // À la place, on utilisera ActiveSpreadsheet en dernier recours, puis on validera.
 
   if (!ss) {
-    try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {}
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (ss) used = 'ActiveSpreadsheet';
+    } catch (_) {}
   }
-  if (!ss) throw new Error("Impossible d’ouvrir le classeur de réponses. Renseigne-le via le menu “Configurer la feuille de réponses…”.");
-  
-  const sheet = _pickSheetByNameOrHeuristic_(ss, options.reponsesSheetName);
-  if (!sheet) throw new Error("Classeur de réponses ouvert, mais aucun onglet trouvé.");
+  if (!ss) {
+    throw new Error("Impossible d’ouvrir le classeur de réponses. Configure-le via le menu “Configurer la feuille de réponses…” (RESPONSES_SSID).");
+  }
+
+  // 2) Choix d’un onglet dans ce classeur + validation "ça ressemble à des réponses ?"
+  let sheet = _pickSheetByNameOrHeuristic_(ss, options.reponsesSheetName);
+  if (!sheet || !_sheetLooksLikeResponses_(sheet)) {
+    // tenter un autre onglet du même classeur qui 'ressemble'
+    const all = ss.getSheets();
+    const candidates = all.filter(sh => _sheetLooksLikeResponses_(sh));
+    if (candidates.length) {
+      sheet = candidates[0];
+      DBG('Heuristic sheet rejected → picked candidate', sheet.getName());
+    }
+  }
+
+  if (!sheet || !_sheetLooksLikeResponses_(sheet)) {
+    // On refuse clairement au lieu de poursuivre avec CONFIG par erreur.
+    throw new Error(
+      "Classeur ouvert (“" + ss.getName() + "” via " + used + "), mais aucune feuille ne ressemble à une feuille de réponses de test.\n" +
+      "→ Renseigne l’ID du classeur de réponses (Google Sheet lié au Form) via le menu : Usine à Tests → « Configurer la feuille de réponses… »."
+    );
+  }
+
   Logger.log(`Source réponses → ${ss.getName()} [${used}] :: onglet "${sheet.getName()}"`);
+  DBG('ReponsesSheet -> classeur:', ss.getName(), '| onglet:', sheet.getName(), '| lastRow=', sheet.getLastRow(), '| lastCol=', sheet.getLastColumn());
   return sheet;
 }
-
-
-
 
 /* ======================= Création de l'objet réponse (robuste) ======================= */
 
 function _creerObjetReponse(rowIndex, options) {
   const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {};
   const sheet = _getReponsesSheet_(config, options);
+
+  // espion : dump de la ligne en brut pour investiguer
+  _spyDumpRow_(sheet, Math.max(2, rowIndex || sheet.getLastRow()));
 
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
@@ -106,6 +214,24 @@ function _creerObjetReponse(rowIndex, options) {
     if (header && !String(header).includes(':')) cle = _nettoyerEnTete(header);
     if (cle) reponse[cle] = rowValues[i];
   });
+
+  // === v20.5 Aliases canoniques ===
+  // E-mail : accepte "Votre_adresse_e_mail" ET "Votre_adresse_email"
+  if (reponse.Votre_adresse_e_mail && !reponse.Votre_adresse_email) {
+    reponse.Votre_adresse_email = reponse.Votre_adresse_e_mail;
+  }
+  if (reponse.Votre_adresse_email && !reponse.Votre_adresse_e_mail) {
+    reponse.Votre_adresse_e_mail = reponse.Votre_adresse_email;
+  }
+  // Nom complet : expose aussi "Nom_et_prenom" pour l'UI historique si besoin
+  if (reponse.Votre_nom_et_prenom && !reponse.Nom_et_prenom) {
+    reponse.Nom_et_prenom = reponse.Votre_nom_et_prenom;
+  }
+
+  // espion : quels champs nom/email a-t-on trouvés ?
+  const spy = _spyFindNomEmail_(reponse);
+  DBG('_creerObjetReponse row=', rowIndex, 'keys=', Object.keys(reponse).slice(0, 12), '| nom=', spy.nom, '| email=', spy.email);
+
   return reponse;
 }
 
@@ -149,6 +275,48 @@ function normalizeAndDedupeCompositionEmailsRows_(rows, idx) {
     });
 }
 
+/* ====================== Enrichissement pour fusion e-mails ====================== */
+
+/**
+ * v20.5 — Construit un dictionnaire prêt pour la fusion {{...}} avec alias robustes.
+ * - Garantit la présence simultanée de Votre_adresse_e_mail et Votre_adresse_email
+ * - Propage le nom complet sous la clé canonique Votre_nom_et_prenom
+ * - Fournit des alias pour Titre_Profil / Description_Profil depuis resultats
+ */
+function _enrichirDonneesPourEmail_(reponse, resultats) {
+  const R = reponse || {};
+  const donnees = { ...R, ...(resultats || {}) };
+
+  // 1) E-mail : accepter les deux variantes
+  const email =
+    R.Votre_adresse_e_mail ||
+    R.Votre_adresse_email ||
+    R.Adresse_e_mail ||
+    R.emailRepondant ||
+    '';
+  if (email) {
+    if (!donnees.Votre_adresse_e_mail) donnees.Votre_adresse_e_mail = email;
+    if (!donnees.Votre_adresse_email) donnees.Votre_adresse_email = email;
+  }
+
+  // 2) Nom & prénom : clé canonique
+  if (R.Votre_nom_et_prenom && !donnees.Votre_nom_et_prenom) {
+    donnees.Votre_nom_et_prenom = R.Votre_nom_et_prenom;
+  } else if (R.Nom_et_prenom && !donnees.Votre_nom_et_prenom) {
+    donnees.Votre_nom_et_prenom = R.Nom_et_prenom;
+  }
+
+  // 3) Alias historiques des résultats
+  if (donnees.titreProfil && !donnees.Titre_Profil) {
+    donnees.Titre_Profil = donnees.titreProfil;
+  }
+  if (donnees.descriptionProfil && !donnees.Description_Profil) {
+    donnees.Description_Profil = donnees.descriptionProfil;
+  }
+
+  return donnees;
+}
+
 /* ========================== Flux principal ========================== */
 
 function onFormSubmit(e) {
@@ -172,7 +340,14 @@ function _envoyerEmailDeConfirmation(config, reponse, langueCible) {
     } else {
       Logger.log(`Utilisation du gabarit de confirmation SPÉCIFIQUE pour ${langueCible}.`);
     }
-    const emailRepondant = reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || reponse.emailRepondant;
+
+    // v20.5 : élargir la détection d'e-mail répondant
+    const emailRepondant =
+      reponse.Votre_adresse_e_mail ||
+      reponse.Votre_adresse_email ||
+      reponse.Adresse_e_mail ||
+      reponse.emailRepondant;
+
     if (!idGabaritConfirmation || !emailRepondant) return;
 
     const doc = DocumentApp.openById(idGabaritConfirmation);
@@ -182,13 +357,16 @@ function _envoyerEmailDeConfirmation(config, reponse, langueCible) {
     const response = UrlFetchApp.fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     let corpsHtml = response.getContentText();
 
-    for (const key in reponse) {
+    // v20.5 : remplacements avec alias robustes
+    const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, null);
+    for (const key in donneesPourEmail) {
       const placeholder = `{{${key}}}`;
-      const valeur = reponse[key] || '';
+      const valeur = donneesPourEmail[key] || '';
       const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
       sujet = sujet.replace(regex, valeur);
       corpsHtml = corpsHtml.replace(regex, valeur);
     }
+
     const mailOptions = { to: emailRepondant, subject: sujet, htmlBody: corpsHtml };
     if (config.Email_Alias && config.Email_Alias.trim() !== '') mailOptions.from = config.Email_Alias;
     GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions);
@@ -298,8 +476,8 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   }
 
-  // Remplacement de variables
-  const donneesPourEmail = { ...reponse, ...resultats };
+  // Remplacement de variables (v20.5 : avec alias robustes)
+  const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
   for (const key in donneesPourEmail) {
     const placeholder = `{{${key}}}`;
     const valeur = donneesPourEmail[key] || '';
@@ -310,7 +488,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   }
 
   // Pièces jointes : résolution & PDF
-  const variablesFusion = { ...reponse, ...resultats };
+  const variablesFusion = { ...donneesPourEmail }; // déjà enrichi
   const piecesJointes = [];
   for (const contenuDoc of Array.from(piecesJointesIds)) {
     let candidate = contenuDoc;
@@ -334,7 +512,11 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
 
   // Destinataires (override, ignore dev, dry-run)
   const T = loadTraductions(langueCible);
-  const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || reponse.emailRepondant;
+  const emailRepondantPrincipal =
+    reponse.Votre_adresse_e_mail ||
+    reponse.Votre_adresse_email ||
+    reponse.Adresse_e_mail ||
+    reponse.emailRepondant;
 
   const override = optionsSurcharge.overrideRecipients === true;
   const ignoreDev = optionsSurcharge.ignoreDeveloppeurEmail === true;
@@ -403,7 +585,7 @@ function getDonneesPourRetraitement(rowIndex) {
     const reponse = _creerObjetReponse(rowIndex, {});
     return {
       nomRepondant: reponse.Votre_nom_et_prenom || reponse.Nom_et_prenom || '',
-      emailRepondant: reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || '',
+      emailRepondant: reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || reponse.Adresse_e_mail || '',
       langueOrigine: getOriginalLanguage(reponse),
       repondantActif: config.Repondant_Email_Actif === 'Oui',
       formateurActif: config.Formateur_Email_Actif === 'Oui',

@@ -1,7 +1,7 @@
 // =================================================================================
 // FICHIER : Utils V2.gs (Projet MOTEUR)
 // RÔLE    : Fonctions utilitaires pour le Moteur / Usine
-// VERSION : 3.1 - getConfigurationFromRow tolérant (résolution sheet/ID/nom) + ECHELLE_NOTE robuste
+// VERSION : 3.2 - alias TEXTE_EMAIL→EMAIL + prise en compte params.mode dans creerItemFormulaire
 // =================================================================================
 
 // ⚙️ ID de la feuille de configuration centrale (CONFIG)
@@ -177,6 +177,7 @@ function buildChoices(optionsString, params) {
 // Création d'items dans le Google Form
 //  - gère QRM, QCU, ECHELLE, ECHELLE_NOTE (robuste), EMAIL, TEXTE_COURT
 //  - remplace [LIEN_FICHIER:Nom] dans la description si présent
+//  - NEW v3.2 : alias TEXTE_EMAIL → EMAIL ; priorise params.mode si fourni
 // ------------------------------------
 function creerItemFormulaire(form, type, titre, optionsString, description, paramsJSONString) {
   // 1) Résolution [LIEN_FICHIER:...]
@@ -219,25 +220,29 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
   // 3) Construction des choix si nécessaire
   const choices = buildChoices(optionsString, params);
 
-  // 4) Création de l'item selon le type
-  let item = null;
-  const formItemType = type ? String(type).toUpperCase() : '';
+  // 4) Type final (priorise params.mode si fourni) + alias TEXTE_EMAIL → EMAIL
+  let resolvedType = (params && params.mode) ? String(params.mode) : String(type || '');
+  resolvedType = resolvedType.trim().toUpperCase();
+  if (resolvedType === 'TEXTE_EMAIL') resolvedType = 'EMAIL';
 
-  if (formItemType.startsWith('QRM')) {
+  // 5) Création de l'item selon le type
+  let item = null;
+
+  if (resolvedType.startsWith('QRM')) {
     if (choices.length > 0) {
       item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QRM: Options manquantes] " + titre);
     }
 
-  } else if (formItemType.startsWith('QCU')) {
+  } else if (resolvedType.startsWith('QCU')) {
     if (choices.length > 0) {
       item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QCU: Options manquantes] " + titre);
     }
 
-  } else if (formItemType === 'ECHELLE_NOTE') { // ✅ v3.1 robuste : min/max OU echelle_min/echelle_max + labels tolérants
+  } else if (resolvedType === 'ECHELLE_NOTE') { // ✅ v3.1 robuste : min/max OU echelle_min/echelle_max + labels tolérants
     if (params) {
       const eMin = (params.echelle_min ?? params.min);
       const eMax = (params.echelle_max ?? params.max);
@@ -262,28 +267,28 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
         .setTitle("[Erreur ECHELLE_NOTE: Paramètres JSON absents] " + titre);
     }
 
-  } else if (formItemType === 'ECHELLE') { // compat historique
+  } else if (resolvedType === 'ECHELLE') { // compat historique
     const parts = optionsString ? optionsString.split(';').map(s => s.trim()) : [];
     const min = parts[0] ? Number(parts[0]) : 1;
     const max = parts[parts.length - 1] ? Number(parts[parts.length - 1]) : 5;
     const scaleItem = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(true);
     item = scaleItem;
 
-  } else if (formItemType === 'EMAIL') {
+  } else if (resolvedType === 'EMAIL') {
     const textItem = form.addTextItem().setTitle(titre).setRequired(true);
     const emailValidation = FormApp.createTextValidation().requireTextIsEmail().build();
     item = textItem.setValidation(emailValidation);
 
-  } else if (formItemType === 'TEXTE_COURT') {
+  } else if (resolvedType === 'TEXTE_COURT') {
     item = form.addTextItem().setTitle(titre).setRequired(true);
 
   } else {
-    item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + type + "] " + titre);
+    item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + (type || resolvedType) + "] " + titre);
   }
 
-  // 5) HelpText (évite d’écraser les labels d’échelle)
+  // 6) HelpText (évite d’écraser les labels d’échelle)
   if (finalDescription && item && typeof item.setHelpText === 'function') {
-    if (formItemType !== 'ECHELLE' && formItemType !== 'ECHELLE_NOTE') {
+    if (resolvedType !== 'ECHELLE' && resolvedType !== 'ECHELLE_NOTE') {
       item.setHelpText(finalDescription);
     }
   }
