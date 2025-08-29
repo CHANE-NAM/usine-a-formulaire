@@ -199,5 +199,35 @@ if (Test-Path -LiteralPath $zipPath) {
 Compress-Archive -Path $SnapDir -DestinationPath $zipPath -CompressionLevel Optimal
 Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 
+# -----------------------------
+# 9) RÉTENTION DES SNAPSHOTS (garder les N derniers)
+# -----------------------------
+# Ajuste la valeur ci-dessous selon ton besoin (ex. 5 selon ta checklist "Rétention auto=5")
+$RetentionCount = 5
+
+try {
+  $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory |
+              Where-Object { $_.Name -like 'SNAPSHOT_*' } |
+              Sort-Object LastWriteTime -Descending
+
+  if ($allSnaps.Count -gt $RetentionCount) {
+    $toDelete = $allSnaps | Select-Object -Skip $RetentionCount
+    foreach ($old in $toDelete) {
+      try {
+        $oldZip = Join-Path $ExportDir ($old.Name + '.zip')
+        if (Test-Path -LiteralPath $oldZip) {
+          Remove-Item -LiteralPath $oldZip -Force -ErrorAction SilentlyContinue
+        }
+        Remove-Item -LiteralPath $old.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host ("[RETENTION] Supprimé: {0}" -f $old.Name)
+      } catch {
+        Write-Warning ("[RETENTION] Échec suppression {0} : {1}" -f $old.Name, $_.Exception.Message)
+      }
+    }
+  }
+} catch {
+  Write-Warning ("[RETENTION] Échec du traitement de rétention : {0}" -f $_.Exception.Message)
+}
+
 Write-Host ""
 Write-Host ("[DONE] Snapshot: {0}" -f $SnapDir)
