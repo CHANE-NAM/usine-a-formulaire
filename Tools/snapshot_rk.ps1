@@ -203,7 +203,7 @@ Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 # 9) RÉTENTION DES SNAPSHOTS (garder les N derniers)
 # -----------------------------
 # Ajuste la valeur ci-dessous selon ton besoin (ex. 5 selon ta checklist "Rétention auto=5")
-$RetentionCount = 5
+$RetentionCount = 8
 
 try {
   $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory |
