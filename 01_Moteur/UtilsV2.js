@@ -1,7 +1,7 @@
 // =================================================================================
 // FICHIER : Utils V2.gs (Projet MOTEUR)
 // RÔLE    : Fonctions utilitaires pour le Moteur / Usine
-// VERSION : 3.3 - Gestion des questions optionnelles via "(optionnel)" dans le titre
+// VERSION : 3.4 - Ajout de la gestion du type de question LIKERT_5.
 // =================================================================================
 
 // ⚙️ ID de la feuille de configuration centrale (CONFIG)
@@ -175,18 +175,13 @@ function buildChoices(optionsString, params) {
 
 // ------------------------------------
 // Création d'items dans le Google Form
-//  - gère QRM, QCU, ECHELLE, ECHELLE_NOTE (robuste), EMAIL, TEXTE_COURT
-//  - remplace [LIEN_FICHIER:Nom] dans la description si présent
-//  - NEW v3.2 : alias TEXTE_EMAIL → EMAIL ; priorise params.mode si fourni
 // ------------------------------------
 function creerItemFormulaire(form, type, titre, optionsString, description, paramsJSONString) {
-  // ==================== DÉBUT DE LA MODIFICATION ====================
-  // On détermine si la question doit être obligatoire en inspectant le titre.
+  // Détermine si la question doit être obligatoire en inspectant le titre.
   let isRequired = true;
   if (titre.toLowerCase().includes('(optionnel)')) {
     isRequired = false;
   }
-  // ===================== FIN DE LA MODIFICATION =====================
 
   // 1) Résolution [LIEN_FICHIER:...]
   let finalDescription = description;
@@ -228,7 +223,7 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
   // 3) Construction des choix si nécessaire
   const choices = buildChoices(optionsString, params);
 
-  // 4) Type final (priorise params.mode si fourni) + alias TEXTE_EMAIL → EMAIL
+  // 4) Type final (priorise params.mode si fourni) + alias
   let resolvedType = (params && params.mode) ? String(params.mode) : String(type || '');
   resolvedType = resolvedType.trim().toUpperCase();
   if (resolvedType === 'TEXTE_EMAIL') resolvedType = 'EMAIL';
@@ -238,19 +233,19 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
 
   if (resolvedType.startsWith('QRM')) {
     if (choices.length > 0) {
-      item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired); // MODIFIÉ
+      item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired);
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QRM: Options manquantes] " + titre);
     }
 
   } else if (resolvedType.startsWith('QCU')) {
     if (choices.length > 0) {
-      item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired); // MODIFIÉ
+      item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired);
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QCU: Options manquantes] " + titre);
     }
 
-  } else if (resolvedType === 'ECHELLE_NOTE') { // ✅ v3.1 robuste : min/max OU echelle_min/echelle_max + labels tolérants
+  } else if (resolvedType === 'ECHELLE_NOTE') {
     if (params) {
       const eMin = (params.echelle_min ?? params.min);
       const eMax = (params.echelle_max ?? params.max);
@@ -258,9 +253,8 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
         const scaleItem = form.addScaleItem()
           .setTitle(titre)
           .setBounds(Number(eMin), Number(eMax))
-          .setRequired(isRequired); // MODIFIÉ
+          .setRequired(isRequired);
 
-        // Labels : label_min / libelle_min / labelMin  (idem pour _max)
         const lmin = (params.label_min ?? params.libelle_min ?? params.labelMin);
         const lmax = (params.label_max ?? params.libelle_max ?? params.labelMax);
         if (lmin && lmax) scaleItem.setLabels(String(lmin), String(lmax));
@@ -275,28 +269,42 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
         .setTitle("[Erreur ECHELLE_NOTE: Paramètres JSON absents] " + titre);
     }
 
-  } else if (resolvedType === 'ECHELLE') { // compat historique
+  } else if (resolvedType === 'LIKERT_5') {
+    if (params && Array.isArray(params.options) && params.options.length > 0) {
+      const values = params.options.map(opt => Number(opt.valeur)).filter(v => !isNaN(v));
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+
+      item = form.addScaleItem()
+        .setTitle(titre)
+        .setBounds(min, max)
+        .setRequired(isRequired);
+    } else {
+      item = form.addParagraphTextItem()
+        .setTitle("[Erreur LIKERT_5: Paramètres JSON (options) invalides] " + titre);
+    }
+
+  } else if (resolvedType === 'ECHELLE') { // compatibilité historique
     const parts = optionsString ? optionsString.split(';').map(s => s.trim()) : [];
     const min = parts[0] ? Number(parts[0]) : 1;
     const max = parts[parts.length - 1] ? Number(parts[parts.length - 1]) : 5;
-    const scaleItem = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(isRequired); // MODIFIÉ
-    item = scaleItem;
+    item = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(isRequired);
 
   } else if (resolvedType === 'EMAIL') {
-    const textItem = form.addTextItem().setTitle(titre).setRequired(isRequired); // MODIFIÉ
+    const textItem = form.addTextItem().setTitle(titre).setRequired(isRequired);
     const emailValidation = FormApp.createTextValidation().requireTextIsEmail().build();
     item = textItem.setValidation(emailValidation);
 
   } else if (resolvedType === 'TEXTE_COURT') {
-    item = form.addTextItem().setTitle(titre).setRequired(isRequired); // MODIFIÉ
+    item = form.addTextItem().setTitle(titre).setRequired(isRequired);
 
   } else {
     item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + (type || resolvedType) + "] " + titre);
   }
 
-  // 6) HelpText (évite d’écraser les labels d’échelle)
+  // 6) HelpText (description sous la question)
   if (finalDescription && item && typeof item.setHelpText === 'function') {
-    if (resolvedType !== 'ECHELLE' && resolvedType !== 'ECHELLE_NOTE') {
+    if (resolvedType !== 'ECHELLE' && resolvedType !== 'ECHELLE_NOTE' && resolvedType !== 'LIKERT_5') {
       item.setHelpText(finalDescription);
     }
   }

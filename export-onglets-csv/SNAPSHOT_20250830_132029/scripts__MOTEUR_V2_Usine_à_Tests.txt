@@ -6,143 +6,171 @@
 // =================================================================================
 // FICHIER : Moteur V2.js
 // RÃ”LE : Fonctions principales de crÃ©ation et d'orchestration des tests.
-// VERSION : 6.1 - Utilisation de getPublishedUrl() pour une fiabilitÃ© maximale.
+// VERSION : 6.2 - Ne crÃ©e pas la sÃ©lection de langue si un seul onglet de question est trouvÃ©.
 // =================================================================================
 
 /**
-Â * GÃ¨re le dÃ©ploiement complet (crÃ©ation + mise Ã  jour du statut + lien public).
-Â */
+ * GÃ¨re le dÃ©ploiement complet (crÃ©ation + mise Ã  jour du statut + lien public).
+ */
 function lancerDeploiementComplet(rowIndex) {
-Â  Logger.log(`Lancement du dÃ©ploiement complet pour la ligne ${rowIndex}...`);
-Â  
-Â  try {
-Â  Â  const config = getConfigurationFromRow(rowIndex);
+  Logger.log(`Lancement du dÃ©ploiement complet pour la ligne ${rowIndex}...`);
+  
+  try {
+    const config = getConfigurationFromRow(rowIndex);
 
-Â  Â  if (config['Statut'].toLowerCase() !== 'en construction') {
-Â  Â  Â  Logger.log(`La crÃ©ation pour la ligne ${rowIndex} a Ã©tÃ© ignorÃ©e (statut non valide).`);
-Â  Â  Â  return null;
-Â  Â  }
+    if (config['Statut'].toLowerCase() !== 'en construction') {
+      Logger.log(`La crÃ©ation pour la ligne ${rowIndex} a Ã©tÃ© ignorÃ©e (statut non valide).`);
+      return null;
+    }
 
-Â  Â  const nomFichierComplet = "[" + config['Type_Test'] + "] " + config['Titre_Formulaire_Utilisateur'];
-Â  Â  const systemIds = getSystemIds();
-Â  Â  if (!systemIds.ID_TEMPLATE_TRAITEMENT_V2) throw new Error("ID_TEMPLATE_TRAITEMENT_V2 introuvable.");
+    const nomFichierComplet = "[" + config['Type_Test'] + "] " + config['Titre_Formulaire_Utilisateur'];
+    const systemIds = getSystemIds();
+    if (!systemIds.ID_TEMPLATE_TRAITEMENT_V2) throw new Error("ID_TEMPLATE_TRAITEMENT_V2 introuvable.");
 
-Â  Â  let dossierCible;
-Â  Â  if (config['ID_Dossier_Cible']) {
-Â  Â  Â  dossierCible = DriveApp.getFolderById(config['ID_Dossier_Cible']);
-Â  Â  } else {
-Â  Â  Â  if (!systemIds.ID_DOSSIER_CIBLE_GEN) throw new Error("ID_DOSSIER_CIBLE_GEN introuvable.");
-Â  Â  Â  dossierCible = DriveApp.getFolderById(systemIds.ID_DOSSIER_CIBLE_GEN);
-Â  Â  }
+    let dossierCible;
+    if (config['ID_Dossier_Cible']) {
+      dossierCible = DriveApp.getFolderById(config['ID_Dossier_Cible']);
+    } else {
+      if (!systemIds.ID_DOSSIER_CIBLE_GEN) throw new Error("ID_DOSSIER_CIBLE_GEN introuvable.");
+      dossierCible = DriveApp.getFolderById(systemIds.ID_DOSSIER_CIBLE_GEN);
+    }
 
-Â  Â  const templateFile = DriveApp.getFileById(systemIds.ID_TEMPLATE_TRAITEMENT_V2);
-Â  Â  const sheetFile = templateFile.makeCopy(nomFichierComplet, dossierCible);
-Â  Â  const reponsesSheetId = sheetFile.getId();
+    const templateFile = DriveApp.getFileById(systemIds.ID_TEMPLATE_TRAITEMENT_V2);
+    const sheetFile = templateFile.makeCopy(nomFichierComplet, dossierCible);
+    const reponsesSheetId = sheetFile.getId();
 
-Â  Â  const form = FormApp.create(nomFichierComplet);
-Â  Â  form.setDestination(FormApp.DestinationType.SPREADSHEET, reponsesSheetId);
-Â  Â  form.setProgressBar(true);
-Â  Â  
-Â  Â  const sousTitre = config['Sous-Titre_Formulaire']; 
-Â  Â  form.setDescription(sousTitre || ""); 
+    const form = FormApp.create(nomFichierComplet);
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, reponsesSheetId);
+    form.setProgressBar(true);
+    
+    const sousTitre = config['Sous-Titre_Formulaire']; 
+    form.setDescription(sousTitre || ""); 
 
-Â  Â  const formFile = DriveApp.getFileById(form.getId());
-Â  Â  formFile.moveTo(dossierCible);
+    const formFile = DriveApp.getFileById(form.getId());
+    formFile.moveTo(dossierCible);
 
-    // ======================= CORRECTION DÃ‰FINITIVE =======================
-    // On utilise la fonction getPublishedUrl() qui est garantie de fonctionner
-    // dans votre environnement, comme l'a prouvÃ© notre diagnostic.
     const formUrl = form.getPublishedUrl();
     Logger.log("URL longue obtenue avec succÃ¨s via getPublishedUrl() : " + formUrl);
-    // ====================================================================
+    
+    // --- GÃ©nÃ©ration des questions ---
+    if (!systemIds.ID_BDD) throw new Error("ID_BDD introuvable.");
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    
+    const blocsMetaConfig = config['Blocs_Meta_A_Inclure'];
+    if (blocsMetaConfig && blocsMetaConfig.trim() !== '') {
+      const metaIds = blocsMetaConfig.split(',').map(id => id.trim());
+      const metaSheet = bdd.getSheetByName('Questions_META_FR'); 
+      if (metaSheet) {
+        const metaData = metaSheet.getDataRange().getValues();
+        const metaHeaders = metaData.shift();
+        const idCol = metaHeaders.indexOf('ID');
+        const metaQuestionsMap = metaData.reduce((acc, row) => { acc[row[idCol]] = row; return acc; }, {});
+        
+        metaIds.forEach(id => {
+          if (metaQuestionsMap[id]) {
+            const [q_id, q_type_old, q_titre, q_options, q_logique, q_description, q_params_json] = metaQuestionsMap[id];
+            let final_meta_type = q_type_old;
+            if (q_params_json) { try { const p = JSON.parse(q_params_json); if(p.mode) final_meta_type = p.mode; } catch(e){} }
+            creerItemFormulaire(form, final_meta_type, q_titre, q_options, q_description, q_params_json);
+          }
+        });
+      }
+    }
 
-Â  Â  // --- GÃ©nÃ©ration des questions ---
-Â  Â  if (!systemIds.ID_BDD) throw new Error("ID_BDD introuvable.");
-Â  Â  const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
-Â  Â  
-Â  Â  const blocsMetaConfig = config['Blocs_Meta_A_Inclure'];
-Â  Â  if (blocsMetaConfig && blocsMetaConfig.trim() !== '') {
-Â  Â  Â  const metaIds = blocsMetaConfig.split(',').map(id => id.trim());
-Â  Â  Â  const metaSheet = bdd.getSheetByName('Questions_META_FR'); 
-Â  Â  Â  if (metaSheet) {
-Â  Â  Â  Â  const metaData = metaSheet.getDataRange().getValues();
-Â  Â  Â  Â  const metaHeaders = metaData.shift();
-Â  Â  Â  Â  const idCol = metaHeaders.indexOf('ID');
-Â  Â  Â  Â  const metaQuestionsMap = metaData.reduce((acc, row) => { acc[row[idCol]] = row; return acc; }, {});
-Â  Â  Â  Â  metaIds.forEach(id => {
-Â  Â  Â  Â  Â  if (metaQuestionsMap[id]) {
-Â  Â  Â  Â  Â  Â  const [q_id, q_type_old, q_titre, q_options, q_logique, q_description, q_params_json] = metaQuestionsMap[id];
-Â  Â  Â  Â  Â  Â  let final_meta_type = q_type_old;
-Â  Â  Â  Â  Â  Â  if (q_params_json) { try { const p = JSON.parse(q_params_json); if(p.mode) final_meta_type = p.mode; } catch(e){} }
-Â  Â  Â  Â  Â  Â  creerItemFormulaire(form, final_meta_type, q_titre, q_options, q_description, q_params_json);
-Â  Â  Â  Â  Â  }
-Â  Â  Â  Â  });
-Â  Â  Â  }
-Â  Â  }
+    // ==================== DÃ‰BUT DE LA MODIFICATION V6.2 ====================
+    // Ã‰tape 1 : On identifie toutes les langues disponibles pour ce test
+    const toutesLesFeuillesBDD = bdd.getSheets();
+    const regexLangues = new RegExp('^Questions_' + config['Type_Test'] + '_([A-Z]{2})$', 'i');
+    const languesAInclure = [];
+    toutesLesFeuillesBDD.forEach(feuille => {
+      const match = feuille.getName().match(regexLangues);
+      if (match && match[1]) languesAInclure.push({ code: match[1].toUpperCase(), nomComplet: getLangueFullName(match[1]), feuille: feuille });
+    });
 
-Â  Â  const toutesLesFeuillesBDD = bdd.getSheets();
-Â  Â  const regexLangues = new RegExp('^Questions_' + config['Type_Test'] + '_([A-Z]{2})$', 'i');
-Â  Â  const languesAInclure = [];
-Â  Â  toutesLesFeuillesBDD.forEach(feuille => {
-Â  Â  Â  const match = feuille.getName().match(regexLangues);
-Â  Â  Â  if (match && match[1]) languesAInclure.push({ code: match[1].toUpperCase(), nomComplet: getLangueFullName(match[1]), feuille: feuille });
-Â  Â  });
+    if (languesAInclure.length === 0) {
+        throw new Error("Aucune feuille de questions trouvÃ©e pour le type '" + config['Type_Test'] + "'.");
+    }
 
-Â  Â  if (languesAInclure.length === 0) throw new Error("Aucune feuille de questions trouvÃ©e pour le type '" + config['Type_Test'] + "'.");
-Â  Â  
-Â  Â  const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
-Â  Â  const choices = [];
-Â  Â  languesAInclure.forEach(langue => {
-Â  Â  Â  const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
-Â  Â  Â  choices.push(itemLangue.createChoice(langue.nomComplet, page));
-Â  Â  Â  
-Â  Â  Â  const nbQuestionsDisponibles = langue.feuille.getLastRow() - 1;
-Â  Â  Â  let nbQuestionsAUtiliser = (config['nbQuestions'] && config['nbQuestions'] > 0) ? Math.min(config['nbQuestions'], nbQuestionsDisponibles) : nbQuestionsDisponibles;
-Â  Â  Â  if (nbQuestionsAUtiliser <= 0) return;
+    // Ã‰tape 2 : On applique une logique diffÃ©rente s'il y a une ou plusieurs langues
+    if (languesAInclure.length > 1) {
+        // CAS 1 : MULTI-LANGUES (comportement original)
+        // On crÃ©e la question de sÃ©lection de langue et les pages associÃ©es.
+        Logger.log(`Mode multi-langues dÃ©tectÃ© (${languesAInclure.length} langues). CrÃ©ation de la sÃ©lection de langue.`);
+        
+        const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
+        const choices = [];
+        languesAInclure.forEach(langue => {
+            const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
+            choices.push(itemLangue.createChoice(langue.nomComplet, page));
+            
+            const nbQuestionsDisponibles = langue.feuille.getLastRow() - 1;
+            let nbQuestionsAUtiliser = (config['nbQuestions'] && config['nbQuestions'] > 0) ? Math.min(config['nbQuestions'], nbQuestionsDisponibles) : nbQuestionsDisponibles;
+            if (nbQuestionsAUtiliser <= 0) return;
 
-Â  Â  Â  const questionsData = langue.feuille.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
-Â  Â  Â  questionsData.forEach((q_data, index) => {
-Â  Â  Â  Â  const [id, type_old, titre, options, logique, description, params_json] = q_data;
-Â  Â  Â  Â  let final_type = type_old;
-Â  Â  Â  Â  if (params_json) { try { const p = JSON.parse(params_json); if(p.mode) final_type = p.mode; } catch(e){} }
-Â  Â  Â  Â  creerItemFormulaire(form, final_type, id + ': ' + titre, options, description, params_json);
-Â  Â  Â  Â  if (index === questionsData.length - 1) page.setGoToPage(FormApp.PageNavigationType.SUBMIT);
-Â  Â  Â  });
-Â  Â  });
-Â  Â  itemLangue.setChoices(choices);
+            const questionsData = langue.feuille.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
+            questionsData.forEach((q_data, index) => {
+                const [id, type_old, titre, options, logique, description, params_json] = q_data;
+                let final_type = type_old;
+                if (params_json) { try { const p = JSON.parse(params_json); if(p.mode) final_type = p.mode; } catch(e){} }
+                creerItemFormulaire(form, final_type, id + ': ' + titre, options, description, params_json);
+                if (index === questionsData.length - 1) page.setGoToPage(FormApp.PageNavigationType.SUBMIT);
+            });
+        });
+        itemLangue.setChoices(choices);
 
-Â  Â  // --- MISE Ã€ JOUR DANS LA FEUILLE CONFIG ---
-Â  Â  const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
-Â  Â  const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
-Â  Â  const colIndex = {};
-Â  Â  headers.forEach((header, i) => { if (header) colIndex[header] = i; });
+    } else {
+        // CAS 2 : LANGUE UNIQUE (nouveau comportement)
+        // On n'ajoute pas la question de langue, on insÃ¨re directement les questions du test.
+        Logger.log(`Mode langue unique dÃ©tectÃ©. Insertion directe des questions.`);
+        
+        const uniqueLangue = languesAInclure[0];
+        const nbQuestionsDisponibles = uniqueLangue.feuille.getLastRow() - 1;
+        let nbQuestionsAUtiliser = (config['nbQuestions'] && config['nbQuestions'] > 0) ? Math.min(config['nbQuestions'], nbQuestionsDisponibles) : nbQuestionsDisponibles;
 
-Â  Â  const STATUT_COL = colIndex['Statut'];
-Â  Â  const ID_UNIQUE_COL = colIndex['Id_Unique'];
-Â  Â  const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
-Â  Â  const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
-Â  Â  const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
-Â  Â  const LIEN_FORM_COL = colIndex['Lien_Formulaire_Public'];
+        if (nbQuestionsAUtiliser > 0) {
+            const questionsData = uniqueLangue.feuille.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
+            questionsData.forEach((q_data) => {
+                const [id, type_old, titre, options, logique, description, params_json] = q_data;
+                let final_type = type_old;
+                if (params_json) { try { const p = JSON.parse(params_json); if(p.mode) final_type = p.mode; } catch(e){} }
+                creerItemFormulaire(form, final_type, id + ': ' + titre, options, description, params_json);
+            });
+        }
+    }
+    // ===================== FIN DE LA MODIFICATION V6.2 =====================
 
-Â  Â  const idUnique = sheetFile.getId().slice(0, 8) + '-' + formFile.getId().slice(0, 8);
-Â  Â  
-Â  Â  configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif - DÃ©clencheur Ã  activer'); 
-Â  Â  configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
-Â  Â  configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(nomFichierComplet);
-Â  Â  if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(formFile.getId());
-Â  Â  if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(sheetFile.getId());
-Â  Â  if (LIEN_FORM_COL !== undefined) configSheet.getRange(rowIndex, LIEN_FORM_COL + 1).setValue(formUrl);
-Â  Â  
-Â  Â  SpreadsheetApp.flush();
-Â  Â  Logger.log(`Ligne ${rowIndex} mise Ã  jour avec le statut 'Actif - DÃ©clencheur Ã  activer'.`);
-Â  Â  
-Â  Â  return { nomFichier: nomFichierComplet, urlSheet: sheetFile.getUrl(), urlForm: formUrl };
+    // --- MISE Ã€ JOUR DANS LA FEUILLE CONFIG ---
+    const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+    const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
+    const colIndex = {};
+    headers.forEach((header, i) => { if (header) colIndex[header] = i; });
 
-Â  } catch(e) {
-Â  Â  console.error("ERREUR (ligne " + rowIndex + ") : " + e.toString() + "\n" + e.stack);
-Â  Â  SpreadsheetApp.getUi().alert("Une erreur est survenue lors du dÃ©ploiement pour la ligne " + rowIndex + ": " + e.message);
-Â  Â  return null;
-Â  }
+    const STATUT_COL = colIndex['Statut'];
+    const ID_UNIQUE_COL = colIndex['Id_Unique'];
+    const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
+    const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
+    const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
+    const LIEN_FORM_COL = colIndex['Lien_Formulaire_Public'];
+
+    const idUnique = sheetFile.getId().slice(0, 8) + '-' + formFile.getId().slice(0, 8);
+    
+    configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif - DÃ©clencheur Ã  activer'); 
+    configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
+    configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(nomFichierComplet);
+    if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(formFile.getId());
+    if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(sheetFile.getId());
+    if (LIEN_FORM_COL !== undefined) configSheet.getRange(rowIndex, LIEN_FORM_COL + 1).setValue(formUrl);
+    
+    SpreadsheetApp.flush();
+    Logger.log(`Ligne ${rowIndex} mise Ã  jour avec le statut 'Actif - DÃ©clencheur Ã  activer'.`);
+    
+    return { nomFichier: nomFichierComplet, urlSheet: sheetFile.getUrl(), urlForm: formUrl };
+
+  } catch(e) {
+    console.error("ERREUR (ligne " + rowIndex + ") : " + e.toString() + "\n" + e.stack);
+    SpreadsheetApp.getUi().alert("Une erreur est survenue lors du dÃ©ploiement pour la ligne " + rowIndex + ": " + e.message);
+    return null;
+  }
 }
 
 
@@ -168,7 +196,7 @@ function lancerDeploiementComplet(rowIndex) {
 // =================================================================================
 // FICHIER : Utils V2.gs (Projet MOTEUR)
 // RÃ”LE    : Fonctions utilitaires pour le Moteur / Usine
-// VERSION : 3.1 - getConfigurationFromRow tolÃ©rant (rÃ©solution sheet/ID/nom) + ECHELLE_NOTE robuste
+// VERSION : 3.3 - Gestion des questions optionnelles via "(optionnel)" dans le titre
 // =================================================================================
 
 // âš™ï¸ ID de la feuille de configuration centrale (CONFIG)
@@ -344,8 +372,17 @@ function buildChoices(optionsString, params) {
 // CrÃ©ation d'items dans le Google Form
 //  - gÃ¨re QRM, QCU, ECHELLE, ECHELLE_NOTE (robuste), EMAIL, TEXTE_COURT
 //  - remplace [LIEN_FICHIER:Nom] dans la description si prÃ©sent
+//  - NEW v3.2 : alias TEXTE_EMAIL â†’ EMAIL ; priorise params.mode si fourni
 // ------------------------------------
 function creerItemFormulaire(form, type, titre, optionsString, description, paramsJSONString) {
+  // ==================== DÃ‰BUT DE LA MODIFICATION ====================
+  // On dÃ©termine si la question doit Ãªtre obligatoire en inspectant le titre.
+  let isRequired = true;
+  if (titre.toLowerCase().includes('(optionnel)')) {
+    isRequired = false;
+  }
+  // ===================== FIN DE LA MODIFICATION =====================
+
   // 1) RÃ©solution [LIEN_FICHIER:...]
   let finalDescription = description;
   const placeholderRegex = /\[LIEN_FICHIER:(.*?)\]/;
@@ -386,25 +423,29 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
   // 3) Construction des choix si nÃ©cessaire
   const choices = buildChoices(optionsString, params);
 
-  // 4) CrÃ©ation de l'item selon le type
-  let item = null;
-  const formItemType = type ? String(type).toUpperCase() : '';
+  // 4) Type final (priorise params.mode si fourni) + alias TEXTE_EMAIL â†’ EMAIL
+  let resolvedType = (params && params.mode) ? String(params.mode) : String(type || '');
+  resolvedType = resolvedType.trim().toUpperCase();
+  if (resolvedType === 'TEXTE_EMAIL') resolvedType = 'EMAIL';
 
-  if (formItemType.startsWith('QRM')) {
+  // 5) CrÃ©ation de l'item selon le type
+  let item = null;
+
+  if (resolvedType.startsWith('QRM')) {
     if (choices.length > 0) {
-      item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+      item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired); // MODIFIÃ‰
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QRM: Options manquantes] " + titre);
     }
 
-  } else if (formItemType.startsWith('QCU')) {
+  } else if (resolvedType.startsWith('QCU')) {
     if (choices.length > 0) {
-      item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+      item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired); // MODIFIÃ‰
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QCU: Options manquantes] " + titre);
     }
 
-  } else if (formItemType === 'ECHELLE_NOTE') { // âœ… v3.1 robuste : min/max OU echelle_min/echelle_max + labels tolÃ©rants
+  } else if (resolvedType === 'ECHELLE_NOTE') { // âœ… v3.1 robuste : min/max OU echelle_min/echelle_max + labels tolÃ©rants
     if (params) {
       const eMin = (params.echelle_min ?? params.min);
       const eMax = (params.echelle_max ?? params.max);
@@ -412,7 +453,7 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
         const scaleItem = form.addScaleItem()
           .setTitle(titre)
           .setBounds(Number(eMin), Number(eMax))
-          .setRequired(true);
+          .setRequired(isRequired); // MODIFIÃ‰
 
         // Labels : label_min / libelle_min / labelMin  (idem pour _max)
         const lmin = (params.label_min ?? params.libelle_min ?? params.labelMin);
@@ -429,33 +470,32 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
         .setTitle("[Erreur ECHELLE_NOTE: ParamÃ¨tres JSON absents] " + titre);
     }
 
-  } else if (formItemType === 'ECHELLE') { // compat historique
+  } else if (resolvedType === 'ECHELLE') { // compat historique
     const parts = optionsString ? optionsString.split(';').map(s => s.trim()) : [];
     const min = parts[0] ? Number(parts[0]) : 1;
     const max = parts[parts.length - 1] ? Number(parts[parts.length - 1]) : 5;
-    const scaleItem = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(true);
+    const scaleItem = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(isRequired); // MODIFIÃ‰
     item = scaleItem;
 
-  } else if (formItemType === 'EMAIL') {
-    const textItem = form.addTextItem().setTitle(titre).setRequired(true);
+  } else if (resolvedType === 'EMAIL') {
+    const textItem = form.addTextItem().setTitle(titre).setRequired(isRequired); // MODIFIÃ‰
     const emailValidation = FormApp.createTextValidation().requireTextIsEmail().build();
     item = textItem.setValidation(emailValidation);
 
-  } else if (formItemType === 'TEXTE_COURT') {
-    item = form.addTextItem().setTitle(titre).setRequired(true);
+  } else if (resolvedType === 'TEXTE_COURT') {
+    item = form.addTextItem().setTitle(titre).setRequired(isRequired); // MODIFIÃ‰
 
   } else {
-    item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + type + "] " + titre);
+    item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + (type || resolvedType) + "] " + titre);
   }
 
-  // 5) HelpText (Ã©vite dâ€™Ã©craser les labels dâ€™Ã©chelle)
+  // 6) HelpText (Ã©vite dâ€™Ã©craser les labels dâ€™Ã©chelle)
   if (finalDescription && item && typeof item.setHelpText === 'function') {
-    if (formItemType !== 'ECHELLE' && formItemType !== 'ECHELLE_NOTE') {
+    if (resolvedType !== 'ECHELLE' && resolvedType !== 'ECHELLE_NOTE') {
       item.setHelpText(finalDescription);
     }
   }
 }
-
 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\InterfaceV2.js ---
 

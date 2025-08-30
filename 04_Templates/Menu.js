@@ -15,7 +15,7 @@ function onOpen(e) {
 
     // Menu principal (titre harmonisé pour tous les fichiers Réponses)
     const main = ui.createMenu('⚙️ Actions du Kit')
-      .addItem('Autoriser le traitement auto', 'activerTraitementAutomatique')
+      .addItem('Autoriser Accès à Google', 'activerTraitementAutomatique')
       .addSeparator()
       .addItem('Retraiter une réponse...', 'retraiterReponse_UI');
 

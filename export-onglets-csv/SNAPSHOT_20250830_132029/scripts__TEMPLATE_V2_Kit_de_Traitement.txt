@@ -94,15 +94,48 @@ try {
 
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 20.4
-// == RÃ”LE  : GÃ¨re la logique de traitement des rÃ©ponses et aiguille vers le bon moteur.
-// == CHANGES v20.1 : Normalisation + dÃ©doublonnage sys_Composition_Emails, comparaisons robustes
-// == CHANGES v20.2 : Mode test (dry-run) + override destinataires + ignore dev
-// == CHANGES v20.3 : RÃ©solution automatique de la feuille de rÃ©ponses (plus d'ActiveSpreadsheet null)
-// == CHANGES v20.4 : SÃ©lection automatique de la derniÃ¨re rÃ©ponse si rowIndex est absent/incorrect
+// == VERSION : 20.7 - L'e-mail de confirmation n'est plus envoyÃ© lors d'un retraitement
+// ==           ou d'un envoi de rÃ©sultats immÃ©diat.
 // =================================================================================
 
-/** Nettoie une chaÃ®ne pour l'utiliser comme clÃ©/placeholder. */
+// ====== DEBUG / ESPIONS ======
+var __DBG = true; // â† mets false pour couper les logs
+
+function DBG() {
+  if (!__DBG) return;
+  const parts = [].slice.call(arguments).map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x)));
+  Logger.log('[DBG] ' + parts.join(' '));
+}
+
+// ... (le reste du fichier TraitementReponses.js reste identique jusqu'Ã  la fonction traiterLigne)
+// ... (pour la lisibilitÃ©, je ne colle ici que la fonction modifiÃ©e)
+
+function _spyDumpRow_(sheet, rowIndex) {
+  try {
+    const lastCol = sheet.getLastColumn();
+    if (!lastCol) return null;
+    const H = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    const V = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+    const subset = {};
+    for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i]; // 25 1res colonnes
+    DBG('DUMP row', rowIndex, 'subset=', subset);
+    return { headers: H, values: V };
+  } catch (e) { DBG('spyDumpRow ERROR', e.message); }
+  return null;
+}
+function _spyFindNomEmail_(reponse) {
+  const keys = Object.keys(reponse || {});
+  const norm = k => _nettoyerEnTete(k).toLowerCase();
+  const allowedName = new Set(['votre_nom_et_prenom','nom_et_prenom','nom_prenom','nomprenom']);
+  const allowedEmail = new Set(['votre_adresse_e_mail','votre_adresse_email','adresse_e_mail','email','email_repondant','email_du_repondant']);
+  let nom = '', email = '';
+  for (const k of keys) {
+    const n = norm(k);
+    if (!nom && allowedName.has(n))  nom = reponse[k];
+    if (!email && allowedEmail.has(n)) email = reponse[k];
+  }
+  return { nom, email };
+}
 function _nettoyerEnTete(enTete) {
   if (!enTete) return "";
   const accents = 'Ã€ÃÃ‚ÃƒÃ„Ã…Ã Ã¡Ã¢Ã£Ã¤Ã¥Ã’Ã“Ã”Ã•Ã–Ã˜Ã²Ã³Ã´ÃµÃ¶Ã¸ÃˆÃ‰ÃŠÃ‹Ã¨Ã©ÃªÃ«Ã‡Ã§ÃŒÃÃŽÃÃ¬Ã­Ã®Ã¯Ã™ÃšÃ›ÃœÃ¹ÃºÃ»Ã¼Ã¿Ã‘Ã±';
@@ -112,99 +145,77 @@ function _nettoyerEnTete(enTete) {
     return i !== -1 ? sansAccents[i] : char;
   }).join('').replace(/[^a-zA-Z0-9_]/g, '_');
 }
-
-/* ===================== RÃ©solution de la feuille de rÃ©ponses ===================== */
-
+function _sheetLooksLikeResponses_(sheet) {
+  try {
+    const lastCol = sheet.getLastColumn();
+    if (!lastCol) return false;
+    const rawHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
+    const norm = h => _nettoyerEnTete(h).toLowerCase();
+    const Hn = rawHeaders.map(norm);
+    const hasName  = Hn.includes('votre_nom_et_prenom') || Hn.includes('nom_et_prenom');
+    const hasEmail = Hn.includes('votre_adresse_e_mail') || Hn.includes('votre_adresse_email') || Hn.includes('adresse_e_mail') || Hn.includes('email');
+    const hasQuestionId = rawHeaders.some(h => /(^|\s)Q\d+\s*:/.test(h) || /^ENV\s*\d{3}/i.test(h) || /^[A-Z]{2,4}\d{2,3}\s*:/.test(h));
+    const ok = (hasName && hasEmail) || hasQuestionId;
+    if (!ok) { DBG('sheetLooksLikeResponses=FALSE name=', sheet.getName(), 'headersSample=', rawHeaders.slice(0, 15)); }
+    return ok;
+  } catch (e) { return false; }
+}
 function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
   if (nameMaybe) {
     const sh = ss.getSheetByName(nameMaybe);
     if (sh) return sh;
   }
-  // Heuristique : "RÃ©ponses au formulaire â€¦" / "Form Responses â€¦" / "Responses"
   const rx = /^(rÃ©ponses?\s+au\s+formulaire.*|form\s+responses?.*|responses?)$/i;
   const sheets = ss.getSheets();
-  for (const sh of sheets) {
-    if (rx.test(sh.getName())) return sh;
-  }
-  // Fallback : 1er onglet
+  for (const sh of sheets) { if (rx.test(sh.getName())) return sh; }
   return sheets[0];
 }
-
-// v20.5 â€” RÃ©solution prioritaire via Script Properties (RESPONSES_SSID)
 function _getReponsesSheet_(config, options) {
   options = options || {};
-  const sys   = (typeof getSystemIds === 'function') ? getSystemIds() : {};
+  const sys = (typeof getSystemIds === 'function') ? getSystemIds() : {};
   const props = PropertiesService.getScriptProperties();
-  const ssidProp = props.getProperty('RESPONSES_SSID');  // â† prioritaire si dÃ©fini
-
+  const ssidProp = props.getProperty('RESPONSES_SSID');
   let ss = null, used = '';
-
-  try {
-    if (options.reponsesSpreadsheetId) {
-      ss = SpreadsheetApp.openById(options.reponsesSpreadsheetId);
-      used = `ById(options:${options.reponsesSpreadsheetId})`;
-    } else if (ssidProp) {
-      ss = SpreadsheetApp.openById(ssidProp);
-      used = `ScriptProp(${ssidProp})`;
-    } else if (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) {
-      const id = config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET;
-      ss = SpreadsheetApp.openById(id);
-      used = `CONFIG(${id})`;
-    } else if (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) {
-      const id2 = sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET;
-      ss = SpreadsheetApp.openById(id2);
-      used = `SYS(${id2})`;
-    } else if (sys?.ID_CONFIG) {
-      ss = SpreadsheetApp.openById(sys.ID_CONFIG);
-      used = `CONFIG(${sys.ID_CONFIG})`;
-    }
-  } catch (_) {}
-
-  if (!ss) {
-    try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {}
+  function tryOpenById(id, tag) {
+    if (!id) return null;
+    try {
+      const ssp = SpreadsheetApp.openById(id);
+      DBG('tryOpenById OK', tag, id);
+      return { ss: ssp, used: `${tag}(${id})` };
+    } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  if (!ss) throw new Error("Impossible dâ€™ouvrir le classeur de rÃ©ponses. Renseigne-le via le menu â€œConfigurer la feuille de rÃ©ponsesâ€¦â€.");
-  
-  const sheet = _pickSheetByNameOrHeuristic_(ss, options.reponsesSheetName);
-  if (!sheet) throw new Error("Classeur de rÃ©ponses ouvert, mais aucun onglet trouvÃ©.");
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) || ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) || ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
+  if (pick) { ss = pick.ss; used = pick.used; }
+  if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
+  if (!ss) throw new Error("Impossible dâ€™ouvrir le classeur de rÃ©ponses. Configure-le via le menu â€œConfigurer la feuille de rÃ©ponsesâ€¦â€ (RESPONSES_SSID).");
+  let sheet = _pickSheetByNameOrHeuristic_(ss, options.reponsesSheetName);
+  if (!sheet || !_sheetLooksLikeResponses_(sheet)) {
+    const candidates = ss.getSheets().filter(sh => _sheetLooksLikeResponses_(sh));
+    if (candidates.length) { sheet = candidates[0]; DBG('Heuristic sheet rejected â†’ picked candidate', sheet.getName()); }
+  }
+  if (!sheet || !_sheetLooksLikeResponses_(sheet)) { throw new Error( "Classeur ouvert (â€œ" + ss.getName() + "â€ via " + used + "), mais aucune feuille ne ressemble Ã  une feuille de rÃ©ponses de test.\n" + "â†’ Renseigne lâ€™ID du classeur de rÃ©ponses (Google Sheet liÃ© au Form) via le menu : Usine Ã  Tests â†’ Â« Configurer la feuille de rÃ©ponsesâ€¦ Â»." ); }
   Logger.log(`Source rÃ©ponses â†’ ${ss.getName()} [${used}] :: onglet "${sheet.getName()}"`);
+  DBG('ReponsesSheet -> classeur:', ss.getName(), '| onglet:', sheet.getName(), '| lastRow=', sheet.getLastRow(), '| lastCol=', sheet.getLastColumn());
   return sheet;
 }
-
-
-
-
-/* ======================= CrÃ©ation de l'objet rÃ©ponse (robuste) ======================= */
-
 function _creerObjetReponse(rowIndex, options) {
   const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {};
   const sheet = _getReponsesSheet_(config, options);
-
+  _spyDumpRow_(sheet, Math.max(2, rowIndex || sheet.getLastRow()));
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
-
-  // Si pas de rowIndex fourni ou hors bornes, on prend la derniÃ¨re ligne de donnÃ©es (â‰¥2)
-  if (!rowIndex || rowIndex < 2 || rowIndex > lastRow) {
-    if (lastRow < 2) {
-      throw new Error("Aucune donnÃ©e dans la feuille de rÃ©ponses (seulement lâ€™entÃªte).");
-    }
-    rowIndex = lastRow;
-  }
-
+  if (!rowIndex || rowIndex < 2 || rowIndex > lastRow) { if (lastRow < 2) { throw new Error("Aucune donnÃ©e dans la feuille de rÃ©ponses (seulement lâ€™en-tÃªte)."); } rowIndex = lastRow; }
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   const rowValues = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
-
   const reponse = {};
-  headers.forEach((header, i) => {
-    let cle = header;
-    if (header && !String(header).includes(':')) cle = _nettoyerEnTete(header);
-    if (cle) reponse[cle] = rowValues[i];
-  });
+  headers.forEach((header, i) => { let cle = header; if (header && !String(header).includes(':')) cle = _nettoyerEnTete(header); if (cle) reponse[cle] = rowValues[i]; });
+  if (reponse.Votre_adresse_e_mail && !reponse.Votre_adresse_email) reponse.Votre_adresse_email = reponse.Votre_adresse_e_mail;
+  if (reponse.Votre_adresse_email && !reponse.Votre_adresse_e_mail) reponse.Votre_adresse_e_mail = reponse.Votre_adresse_email;
+  if (reponse.Votre_nom_et_prenom && !reponse.Nom_et_prenom) reponse.Nom_et_prenom = reponse.Votre_nom_et_prenom;
+  const spy = _spyFindNomEmail_(reponse);
+  DBG('_creerObjetReponse row=', rowIndex, 'keys=', Object.keys(reponse).slice(0, 12), '| nom=', spy.nom, '| email=', spy.email);
   return reponse;
 }
-
-/* =========================== OUTILS PDF =========================== */
-
 function genererPdfDepuisModele(templateId, variables, nomFichier) {
   if (!templateId) throw new Error("ID du modÃ¨le manquant.");
   const templateFile = DriveApp.getFileById(templateId);
@@ -213,75 +224,55 @@ function genererPdfDepuisModele(templateId, variables, nomFichier) {
   const body = doc.getBody();
   for (const key in variables) {
     const placeholder = "{{" + key + "}}";
-    const escaped = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    body.replaceText(escaped, String(variables[key] ?? ""));
+    body.replaceText(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), String(variables[key] ?? ""));
   }
   doc.saveAndClose();
   const pdfBlob = tempCopy.getAs(MimeType.PDF);
   tempCopy.setTrashed(true);
   return pdfBlob;
 }
-
-/* ==== UTILITAIRE v20.1 : Normaliser + dÃ©doublonner sys_Composition_Emails ==== */
-
 function normalizeAndDedupeCompositionEmailsRows_(rows, idx) {
   const seen = new Set();
-  return (rows || [])
-    .map(r => { r[idx.element] = (r[idx.element] || '').toString().trim(); return r; })
-    .filter(r => {
-      const key = [
-        (r[idx.typeTest] || '').toString().trim(),
-        (r[idx.langue]   || '').toString().trim(),
-        (r[idx.niveau]   || '').toString().trim(),
-        (r[idx.profil]   || '').toString().trim(),
-        (r[idx.element]  || '').toString().trim(),
-        (r[idx.ordre]    || '').toString().trim()
-      ].join('|');
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+  return (rows || []).map(r => { r[idx.element] = (r[idx.element] || '').toString().trim(); return r; }).filter(r => { const key = [(r[idx.typeTest] || '').toString().trim(), (r[idx.langue] || '').toString().trim(), (r[idx.niveau] || '').toString().trim(), (r[idx.profil] || '').toString().trim(), (r[idx.element] || '').toString().trim(), (r[idx.ordre] || '').toString().trim()].join('|'); if (seen.has(key)) return false; seen.add(key); return true; });
 }
-
-/* ========================== Flux principal ========================== */
-
+function _enrichirDonneesPourEmail_(reponse, resultats) {
+  const R = reponse || {};
+  const donnees = { ...R, ...(resultats || {}) };
+  const email = R.Votre_adresse_e_mail || R.Votre_adresse_email || R.Adresse_e_mail || R.emailRepondant || '';
+  if (email) { if (!donnees.Votre_adresse_e_mail) donnees.Votre_adresse_e_mail = email; if (!donnees.Votre_adresse_email) donnees.Votre_adresse_email = email; }
+  if (R.Votre_nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Votre_nom_et_prenom; } else if (R.Nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Nom_et_prenom; }
+  if (donnees.titreProfil && !donnees.Titre_Profil) donnees.Titre_Profil = donnees.titreProfil;
+  if (donnees.descriptionProfil && !donnees.Description_Profil) donnees.Description_Profil = donnees.descriptionProfil;
+  return donnees;
+}
 function onFormSubmit(e) {
   try {
-    const rowIndex = e.range.getRow();
-    traiterLigne(rowIndex, {}); // options auto
+    traiterLigne(e.range.getRow(), {});
   } catch (err) {
     Logger.log(`Erreur critique onFormSubmit: ${err}\n${err.stack}`);
   }
 }
-
-/** Envoie un e-mail de confirmation. */
 function _envoyerEmailDeConfirmation(config, reponse, langueCible) {
   try {
-    const nomColonneOverride = `ID_Gabarit_Email_Confirmation_${langueCible}`;
-    let idGabaritConfirmation = config[nomColonneOverride];
+    let idGabaritConfirmation = config[`ID_Gabarit_Email_Confirmation_${langueCible}`];
     if (!idGabaritConfirmation || String(idGabaritConfirmation).trim() === '') {
-      const systemIds = getSystemIds();
-      idGabaritConfirmation = systemIds[`ID_GABARIT_CONFIRMATION_${langueCible}`];
+      idGabaritConfirmation = getSystemIds()[`ID_GABARIT_CONFIRMATION_${langueCible}`];
       Logger.log(`Utilisation du gabarit de confirmation PAR DÃ‰FAUT pour ${langueCible}.`);
     } else {
       Logger.log(`Utilisation du gabarit de confirmation SPÃ‰CIFIQUE pour ${langueCible}.`);
     }
-    const emailRepondant = reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || reponse.emailRepondant;
+    const emailRepondant = reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || reponse.Adresse_e_mail || reponse.emailRepondant;
     if (!idGabaritConfirmation || !emailRepondant) return;
-
     const doc = DocumentApp.openById(idGabaritConfirmation);
     let sujet = doc.getName();
     const url = "https://docs.google.com/feeds/download/documents/export/Export?id=" + idGabaritConfirmation + "&exportFormat=html";
-    const token = ScriptApp.getOAuthToken();
-    const response = UrlFetchApp.fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    const response = UrlFetchApp.fetch(url, { headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() } });
     let corpsHtml = response.getContentText();
-
-    for (const key in reponse) {
-      const placeholder = `{{${key}}}`;
-      const valeur = reponse[key] || '';
-      const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
-      sujet = sujet.replace(regex, valeur);
-      corpsHtml = corpsHtml.replace(regex, valeur);
+    const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, null);
+    for (const key in donneesPourEmail) {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      sujet = sujet.replace(regex, donneesPourEmail[key] || '');
+      corpsHtml = corpsHtml.replace(regex, donneesPourEmail[key] || '');
     }
     const mailOptions = { to: emailRepondant, subject: sujet, htmlBody: corpsHtml };
     if (config.Email_Alias && config.Email_Alias.trim() !== '') mailOptions.from = config.Email_Alias;
@@ -299,7 +290,13 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
     const langueOrigine = getOriginalLanguage(reponse);
     const langueCible = optionsSurcharge.langue || langueOrigine;
 
-    if (!optionsSurcharge.isRetraitement) _envoyerEmailDeConfirmation(config, reponse, langueCible);
+    // --- MODIFICATION V20.7 START ---
+    // On n'envoie l'email de confirmation QUE si l'envoi des rÃ©sultats est diffÃ©rÃ©
+    // ET qu'il ne s'agit pas d'un retraitement manuel.
+    if (!optionsSurcharge.isRetraitement && config.Repondant_Quand !== 'Immediat') {
+      _envoyerEmailDeConfirmation(config, reponse, langueCible);
+    }
+    // --- MODIFICATION V20.7 END ---
 
     const resultats = calculerResultats(reponse, langueCible, config, langueOrigine);
 
@@ -307,8 +304,6 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
       if (config.Moteur_Calcul === 'Universel') {
         Logger.log("Moteur UNIVERSEL â†’ envoi immÃ©diat.");
         assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge);
-      } else {
-        // legacy...
       }
     } else {
       Logger.log(`Envoi diffÃ©rÃ© (â€œ${config.Repondant_Quand}â€) â†’ programmation.`);
@@ -319,247 +314,89 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
   }
 }
 
-/* ===================== MOTEUR UNIVERSEL : envoi ===================== */
-
-function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}) {
+// ... (le reste du fichier reste identique)
+function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}){
   const typeTest = (config.Type_Test || '').toString().trim();
   let codeNiveauEmail = (config.ID_Gabarit_Email_Repondant || '').toString().replace('RESULTATS_', '').trim();
   if (optionsSurcharge && optionsSurcharge.niveau && optionsSurcharge.niveau !== '') codeNiveauEmail = optionsSurcharge.niveau;
-
   const profilFinal = (resultats.profilFinal || '').toString().trim();
   const systemIds = getSystemIds();
   const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
   const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
   const compoData = compoSheet.getDataRange().getValues();
   const compoHeaders = compoData.shift();
-  const idx = {
-    typeTest: compoHeaders.indexOf('Type_Test'),
-    langue: compoHeaders.indexOf('Code_Langue'),
-    niveau: compoHeaders.indexOf('Code_Niveau_Email'),
-    profil: compoHeaders.indexOf('Code_Profil'),
-    element: compoHeaders.indexOf('Element'),
-    ordre: compoHeaders.indexOf('Ordre'),
-    contenu: compoHeaders.indexOf('Contenu / ID_Document')
-  };
-
-  // Normalisation + dÃ©doublonnage
+  const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
   const compoRows = normalizeAndDedupeCompositionEmailsRows_(compoData, idx);
-
-  // Filtre robuste (trim + niveau Ã©vent. en liste "N1,N3", etc.)
-  let briquesDeContenu = compoRows.filter(row => {
-    const typeLigne   = (row[idx.typeTest] || '').toString().trim();
-    const typeMatch   = (typeLigne === typeTest || typeLigne === '');
-    const langMatch   = ((row[idx.langue] || '').toString().trim() === (langueCible || '').toString().trim());
-    const levelValue  = (row[idx.niveau] || '').toString();
-    const levelList   = levelValue.split(',').map(s => s.trim()).filter(Boolean);
-    const levelMatch  = levelList.length > 0 ? levelList.includes(codeNiveauEmail) : levelValue.includes(codeNiveauEmail);
-    const profilLigne = (row[idx.profil] || '').toString().trim();
-    const profileMatch= (profilLigne === profilFinal || profilLigne === '');
-    return typeMatch && langMatch && levelMatch && profileMatch;
-  });
-
+  let briquesDeContenu = compoRows.filter(row => { const typeLigne = (row[idx.typeTest] || '').toString().trim(); const typeMatch = (typeLigne === typeTest || typeLigne === ''); const langMatch = ((row[idx.langue] || '').toString().trim() === (langueCible || '').toString().trim()); const levelValue = (row[idx.niveau] || '').toString(); const levelList = levelValue.split(',').map(s => s.trim()).filter(Boolean); const levelMatch = levelList.length > 0 ? levelList.includes(codeNiveauEmail) : levelValue.includes(codeNiveauEmail); const profilLigne = (row[idx.profil] || '').toString().trim(); const profileMatch= (profilLigne === profilFinal || profilLigne === ''); return typeMatch && langMatch && levelMatch && profileMatch; });
   briquesDeContenu.sort((a, b) => (Number(a[idx.ordre]) || 0) - (Number(b[idx.ordre]) || 0));
-
   let contenuInfoCopie = null;
   const indexInfoCopie = briquesDeContenu.findIndex(b => (b[idx.element] || '').toString().trim() === 'Info_Copie');
-  if (indexInfoCopie > -1) {
-    contenuInfoCopie = briquesDeContenu[indexInfoCopie][idx.contenu];
-    briquesDeContenu.splice(indexInfoCopie, 1);
-  }
-
+  if (indexInfoCopie > -1) { contenuInfoCopie = briquesDeContenu[indexInfoCopie][idx.contenu]; briquesDeContenu.splice(indexInfoCopie, 1); }
   let sujet = `RÃ©sultats de votre test ${typeTest}`;
   let corpsHtml = "";
   const piecesJointesIds = new Set();
-
   for (const brique of briquesDeContenu) {
     const elementType = (brique[idx.element] || '').toString().trim();
     const contenu = brique[idx.contenu];
     switch (elementType) {
       case 'Sujet_Email': sujet = contenu; break;
-      case 'Introduction':
-      case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
-      case 'Document':
-        if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim());
-        break;
-      case 'Ligne_Score':
-        Object.entries(resultats.scoresData).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => {
-          let ligneScore = (contenu || "")
-            .replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code)
-            .replace(/{{score}}/g, score);
-          corpsHtml += ligneScore + "<br>";
-        });
-        break;
+      case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
+      case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
+      case 'Ligne_Score': Object.entries(resultats.scoresData).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => { let ligneScore = (contenu || "").replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code).replace(/{{score}}/g, score); corpsHtml += ligneScore + "<br>"; }); break;
     }
   }
-
-  // Remplacement de variables
-  const donneesPourEmail = { ...reponse, ...resultats };
-  for (const key in donneesPourEmail) {
-    const placeholder = `{{${key}}}`;
-    const valeur = donneesPourEmail[key] || '';
-    const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
-    sujet = sujet.replace(regex, valeur);
-    corpsHtml = corpsHtml.replace(regex, valeur);
-    if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur);
-  }
-
-  // PiÃ¨ces jointes : rÃ©solution & PDF
-  const variablesFusion = { ...reponse, ...resultats };
+  const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
+  for (const key in donneesPourEmail) { const placeholder = `{{${key}}}`; const valeur = donneesPourEmail[key] || ''; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'); sujet = sujet.replace(regex, valeur); corpsHtml = corpsHtml.replace(regex, valeur); if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur); }
+  const variablesFusion = { ...donneesPourEmail };
   const piecesJointes = [];
-  for (const contenuDoc of Array.from(piecesJointesIds)) {
-    let candidate = contenuDoc;
-    if (candidate.startsWith("{{") && candidate.endsWith("}}")) {
-      const cle = candidate.slice(2, -2);
-      candidate = variablesFusion[cle] || "";
-    }
-    if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) {
-      try {
-        const nomRapport = (resultats.titreProfil || resultats.profilFinal || config.Type_Test || "Rapport");
-        const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport);
-        piecesJointes.push(pdf);
-      } catch(e) {
-        Logger.log("Fusion Doc->PDF Ã©chouÃ©e pour " + candidate + " : " + e.message);
-        try { piecesJointes.push(DriveApp.getFileById(candidate).getBlob()); } catch(_) {}
-      }
-    } else {
-      Logger.log("IgnorÃ© (Document) : valeur non reconnue " + candidate);
-    }
-  }
-
-  // Destinataires (override, ignore dev, dry-run)
+  for (const contenuDoc of Array.from(piecesJointesIds)) { let candidate = contenuDoc; if (candidate.startsWith("{{") && candidate.endsWith("}}")) { const cle = candidate.slice(2, -2); candidate = variablesFusion[cle] || ""; } if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) { try { const nomRapport = (resultats.titreProfil || resultats.profilFinal || config.Type_Test || "Rapport"); const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport); piecesJointes.push(pdf); } catch(e) { Logger.log("Fusion Doc->PDF Ã©chouÃ©e pour " + candidate + " : " + e.message); try { piecesJointes.push(DriveApp.getFileById(candidate).getBlob()); } catch(_) {} } } else { Logger.log("IgnorÃ© (Document) : valeur non reconnue " + candidate); } }
   const T = loadTraductions(langueCible);
-  const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || reponse.emailRepondant;
-
+  const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || reponse.Adresse_e_mail || reponse.emailRepondant;
   const override = optionsSurcharge.overrideRecipients === true;
   const ignoreDev = optionsSurcharge.ignoreDeveloppeurEmail === true;
-  const dryRun   = optionsSurcharge.dryRun === true;
+  const dryRun = optionsSurcharge.dryRun === true;
   const destS = optionsSurcharge.destinataires || {};
-
   const adressesUniques = new Set();
-
-  if (override) {
-    if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
-    if (destS.formateur && destS.formateurEmail)     adressesUniques.add(destS.formateurEmail);
-    if (destS.patron && destS.patronEmail)           adressesUniques.add(destS.patronEmail);
-    if (destS.test && destS.test.trim() !== '') {
-      destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
-    }
-  } else {
-    if (Object.keys(destS).length > 0) {
-      if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
-      if (destS.formateur && destS.formateurEmail)     adressesUniques.add(destS.formateurEmail);
-      if (destS.patron && destS.patronEmail)           adressesUniques.add(destS.patronEmail);
-      if (destS.test && destS.test.trim() !== '') {
-        destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
-      }
-    } else {
-      if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
-      if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email)          adressesUniques.add(config.Patron_Email);
-      if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email)   adressesUniques.add(config.Formateur_Email);
-    }
-    if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email);
-  }
-
-  // Envoi (ou journalisation si dry-run)
-  if (dryRun) {
-    Logger.log('â€” DRY-RUN â€” AUCUN EMAIL ENVOYÃ‰ â€”');
-    Logger.log('Destinataires simulÃ©s : ' + Array.from(adressesUniques).join(', '));
-    Logger.log('Sujet (aprÃ¨s remplacements) : ' + sujet);
-    Logger.log('Corps (aperÃ§u 400c) : ' + (corpsHtml || '').slice(0, 400));
-    Logger.log('PiÃ¨ces jointes (nb) : ' + piecesJointes.length + (piecesJointesIds.size ? ' | ModÃ¨les: ' + Array.from(piecesJointesIds).join(', ') : ''));
-    return;
-  }
-
-  adressesUniques.forEach(adresse => {
-    try {
-      let sujetFinal = sujet;
-      let corpsHtmlFinal = corpsHtml;
-      if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) {
-        sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet;
-        if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml;
-      }
-      const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes };
-      const aliasExpediteur = optionsSurcharge.alias || config.Email_Alias;
-      if (aliasExpediteur && aliasExpediteur.trim() !== '') mailOptions.from = aliasExpediteur;
-      GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions);
-      Logger.log(`E-mail de RÃ‰SULTATS [${langueCible}] envoyÃ© Ã  ${adresse}.`);
-    } catch (e) {
-      Logger.log(`Echec de l'envoi des rÃ©sultats Ã  ${adresse}. Erreur: ${e.message}`);
-    }
-  });
+  if (override) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); } } else { if (Object.keys(destS).length > 0) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); } } else { if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email); if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) adressesUniques.add(config.Formateur_Email); } if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email); }
+  if (dryRun) { Logger.log('â€” DRY-RUN â€” AUCUN EMAIL ENVOYÃ‰ â€”'); Logger.log('Destinataires simulÃ©s : ' + Array.from(adressesUniques).join(', ')); Logger.log('Sujet (aprÃ¨s remplacements) : ' + sujet); Logger.log('Corps (aperÃ§u 400c) : ' + (corpsHtml || '').slice(0, 400)); Logger.log('PiÃ¨ces jointes (nb) : ' + piecesJointes.length + (piecesJointesIds.size ? ' | ModÃ¨les: ' + Array.from(piecesJointesIds).join(', ') : '')); return; }
+  adressesUniques.forEach(adresse => { try { let sujetFinal = sujet; let corpsHtmlFinal = corpsHtml; if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) { sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet; if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml; } const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes }; const aliasExpediteur = optionsSurcharge.alias || config.Email_Alias; if (aliasExpediteur && aliasExpediteur.trim() !== '') mailOptions.from = aliasExpediteur; GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions); Logger.log(`E-mail de RÃ‰SULTATS [${langueCible}] envoyÃ© Ã  ${adresse}.`); } catch (e) { Logger.log(`Echec de l'envoi des rÃ©sultats Ã  ${adresse}. Erreur: ${e.message}`); } });
 }
-
-/* =================== SECTION INTERFACE UTILISATEUR (UI) =================== */
-
 function getDonneesPourRetraitement(rowIndex) {
   try {
     const config = getTestConfiguration();
     const reponse = _creerObjetReponse(rowIndex, {});
-    return {
-      nomRepondant: reponse.Votre_nom_et_prenom || reponse.Nom_et_prenom || '',
-      emailRepondant: reponse.Votre_adresse_e_mail || reponse.Adresse_e_mail || '',
-      langueOrigine: getOriginalLanguage(reponse),
-      repondantActif: config.Repondant_Email_Actif === 'Oui',
-      formateurActif: config.Formateur_Email_Actif === 'Oui',
-      patronActif: config.Patron_Email_Mode === 'Oui',
-      emailAlias: config.Email_Alias || ''
-    };
+    return { nomRepondant: reponse.Votre_nom_et_prenom || reponse.Nom_et_prenom || '', emailRepondant: reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || reponse.Adresse_e_mail || '', langueOrigine: getOriginalLanguage(reponse), repondantActif: config.Repondant_Email_Actif === 'Oui', formateurActif: config.Formateur_Email_Actif === 'Oui', patronActif: config.Patron_Email_Mode === 'Oui', emailAlias: config.Email_Alias || '' };
   } catch (e) {
     Logger.log(`ERREUR getDonneesPourRetraitement(${rowIndex}): ${e}`);
     throw new Error("Impossible de rÃ©cupÃ©rer les donnÃ©es pour la ligne " + rowIndex + ". " + e.message);
   }
 }
-
 function lancerRetraitementDepuisUI(options) {
   if (!options || !options.rowIndex) throw new Error("Options de retraitement invalides.");
   options.isRetraitement = true;
   traiterLigne(options.rowIndex, options);
   return "Retraitement pour la ligne " + options.rowIndex + " lancÃ© avec succÃ¨s !";
 }
-
-/* ===== Helpers de test ===== */
-
 function retraitementTestSansEnvoi(rowIndex, options) {
   options = options || {};
   options.isRetraitement = true;
   options.dryRun = true;
-  options.overrideRecipients = true;      // n'utilise que options.destinataires
-  options.ignoreDeveloppeurEmail = true;  // ne force pas l'email dÃ©veloppeur
-
-  // Auto-sÃ©lection de la derniÃ¨re ligne si non fournie
-  if (!rowIndex) {
-    const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {};
-    const sh = _getReponsesSheet_(config, options);
-    const lr = sh.getLastRow();
-    if (lr < 2) throw new Error("Aucune donnÃ©e dans la feuille de rÃ©ponses (seulement lâ€™entÃªte).");
-    rowIndex = lr; // derniÃ¨re rÃ©ponse
-  }
-
+  options.overrideRecipients = true;
+  options.ignoreDeveloppeurEmail = true;
+  if (!rowIndex) { const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {}; const sh = _getReponsesSheet_(config, options); const lr = sh.getLastRow(); if (lr < 2) throw new Error("Aucune donnÃ©e dans la feuille de rÃ©ponses (seulement lâ€™en-tÃªte)."); rowIndex = lr; }
   traiterLigne(rowIndex, options);
 }
-
-/* === Diagnostics === */
-
 function diagnostic_SourceReponses() {
   const sh = _getReponsesSheet_((typeof getTestConfiguration === 'function') ? getTestConfiguration() : {}, {});
   Logger.log(`Diagnostic â†’ classeur: "${sh.getParent().getName()}" | onglet: "${sh.getName()}" | lignes: ${sh.getLastRow()} | colonnes: ${sh.getLastColumn()}`);
 }
-
 function diagnostic_CompoEmails_v20_1() {
   const systemIds = getSystemIds();
   const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
   const sh = bdd.getSheetByName('sys_Composition_Emails');
   const data = sh.getDataRange().getValues();
   const headers = data.shift();
-  const idx = {
-    typeTest: headers.indexOf('Type_Test'),
-    langue: headers.indexOf('Code_Langue'),
-    niveau: headers.indexOf('Code_Niveau_Email'),
-    profil: headers.indexOf('Code_Profil'),
-    element: headers.indexOf('Element'),
-    ordre: headers.indexOf('Ordre'),
-    contenu: headers.indexOf('Contenu / ID_Document')
-  };
+  const idx = { typeTest: headers.indexOf('Type_Test'), langue: headers.indexOf('Code_Langue'), niveau: headers.indexOf('Code_Niveau_Email'), profil: headers.indexOf('Code_Profil'), element: headers.indexOf('Element'), ordre: headers.indexOf('Ordre'), contenu: headers.indexOf('Contenu / ID_Document') };
   const before = data.length;
   const trailingSpaces = data.filter(r => /\s$/.test(String(r[idx.element] || ''))).length;
   const afterRows = normalizeAndDedupeCompositionEmailsRows_(data, idx);
@@ -974,310 +811,268 @@ function mapQuestionsById(bdd, nomFeuille) {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
 
 // =================================================================================
-// == FICHIER : Logique_Universel.gs
-// == VERSION : 9.8 (normLang + fallback si feuille origine manquante + match robuste
-// ==             + LIKERT_5 + moteur Environnement + logs)
-// == RÃ”LE  : Moteur de calcul universel capable de traiter n'importe quel test.
-// == STATUT : PÃ‰RENNE (TEMPLATE + Sheets rÃ©ponses)
+// == FICHIER : Logique_Universel.js
+// == VERSION : 10.2 - Moteur de calcul dÃ©diÃ© pour r&K_Environnement pour robustesse.
+// ==           AmÃ©lioration des espions pour tracer la traduction et la recherche.
 // =================================================================================
 
-// Compteurs de debug (limiter le bruit de logs par exÃ©cution)
+// --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
+/**
+ * Analyse une chaÃ®ne de seuil de score (ex: "R >= 80%", "K 60-79%") et vÃ©rifie si un score donnÃ© correspond.
+ * @param {string} seuilStr - La chaÃ®ne de caractÃ¨res du seuil.
+ * @param {string} codeProfilMajoritaire - Le code du profil dominant (ex: 'R', 'K').
+ * @param {number} scorePourcentage - Le score en pourcentage de l'utilisateur.
+ * @returns {boolean} True si le score correspond au seuil, sinon false.
+ */
+function _parseSeuilScore_rK(seuilStr, codeProfilMajoritaire, scorePourcentage) {
+    if (!seuilStr || !codeProfilMajoritaire) return false;
+    const seuil = String(seuilStr).trim();
+
+    const profilSeuilMatch = seuil.toUpperCase().split(' ')[0];
+    if (profilSeuilMatch !== codeProfilMajoritaire.toUpperCase()) {
+        return false;
+    }
+
+    const matchSimple = seuil.match(/(>=|<=)\s*(\d+)/);
+    if (matchSimple) {
+        const operateur = matchSimple[1];
+        const valeurSeuil = parseInt(matchSimple[2], 10);
+        if (operateur === '>=') return scorePourcentage >= valeurSeuil;
+        if (operateur === '<=') return scorePourcentage <= valeurSeuil;
+    }
+
+    const matchPlage = seuil.match(/(\d+)-(\d+)/);
+    if (matchPlage) {
+        const min = parseInt(matchPlage[1], 10);
+        const max = parseInt(matchPlage[2], 10);
+        return scorePourcentage >= min && scorePourcentage <= max;
+    }
+
+    return false;
+}
+
+/**
+ * Moteur de dÃ©termination de profil et de recommandation SPÃ‰CIFIQUE aux tests "r&K".
+ * Lit l'onglet de profil correspondant et trouve la recommandation multi-critÃ¨res.
+ * @param {Object} scoresData - Les scores bruts (ex: {R: 15, K: 5}).
+ * @param {string} typeTest - Le nom du test (ex: 'r&K_Adaptabilite').
+ * @param {string} langue - Le code de la langue (ex: 'FR').
+ * @returns {Object} Un objet contenant `profilFinal` et `Recommandation`.
+ */
+function _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue) {
+    Logger.log(`[ESPION][r&K] DÃ©marrage du moteur de recommandation pour le test "${typeTest}".`);
+    try {
+        const totalPoints = Object.values(scoresData).reduce((sum, val) => sum + (Number(val) || 0), 0);
+        if (totalPoints === 0) {
+            Logger.log("[ESPION][r&K] Le total des points est Ã  zÃ©ro. Impossible de dÃ©terminer un profil.");
+            return { profilFinal: "IndÃ©terminÃ©", Recommandation: "" };
+        }
+
+        const profilMajoritaireCode = Object.keys(scoresData).reduce((a, b) => (scoresData[a] || 0) > (scoresData[b] || 0) ? a : b);
+        const scoreMajoritaire = scoresData[profilMajoritaireCode] || 0;
+        const pourcentage = (scoreMajoritaire / totalPoints) * 100;
+        Logger.log(`[ESPION][r&K] Profil dominant: "${profilMajoritaireCode}" avec un score de ${scoreMajoritaire}/${totalPoints} (${pourcentage.toFixed(1)}%).`);
+
+        const systemIds = getSystemIds();
+        const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+        const nomFeuilleProfils = `Profils_${typeTest}_${langue}`;
+        const sheetProfils = bdd.getSheetByName(nomFeuilleProfils);
+        if (!sheetProfils) {
+          Logger.log(`[ESPION][r&K] AVERTISSEMENT: Feuille de profils introuvable: "${nomFeuilleProfils}". Aucune recommandation ne sera chargÃ©e.`);
+          return { profilFinal: profilMajoritaireCode, Recommandation: "" };
+        }
+        Logger.log(`[ESPION][r&K] Lecture de la feuille de profils: "${nomFeuilleProfils}".`);
+
+        const data = sheetProfils.getDataRange().getValues();
+        const headers = data.shift().map(h => String(h || '').trim());
+        
+        const idx = {
+            profil: headers.indexOf('Profil'),
+            seuil: headers.indexOf('Seuil_Score'),
+            destinataire: headers.indexOf('Destinataire'),
+            axe: headers.indexOf('Axe'),
+            reco: headers.indexOf('Recommandation')
+        };
+        if (Object.values(idx).some(i => i === -1)) {
+            Logger.log(`[ESPION][r&K] ERREUR: Colonnes manquantes dans "${nomFeuilleProfils}". Requis: Profil, Seuil_Score, Destinataire, Axe, Recommandation`);
+            return { profilFinal: profilMajoritaireCode, Recommandation: "" };
+        }
+
+        for (const row of data) {
+            const dest = String(row[idx.destinataire] || '').trim();
+            const axe = String(row[idx.axe] || '').trim();
+            const seuilStr = String(row[idx.seuil] || '').trim();
+            
+            if (dest === 'RÃ©pondant' && axe === 'DÃ©velopper potentiel' && _parseSeuilScore_rK(seuilStr, profilMajoritaireCode, pourcentage)) {
+                const profilFinalTrouve = String(row[idx.profil] || profilMajoritaireCode);
+                const recommandationTrouvee = String(row[idx.reco] || '');
+                Logger.log(`[ESPION][r&K] SUCCÃˆS: Ligne de recommandation trouvÃ©e. Profil: "${profilFinalTrouve}". Recommandation: "${recommandationTrouvee.substring(0, 50)}..."`);
+                return {
+                    profilFinal: profilFinalTrouve,
+                    Recommandation: recommandationTrouvee
+                };
+            }
+        }
+        
+        Logger.log(`[ESPION][r&K] AVERTISSEMENT: Aucune recommandation correspondante trouvÃ©e pour le profil "${profilMajoritaireCode}" avec un score de ${pourcentage.toFixed(1)}%.`);
+        return { profilFinal: profilMajoritaireCode, Recommandation: "" };
+
+    } catch (e) {
+        Logger.log("ERREUR CRITIQUE dans _determinerProfilFinalParSeuils_rK: " + e.message);
+        return { profilFinal: "Erreur de calcul", Recommandation: "" };
+    }
+}
+
+/**
+ * Moteur de calcul DÃ‰DIÃ‰ pour le test r&K_Environnement.
+ * Calcule les scores K et r sans dÃ©pendre de la feuille Questions_...
+ */
+function _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur) {
+    Logger.log('[ESPION][ENV] Moteur de calcul dÃ©diÃ© pour r&K_Environnement activÃ©.');
+    const scores = { K: 0, r: 0 };
+    let countK = 0, countR = 0;
+
+    for (const enTete in reponsesUtilisateur) {
+        const valNum = parseFloat(String(reponsesUtilisateur[enTete]).replace(',', '.'));
+        if (isNaN(valNum)) continue;
+
+        const m = String(enTete).match(/^ENV(\d{3})/);
+        if (m) {
+            const itemNum = parseInt(m[1], 10);
+            const a = (itemNum - 1) % 4; // 0, 1, 2, 3
+            if (a < 2) { // K
+                scores.K += valNum;
+                countK++;
+            } else { // r
+                scores.r += valNum;
+                countR++;
+            }
+        }
+    }
+    if (countK > 0) scores.K /= countK;
+    if (countR > 0) scores.r /= countR;
+    
+    Logger.log(`[ESPION][ENV] Scores bruts (moyennes): K=${scores.K.toFixed(2)}, r=${scores.r.toFixed(2)}`);
+    return { scoresData: scores };
+}
+
+
+// Compteurs de debug
 var __DBG_QCU_CAT_MISS = 0;
 var __DBG_QRM_CAT_MISS = 0;
 var __DBG_LIKERT_MISS  = 0;
 
-// Normalisation robuste de chaÃ®nes (accents, apostrophes typographiques, tirets, NBSP, casse)
+// Normalisation robuste de chaÃ®nes
 function _normStr(s) {
   return String(s == null ? '' : s)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // accents â†’ sans accents
-    .replace(/[\u2019\u2018]/g, "'")                  // â€™ â€˜ â†’ '
-    .replace(/[\u201C\u201D]/g, '"')                  // â€œ â€ â†’ "
-    .replace(/[Â«Â»]/g, '')                             // guillemets franÃ§ais â†’ rien
-    .replace(/[\u2013\u2014]/g, '-')                  // â€“ â€” â†’ -
-    .replace(/\u00A0/g, ' ')                           // NBSP â†’ espace
-    .replace(/\s+/g, ' ')                              // espaces multiples â†’ simple
-    .trim()
-    .toLowerCase();
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u2019\u2018]/g, "'").replace(/[\u201C\u201D]/g, '"')
+    .replace(/[Â«Â»]/g, '').replace(/[\u2013\u2014]/g, '-')
+    .replace(/\u00A0/g, ' ').replace(/\s+/g, ' ')
+    .trim().toLowerCase();
 }
 
 
-// Normalisation de codes langues (FR, EN, ES, DE, IT, PT, â€¦)
+// Normalisation de codes langues
 function _normLang(s) {
   const x = _normStr(s);
   if (!x) return '';
-  // franÃ§ais
   if (/^fr|fran|french/.test(x)) return 'FR';
-  // anglais
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
-  // espagnol
   if (/^es|espag|span/.test(x)) return 'ES';
-  // allemand
   if (/^de|allem|german/.test(x)) return 'DE';
-  // italien
   if (/^it|ital/.test(x)) return 'IT';
-  // portugais
   if (/^pt|portug/.test(x)) return 'PT';
-  // par dÃ©faut, si ressemble Ã  2 lettres
   const m = x.match(/^[a-z]{2}$/);
-  return m ? x.toUpperCase() : x.toUpperCase(); // sinon renvoyer tel quel en MAJ
+  return m ? x.toUpperCase() : x.toUpperCase();
 }
 
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
-  // --- Logs de debug (aperÃ§u des clÃ©s et valeurs) ---
-  try {
-    const keys = Object.keys(reponsesUtilisateur || {});
-    Logger.log('DEBUG(keys[0..4]) â†’ ' + JSON.stringify(keys.slice(0, 5)));
-    if (keys.length) {
-      const peek = {};
-      keys.slice(0, 5).forEach(k => peek[k] = reponsesUtilisateur[k]);
-      Logger.log('DEBUG(values[0..4]) â†’ ' + JSON.stringify(peek));
-    }
-  } catch(e){}
-
-  // Auto-dÃ©tection/normalisation du type
-  let typeLC = String((config && config.Type_Test) || '').toLowerCase().trim();
-  const autoType   = _detectTestTypeAuto(reponsesUtilisateur);
-  const hasEnvKeys = _hasEnvKeys(reponsesUtilisateur);
-
-  if (!typeLC && autoType) {
-    config.Type_Test = autoType;
-    typeLC = autoType.toLowerCase();
-    Logger.log('Type_Test auto-dÃ©tectÃ©: ' + config.Type_Test);
-  }
-
-  // Normalisation langues (ex: 'FranÃ§ais' â†’ 'FR')
-  const langCibN = _normLang(langueCible);
-  const langOriN = _normLang(langueOrigine);
-
-  // â€”â€”â€” CAS PRIORITAIRE : r&K_Environnement â€”â€”â€”
-  try {
-    if (typeLC.indexOf('environnement') !== -1 || hasEnvKeys) {
-      if (!config.Type_Test) config.Type_Test = 'r&K_Environnement';
-      Logger.log('Moteur ENV activÃ© (raison: ' +
-                 (typeLC.indexOf('environnement') !== -1 ? 'Type_Test' : 'ClÃ©s ENV dÃ©tectÃ©es') + ').');
-
-      let res = calculerResultats_rK_Environnement(reponsesUtilisateur, langCibN || langueCible, config);
-
-      // Enrichissement optionnel via Profils_*
-      const profilsMap = (typeof _chargerProfils === 'function')
-        ? _chargerProfils(config.Type_Test, langCibN || langueCible)
-        : {};
-      if (res.profilFinal && profilsMap[res.profilFinal]) {
-        res = { ...res, ...profilsMap[res.profilFinal] };
-      }
-
-      Logger.log("Calculs terminÃ©s. RÃ©sultats : " + JSON.stringify(res));
-      return res;
-    }
-  } catch (e) {
-    Logger.log("Bypass moteur ENV (fallback universel) : " + e.message);
-  }
-
-  // â€”â€”â€” FLOWS GENERIQUES (autres tests) â€”â€”â€”
+  Logger.log(`[ESPION] DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}".`);
   let resultats = { scoresData: {}, sousTotauxParMode: {} };
-
-  const profilsMap = (typeof _chargerProfils === 'function')
-    ? _chargerProfils(config.Type_Test, langCibN || langueCible)
-    : {};
-
-  const questionsMapCible = _chargerQuestions(config.Type_Test, langCibN || langueCible);
-  if (!questionsMapCible) {
-    Logger.log('Avertissement: _chargerQuestions a retournÃ© null pour ' + (config && config.Type_Test));
-    Logger.log("Calculs terminÃ©s. RÃ©sultats : " + JSON.stringify(resultats));
-    return resultats;
-  }
-
-  // 1) MÃªme langue (aprÃ¨s normalisation) â†’ exÃ©cuter directement
-  if (!langOriN || langOriN === langCibN) {
-    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats);
+  
+  const langCibN = _normLang(langueCible);
+  
+  // --- MODIFICATION V10.2 START: Aiguillage vers moteur dÃ©diÃ© pour r&K_Environnement ---
+  if (config.Type_Test === 'r&K_Environnement') {
+    resultats = _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur);
   } else {
-    // 2) Langues diffÃ©rentes â†’ tenter la "traduction" classique
-    const questionsMapOrigine = _chargerQuestions(config.Type_Test, langOriN);
-    if (!questionsMapOrigine) {
-      // 2a) Fallback : si la feuille origine nâ€™existe pas, traiter quand mÃªme avec la langue cible
-      Logger.log('Avertissement: _chargerQuestions(orig) introuvable pour langue=' + langOriN + '. Fallback direct â†’ langue cible.');
+    // Logique standard pour tous les autres tests
+    const langOriN = _normLang(langueOrigine);
+    const questionsMapCible = _chargerQuestions(config.Type_Test, langCibN || langueCible);
+    if (!questionsMapCible) {
+      Logger.log('[ESPION] AVERTISSEMENT: Impossible de charger les questions pour ' + (config && config.Type_Test) + '. Le calcul est interrompu.');
+      return resultats;
+    }
+    if (!langOriN || langOriN === langCibN) {
       _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats);
     } else {
-      // 2b) Traduction classique par position dâ€™options (si les options diffÃ¨rent rÃ©ellement)
-      for (const enTeteComplet in reponsesUtilisateur) {
-        if (!enTeteComplet.includes(':')) continue;
-        const idQuestion = enTeteComplet.split(':')[0].trim();
-        const qc = questionsMapCible[idQuestion];
-        if (!qc) continue;
-
-        if (qc.parametres.mode === 'ECHELLE_NOTE') {
-          _aiguillerCalcul(qc.parametres.mode, reponsesUtilisateur[enTeteComplet], qc.parametres, resultats);
-        } else {
-          const qo = questionsMapOrigine[idQuestion];
-          if (qo && qo.parametres && qo.parametres.options) {
-            const reponseTexte = reponsesUtilisateur[enTeteComplet];
-            const reponsesArray = String(reponseTexte).split(',').map(r => r.trim());
-            reponsesArray.forEach(reponseSimple => {
-              const idx = qo.parametres.options.findIndex(opt => _normStr(opt.libelle) === _normStr(reponseSimple));
-              if (idx !== -1 && qc.parametres.options && qc.parametres.options[idx]) {
-                const optCible = qc.parametres.options[idx];
-                _aiguillerCalcul(qc.parametres.mode, optCible.libelle, qc.parametres, resultats);
-              } else {
-                // si pas trouvÃ© cÃ´tÃ© origine, tenter le match direct sur la cible (au cas oÃ¹ les libellÃ©s sont identiques)
-                const optDirect = (qc.parametres.options || []).find(opt => _normStr(opt.libelle) === _normStr(reponseSimple));
-                if (optDirect) {
-                  _aiguillerCalcul(qc.parametres.mode, optDirect.libelle, qc.parametres, resultats);
-                }
-              }
-            });
-          } else {
-            // si pas dâ€™options cÃ´tÃ© origine, essayer direct sur la cible
-            const reponseTexte = reponsesUtilisateur[enTeteComplet];
-            _aiguillerCalcul(qc.parametres.mode, reponseTexte, qc.parametres, resultats);
-          }
-        }
+      const questionsMapOrigine = _chargerQuestions(config.Type_Test, langOriN);
+      if (!questionsMapOrigine) {
+        Logger.log('[ESPION] AVERTISSEMENT: Feuille de questions de la langue d\'origine introuvable. Tentative de calcul direct.');
+        _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats);
+      } else {
+        _traduireEtExecuterCalcul(reponsesUtilisateur, questionsMapOrigine, questionsMapCible, resultats);
       }
     }
+  }
+  // --- MODIFICATION V10.2 END ---
+  
+  Logger.log('[ESPION] Scores bruts calculÃ©s: ' + JSON.stringify(resultats.scoresData));
+  
+  if (config.Type_Test === 'r&K_Environnement') {
+      const scoresTraduits = { K: resultats.scoresData.K || 0, r: resultats.scoresData.r || 0 };
+      resultats.scoresData = scoresTraduits;
+      Logger.log('[ESPION][Traducteur] Scores normalisÃ©s pour le moteur r&K: ' + JSON.stringify(resultats.scoresData));
   }
 
   if (Object.keys(resultats.scoresData).length > 0) {
-    resultats.profilFinal = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibN || langueCible);
-    const toutes = profilsMap[resultats.profilFinal];
-    if (toutes) resultats = { ...resultats, ...toutes };
+    const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibN || langueCible);
+    resultats = { ...resultats, ...profilEtReco }; 
+    
+    const profilsMap = _chargerProfils(config.Type_Test, langCibN || langueCible);
+    const infosProfilComplet = profilsMap[resultats.profilFinal];
+    if (infosProfilComplet) {
+      resultats = { ...resultats, ...infosProfilComplet };
+    }
+    
     resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
   }
 
-  Logger.log("Calculs terminÃ©s. RÃ©sultats : " + JSON.stringify(resultats));
+  Logger.log("[ESPION] Calculs terminÃ©s. Objet de rÃ©sultats final (partiel): " + 
+             `profilFinal="${resultats.profilFinal}", ` +
+             `Recommandation="${(resultats.Recommandation || '').substring(0,50)}..."`);
   return resultats;
 }
 
-/**
- * Auto-dÃ©tecte le type de test Ã  partir des en-tÃªtes de la feuille de rÃ©ponses.
- * Couvre : ENV###, ADA###, RES###, CRE### et motif "RKxx:" (â†’ AdaptabilitÃ©).
- */
-function _detectTestTypeAuto(reponses) {
-  let seenENV=false, seenRK=false, seenADA=false, seenRES=false, seenCRE=false;
-  for (const k in reponses) {
-    const kk = String(k || '');
-    if (/^ENV\s*\d{3}/i.test(kk)) seenENV = true;
-    if (/^RK\d{2}\s*:/.test(kk))   seenRK  = true; // "RK01: ..."
-    if (/^ADA\s*\d{3}/i.test(kk))  seenADA = true;
-    if (/^RES\s*\d{3}/i.test(kk))  seenRES = true;
-    if (/^CRE\s*\d{3}/i.test(kk))  seenCRE = true;
-  }
-  if (seenENV) return 'r&K_Environnement';
-  if (seenADA) return 'r&K_Adaptabilite';
-  if (seenRES) return 'r&K_Resilience';
-  if (seenCRE) return 'r&K_Creativite';
-  if (seenRK)  return 'r&K_Adaptabilite';
-  return '';
-}
+function _traduireEtExecuterCalcul(reponsesUtilisateur, questionsMapOrigine, questionsMapCible, resultats) {
+  for (const enTeteComplet in reponsesUtilisateur) {
+    if (!enTeteComplet.includes(':')) continue;
+    const idQuestion = enTeteComplet.split(':')[0].trim();
+    const qc = questionsMapCible[idQuestion];
+    if (!qc) continue;
 
-/** PrÃ©sence dâ€™en-tÃªtes ENV### (mÃªme â€œnettoyÃ©sâ€). */
-function _hasEnvKeys(reponses) {
-  for (const k in reponses) {
-    if (/^ENV\s*\d{3}/i.test(k)) return true;
-    if (/^ENV\d{3}_/i.test(k))   return true;
-  }
-  return false;
-}
-
-/* ============================================================================
- * Moteur â€” r&K_Environnement
- * ============================================================================ */
-function calculerResultats_rK_Environnement(reponse, langueCible, config) {
-  const envVals = {};
-  for (const k in reponse) {
-    const m = String(k).match(/^ENV\s*(\d{3})/i);
-    if (m) {
-      const n = parseInt(m[1], 10);
-      const raw = reponse[k];
-      const v = (typeof raw === 'number') ? raw : Number(String(raw).replace(',', '.'));
-      if (!isNaN(v)) envVals[n] = v;
+    if (qc.parametres.mode === 'ECHELLE_NOTE') {
+      _aiguillerCalcul(qc.parametres.mode, reponsesUtilisateur[enTeteComplet], qc.parametres, resultats);
+    } else {
+      const qo = questionsMapOrigine[idQuestion];
+      if (qo && qo.parametres && qo.parametres.options) {
+        const reponsesArray = String(reponsesUtilisateur[enTeteComplet]).split(',').map(r => r.trim());
+        reponsesArray.forEach(reponseSimple => {
+          const idx = qo.parametres.options.findIndex(opt => _normStr(opt.libelle) === _normStr(reponseSimple));
+          if (idx !== -1 && qc.parametres.options && qc.parametres.options[idx]) {
+            _aiguillerCalcul(qc.parametres.mode, qc.parametres.options[idx].libelle, qc.parametres, resultats);
+          } else {
+            const optDirect = (qc.parametres.options || []).find(opt => _normStr(opt.libelle) === _normStr(reponseSimple));
+            if (optDirect) _aiguillerCalcul(qc.parametres.mode, optDirect.libelle, qc.parametres, resultats);
+          }
+        });
+      } else {
+        _aiguillerCalcul(qc.parametres.mode, reponsesUtilisateur[enTeteComplet], qc.parametres, resultats);
+      }
     }
   }
-
-  const THEMES = [
-    "Concurrence & Pression du marchÃ©","Clients & Demande","Technologies & Innovation",
-    "RÃ©glementation & Cadre juridique","Ressources humaines & CompÃ©tences","Financement & AccÃ¨s aux capitaux",
-    "Fournisseurs & Logistique","Ressources & Infrastructures matÃ©rielles","Image & RÃ©putation sectorielle",
-    "Partenariats & RÃ©seaux","Territoire & Environnement gÃ©ographique","Tendances sociÃ©tales & culturelles",
-    "Contexte Ã©conomique global","Risques & SÃ©curitÃ©","OpportunitÃ©s de croissance & MarchÃ©s",
-  ];
-
-  const avg = (a,b) => (a+b)/2;
-  const round2 = n => +n.toFixed(2);
-  const interpK = (x) => x>=7 ? "Environnement plutÃ´t stable et prÃ©visible"
-                    : x<=3 ? "Environnement plutÃ´t instable / changeant"
-                           : "StabilitÃ© modÃ©rÃ©e avec quelques variations";
-  const interpr = (x) => x>=7 ? "Changements rapides / forte dynamique"
-                    : x<=3 ? "Changements lents / faible dynamique"
-                           : "Vitesse de changement modÃ©rÃ©e";
-
-  const themes = [];
-  let sumK=0, sumR=0, cntK=0, cntR=0;
-
-  for (let t=0; t<15; t++) {
-    const base = t*4;
-    const K1 = envVals[base+1], K2 = envVals[base+2];
-    const R1 = envVals[base+3], R2 = envVals[base+4];
-
-    const hasK = (K1!=null && K2!=null);
-    const hasR = (R1!=null && R2!=null);
-
-    const k = hasK ? avg(K1, K2) : null;
-    const r = hasR ? avg(R1, R2) : null;
-
-    if (k!=null) { sumK += k; cntK++; }
-    if (r!=null) { sumR += r; cntR++; }
-
-    themes.push({
-      name: THEMES[t],
-      stabilite: k!=null ? round2(k) : "",
-      vitesse:   r!=null ? round2(r) : "",
-      interpretStab: k!=null ? interpK(k) : "",
-      interpretVit:  r!=null ? interpr(r) : "",
-      reco: ""
-    });
-  }
-
-  const scoreK = cntK ? round2(sumK/cntK) : 0;
-  const scoreR = cntR ? round2(sumR/cntR) : 0;
-
-  const hi = 6.5, lo = 3.5;
-  let titreProfil = "";
-  if (scoreK >= hi && scoreR <= lo) titreProfil = "Stable & Lent";
-  else if (scoreK >= hi && scoreR >= hi) titreProfil = "Stable & Rapide";
-  else if (scoreK <= lo && scoreR >= hi) titreProfil = "Instable & Rapide";
-  else if (scoreK <= lo && scoreR <= lo) titreProfil = "Instable & Lent";
-  else if (scoreK >= scoreR)            titreProfil = "PlutÃ´t Stable";
-  else                                  titreProfil = "PlutÃ´t Rapide";
-
-  const flat = {
-    Score_Stabilite: scoreK,
-    Interpretation_Stabilite: interpK(scoreK),
-    Score_Vitesse: scoreR,
-    Interpretation_Vitesse: interpr(scoreR),
-    Titre_Profil: titreProfil,
-    profilFinal: titreProfil
-  };
-  themes.forEach((th, i) => {
-    const n = i+1;
-    flat[`Nom_Theme_${n}`] = th.name;
-    flat[`Score_Stabilite_Theme_${n}`] = th.stabilite;
-    flat[`Interpretation_Stabilite_Theme_${n}`] = th.interpretStab;
-    flat[`Score_Vitesse_Theme_${n}`] = th.vitesse;
-    flat[`Interpretation_Vitesse_Theme_${n}`] = th.interpretVit;
-    flat[`Recommandations_Theme_${n}`] = th.reco;
-  });
-
-  return {
-    scoresData: { K: scoreK, r: scoreR },
-    sousTotauxParMode: { K: scoreK, r: scoreR },
-    mapCodeToName: { K: "StabilitÃ© (K)", r: "Vitesse (r)" },
-    themes,
-    ...flat
-  };
 }
-
-// =================================================================================
-// == FLOWS & OUTILS GENERIQUES
-// =================================================================================
 
 function _executerCalcul(reponses, questionsMap, resultats) {
   for (const enTeteComplet in reponses) {
@@ -1285,186 +1080,49 @@ function _executerCalcul(reponses, questionsMap, resultats) {
     const idQuestion = enTeteComplet.split(':')[0].trim();
     const questionConfig = questionsMap[idQuestion];
     if (questionConfig) {
-      const reponse = reponses[enTeteComplet];
-      const mode = questionConfig.parametres.mode;
-      const parametres = questionConfig.parametres;
-      _aiguillerCalcul(mode, reponse, parametres, resultats);
+      _aiguillerCalcul(questionConfig.parametres.mode, reponses[enTeteComplet], questionConfig.parametres, resultats);
     }
   }
 }
 
 function _aiguillerCalcul(mode, reponse, parametres, resultats) {
-  // normalise le mode : trim, casse, espaces multiples
-  var m = String(mode || '')
-    .replace(/\u00A0/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toUpperCase();
-
+  var m = String(mode || '').replace(/\s+/g, ' ').trim().toUpperCase();
   switch (m) {
-    case 'QCU_DIRECT':   _traiterQCU_DIRECT(reponse, parametres, resultats); break;
     case 'QCU_CAT':      _traiterQCU_CAT(reponse, parametres, resultats);    break;
-    case 'QRM_CAT':      _traiterQRM_CAT(reponse, parametres, resultats);    break;
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
-    case 'LIKERT_5':     _traiterLIKERT_5(reponse, parametres, resultats);   break;
-
-    // petites variantes frÃ©quentes quâ€™on tolÃ¨re aussi
-    case 'QCU':
-      _traiterQCU_CAT(reponse, parametres, resultats);                        break;
-    case 'LIKERT':
-    case 'LIKERT5':
-      _traiterLIKERT_5(reponse, parametres, resultats);                       break;
-
     default:
-      Logger.log('Mode de traitement inconnu: "%s" â†’ rÃ©ponse ignorÃ©e', mode);
+      if (__DBG) Logger.log('Mode de traitement inconnu: "%s" â†’ rÃ©ponse ignorÃ©e', mode);
       break;
   }
 }
 
-
-// Likert 5 points (options libellÃ©s + valeurs 1..5), match robuste
-function _traiterLIKERT_5(reponseUtilisateur, parametres, resultats) {
-  if (!parametres || !parametres.options) return;
-  const repN = _normStr(reponseUtilisateur);
-  const opt = parametres.options.find(o => _normStr(o.libelle) === repN);
-  if (opt && opt.profil && typeof opt.valeur === 'number') {
-    resultats.scoresData[opt.profil] = (resultats.scoresData[opt.profil] || 0) + opt.valeur;
-  } else {
-    if (__DBG_LIKERT_MISS < 3) {
-      Logger.log('LIKERT_5: aucune option ne correspond Ã  "%s". Exemples: %s',
-        reponseUtilisateur, JSON.stringify((parametres.options||[]).slice(0,3).map(o=>o.libelle)));
-      __DBG_LIKERT_MISS++;
-    }
-  }
-}
-
-function _traiterQCU_DIRECT(reponseUtilisateur, parametres, resultats) {
-  if (!parametres || !parametres.profil) return;
-  resultats.scoresData[parametres.profil] = reponseUtilisateur;
-}
-
-// QCU: match texte (normalisÃ©) OU index numÃ©rique (1..n)
 function _traiterQCU_CAT(reponseUtilisateur, parametres, resultats) {
   if (!reponseUtilisateur || !parametres || !parametres.options) return;
-
-  const repStr  = String(reponseUtilisateur).trim();
-  const repNorm = _normStr(repStr);
-
-  // 1) correspondance par libellÃ© normalisÃ©
+  const repNorm = _normStr(reponseUtilisateur);
   let optionTrouvee = parametres.options.find(opt => _normStr(opt.libelle) === repNorm);
-
-  // 2) fallback: si "3" â†’ 3e option
   if (!optionTrouvee) {
-    const n = parseInt(repStr, 10);
-    if (!isNaN(n) && n >= 1 && n <= parametres.options.length) {
-      optionTrouvee = parametres.options[n - 1];
-    }
+    const n = parseInt(String(reponseUtilisateur).trim(), 10);
+    if (!isNaN(n) && n >= 1 && n <= parametres.options.length) optionTrouvee = parametres.options[n - 1];
   }
-
   if (optionTrouvee && optionTrouvee.profil) {
     const profil = optionTrouvee.profil;
     const valeur = (typeof optionTrouvee.valeur === 'number') ? optionTrouvee.valeur : 1;
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeur;
-  } else {
-    if (typeof __DBG_QCU_CAT_MISS === 'number' && __DBG_QCU_CAT_MISS < 5) {
-      Logger.log('QCU_CAT: aucune option ne correspond Ã  "%s". Exemples: %s',
-        reponseUtilisateur, JSON.stringify((parametres.options||[]).slice(0,3).map(o=>o.libelle)));
-      __DBG_QCU_CAT_MISS++;
-    }
   }
 }
-
-// QRM: idem, et accepte "1,3" comme multi-index
-function _traiterQRM_CAT(reponseUtilisateur, parametres, resultats) {
-  if (!reponseUtilisateur || !parametres || !parametres.options) return;
-
-  const reponsesArray = String(reponseUtilisateur)
-    .split(',')
-    .map(r => r.trim())
-    .filter(Boolean);
-
-  reponsesArray.forEach(reponse => {
-    const repNorm = _normStr(reponse);
-
-    let optionTrouvee = parametres.options.find(opt => _normStr(opt.libelle) === repNorm);
-
-    if (!optionTrouvee) {
-      const n = parseInt(reponse, 10);
-      if (!isNaN(n) && n >= 1 && n <= parametres.options.length) {
-        optionTrouvee = parametres.options[n - 1];
-      }
-    }
-
-    if (optionTrouvee && optionTrouvee.profil && typeof optionTrouvee.valeur === 'number') {
-      const profil = optionTrouvee.profil;
-      const valeur = optionTrouvee.valeur;
-      resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeur;
-    } else {
-      if (typeof __DBG_QRM_CAT_MISS === 'number' && __DBG_QRM_CAT_MISS < 5) {
-        Logger.log('QRM_CAT: aucune option ne correspond Ã  "%s". Exemples: %s',
-          reponse, JSON.stringify((parametres.options||[]).slice(0,3).map(o=>o.libelle)));
-        __DBG_QRM_CAT_MISS++;
-      }
-    }
-  });
-}
-
 
 function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
   if (!parametres || !parametres.profil) return;
   const valeurNumerique = parseFloat(String(reponseUtilisateur).replace(',', '.'));
   if (!isNaN(valeurNumerique)) {
-    const profil = parametres.profil;
-    resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
-  }
-}
-
-function _determinerProfilFinalParSeuils(scoresData, typeTest, langue) {
-  try {
-    const systemIds = getSystemIds();
-    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
-    const nomFeuilleProfils = `Profils_${typeTest}_${langue}`;
-    const sheetProfils = bdd.getSheetByName(nomFeuilleProfils);
-    if (!sheetProfils) return "";
-    const dataProfils = sheetProfils.getRange("A2:C" + sheetProfils.getLastRow()).getValues();
-    const totalPoints = Object.values(scoresData).reduce((sum, val) => sum + val, 0);
-    if (totalPoints === 0) return "";
-    const profilMajoritaire = Object.keys(scoresData).reduce((a, b) => scoresData[a] > scoresData[b] ? a : b);
-    const scoreMajoritaire = scoresData[profilMajoritaire];
-    const pourcentage = (scoreMajoritaire / totalPoints) * 100;
-    for (const row of dataProfils) {
-      const nomProfil = row[0];
-      const conditionSeuil = row[1];
-      if (!nomProfil || !conditionSeuil) continue;
-      const codeProfilSeuil = conditionSeuil.split(' ')[0];
-      if (codeProfilSeuil.toUpperCase() !== String(profilMajoritaire).toUpperCase()) continue;
-      if (conditionSeuil.includes('>=')) {
-        const seuil = parseFloat(conditionSeuil.replace(/[^0-9.]/g, ''));
-        if (pourcentage >= seuil) return nomProfil;
-      } else if (conditionSeuil.includes('<=')) {
-        const seuil = parseFloat(conditionSeuil.replace(/[^0-9.]/g, ''));
-        if (pourcentage <= seuil) return nomProfil;
-      } else if (conditionSeuil.includes('-')) {
-        const parts = conditionSeuil.match(/(\d+)-(\d+)/);
-        if (parts) {
-          const min = parseInt(parts[1], 10);
-          const max = parseInt(parts[2], 10);
-          if (pourcentage >= min && pourcentage <= max) return nomProfil;
-        }
-      }
-    }
-    return profilMajoritaire;
-  } catch (e) {
-    Logger.log("Erreur dans _determinerProfilFinalParSeuils: " + e.message);
-    return "";
+    resultats.scoresData[parametres.profil] = (resultats.scoresData[parametres.profil] || 0) + valeurNumerique;
   }
 }
 
 function _determinerProfilFinal(scoresData, typeTest, langue) {
-  if (!scoresData || Object.keys(scoresData).length === 0) return "";
-  const testsAvecSeuils = ["r&K_Adaptabilite", "r&K_Resilience", "r&K_Creativite"];
-  if (testsAvecSeuils.some(t => String(typeTest || '').toUpperCase() === t.toUpperCase())) {
-    return _determinerProfilFinalParSeuils(scoresData, typeTest, langue);
+  if (!scoresData || Object.keys(scoresData).length === 0) return { profilFinal: "" };
+  if (String(typeTest || '').toLowerCase().startsWith('r&k_')) {
+    return _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue);
   }
   if (String(typeTest || '').toUpperCase() === 'MBTI') {
     let profil = "";
@@ -1472,9 +1130,38 @@ function _determinerProfilFinal(scoresData, typeTest, langue) {
     profil += (scoresData.S || 0) > (scoresData.N || 0) ? 'S' : 'N';
     profil += (scoresData.T || 0) > (scoresData.F || 0) ? 'T' : 'F';
     profil += (scoresData.J || 0) > (scoresData.P || 0) ? 'J' : 'P';
-    return profil;
+    return { profilFinal: profil };
   } else {
-    return Object.keys(scoresData).reduce((a, b) => scoresData[a] > scoresData[b] ? a : b);
+    const profilFinal = Object.keys(scoresData).reduce((a, b) => scoresData[a] > scoresData[b] ? a : b);
+    return { profilFinal: profilFinal };
+  }
+}
+
+function _chargerProfils(typeTest, langue) {
+  try {
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const nomFeuille = `Profils_${typeTest}_${langue}`;
+    const sheet = bdd.getSheetByName(nomFeuille);
+    if (!sheet) return {};
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const profilsMap = {};
+    const codeColIndex = headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil');
+    if (codeColIndex === -1) return {};
+    data.forEach(row => {
+      const codeProfil = row[codeColIndex];
+      if (codeProfil) {
+        profilsMap[codeProfil] = {};
+        headers.forEach((header, index) => {
+          if (header) profilsMap[codeProfil][header] = row[index];
+        });
+      }
+    });
+    return profilsMap;
+  } catch (e) {
+    Logger.log("Erreur critique _chargerProfils: " + e.message);
+    return {};
   }
 }
 
@@ -1495,14 +1182,8 @@ function _chargerQuestions(typeTest, langue) {
     if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
 
     const data = sheet.getDataRange().getValues();
-    // Normalisation en-tÃªtes (BOM/quotes/espaces)
     const headersRaw = data.shift();
-    const headers = (headersRaw || []).map(h =>
-      String(h || '')
-        .replace(/^\uFEFF/, '')    // BOM
-        .replace(/^"|"$/g, '')     // guillemets englobants
-        .trim()
-    );
+    const headers = (headersRaw || []).map(h => String(h || '').replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim());
 
     const idCol     = headers.indexOf('ID');
     const paramsCol = headers.indexOf('ParamÃ¨tres (JSON)');
@@ -1526,121 +1207,6 @@ function _chargerQuestions(typeTest, langue) {
   }
 }
 
-// =================================================================================
-function enrichirVariablesEnv(resultats, reponses, config, langueCible) {
-  try {
-    const systemIds = getSystemIds();
-    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
-    const sheetName = `Questions_${config.Type_Test}_${langueCible}`;
-    const sheet = bdd.getSheetByName(sheetName);
-    if (!sheet) { Logger.log(`enrichirVariablesEnv: feuille introuvable: ${sheetName}`); return resultats; }
-
-    const data = sheet.getDataRange().getValues();
-    // Normalisation en-tÃªtes
-    const headersRaw = data.shift();
-    const headers = (headersRaw || []).map(h =>
-      String(h || '').replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim()
-    );
-
-    const colParams = headers.indexOf('ParamÃ¨tres (JSON)');
-    const colTypeQ  = headers.indexOf('TypeQuestion');
-    const colID     = headers.indexOf('ID');
-
-    const THEME_ORDER = [
-      'Concurrence & Pression du marchÃ©','Clients & Demande','Technologies & Innovation',
-      'RÃ©glementation & Cadre juridique','Ressources humaines & CompÃ©tences','Financement & AccÃ¨s aux capitaux',
-      'Fournisseurs & Logistique','Ressources & Infrastructures matÃ©rielles','Image & RÃ©putation sectorielle',
-      'Partenariats & RÃ©seaux','Territoire & Environnement gÃ©ographique','Tendances sociÃ©tales & culturelles',
-      'Contexte Ã©conomique global','Risques & SÃ©curitÃ©','OpportunitÃ©s de croissance & MarchÃ©s'
-    ];
-    function avg(list){ return (list&&list.length)?(list.reduce((a,b)=>a+Number(b||0),0)/list.length):null;}
-    function round1(n){ return (n==null)?'':Number(n.toFixed(1));}
-    function interpStab(v){ if(v==null) return ''; return v<=3?'TrÃ¨s r': v<=5?'r': v<=7?'K':'TrÃ¨s K'; }
-    function interpVit(v){ if(v==null) return ''; return v<=3?'TrÃ¨s lent': v<=5?'Lent': v<=7?'Rapide':'TrÃ¨s rapide'; }
-
-    const bucket = {}; THEME_ORDER.forEach(n=>bucket[n]={stab:[],vit:[]});
-
-    const envMap = {};
-    for (const h in reponses) {
-      const m = String(h).match(/^ENV\s*(\d{3})/i);
-      if (!m) continue;
-      const v = Number(String(reponses[h]).replace(',','.'));
-      if (!isNaN(v)) envMap[m[1]] = v;
-    }
-
-    data.forEach(row=>{
-      const typeQ = (row[colTypeQ]||'').trim();
-      if (typeQ !== 'ECHELLE_NOTE') return;
-      let p={}; try{ p=JSON.parse(row[colParams]||'{}'); }catch(_){}
-      const theme = p.theme||''; const dim = p.dimension||'';
-      const id = (row[colID]||'').toString().replace(/[^\d]/g,''); // 'ENV001' -> '001'
-      if (!theme || !envMap[id] || !bucket.hasOwnProperty(theme)) return;
-      if (dim==='StabilitÃ©') bucket[theme].stab.push(envMap[id]);
-      else if (dim==='Vitesse') bucket[theme].vit.push(envMap[id]);
-    });
-
-    resultats.themes = [];
-    let gS=[], gV=[];
-    THEME_ORDER.forEach((tName,i)=>{
-      const s = avg(bucket[tName].stab), v = avg(bucket[tName].vit);
-      if (s!=null) gS = gS.concat(bucket[tName].stab);
-      if (v!=null) gV = gV.concat(bucket[tName].vit);
-      const s1 = round1(s), v1 = round1(v), sI = interpStab(s), vI = interpVit(v);
-      resultats.themes.push({name:tName, stabilite:s1, vitesse:v1, interpretStab:sI, interpretVit:vI, reco:''});
-      const j=i+1;
-      resultats['Nom_Theme_'+j]=tName;
-      resultats['Score_Stabilite_Theme_'+j]=s1;
-      resultats['Interpretation_Stabilite_Theme_'+j]=sI;
-      resultats['Score_Vitesse_Theme_'+j]=v1;
-      resultats['Interpretation_Vitesse_Theme_'+j]=vI;
-      resultats['Recommandations_Theme_'+j]='';
-    });
-
-    function maybeSet(o,k,v){ if(o[k]==null || o[k]==='') o[k]=v; }
-    const gStab = round1(avg(gS)), gVit = round1(avg(gV));
-    maybeSet(resultats,'Score_Stabilite', gStab);
-    maybeSet(resultats,'Interpretation_Stabilite', interpStab(gStab||null));
-    maybeSet(resultats,'Score_Vitesse', gVit);
-    maybeSet(resultats,'Interpretation_Vitesse', interpVit(gVit||null));
-
-  } catch(e) {
-    Logger.log('enrichirVariablesEnv() ERREUR: ' + e.message + '\n' + e.stack);
-  }
-  return resultats;
-}
-
-/* ============================================================================
- * CHARGEUR DE PROFILS
- * ============================================================================ */
-function _chargerProfils(typeTest, langue) {
-  try {
-    const systemIds = getSystemIds();
-    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
-    const nomFeuille = `Profils_${typeTest}_${langue}`;
-    const sheet = bdd.getSheetByName(nomFeuille);
-    if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
-
-    const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
-    const profilsMap = {};
-    const codeColIndex = headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil');
-    if (codeColIndex === -1) throw new Error("Colonne 'Code_Profil' ou 'Profil' introuvable.");
-
-    data.forEach(row => {
-      const codeProfil = row[codeColIndex];
-      if (codeProfil) {
-        profilsMap[codeProfil] = {};
-        headers.forEach((header, index) => {
-          if (header) profilsMap[codeProfil][header] = row[index];
-        });
-      }
-    });
-    return profilsMap;
-  } catch (e) {
-    Logger.log("Erreur critique _chargerProfils: " + e.message + "\n" + e.stack);
-    return {};
-  }
-}
 
 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
@@ -1662,7 +1228,7 @@ function onOpen(e) {
 
     // Menu principal (titre harmonisÃ© pour tous les fichiers RÃ©ponses)
     const main = ui.createMenu('âš™ï¸ Actions du Kit')
-      .addItem('Activer le traitement auto', 'activerTraitementAutomatique')
+      .addItem('Autoriser le traitement auto', 'activerTraitementAutomatique')
       .addSeparator()
       .addItem('Retraiter une rÃ©ponse...', 'retraiterReponse_UI');
 
@@ -1964,8 +1530,10 @@ function envoyerEmailProgramme(e) {
     Logger.log(`Nettoyage de la propriÃ©tÃ© ${proprieteId} terminÃ©.`);
 
   } catch (err) {
-    Logger.log(`ERREUR FATALE lors de l'exÃ©cution de l'envoi programmÃ© (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
-    // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
+    L
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+
+  // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
     properties.deleteProperty(proprieteId);
   } finally {
     // Nettoyage : supprimer le dÃ©clencheur qui vient de s'exÃ©cuter
@@ -1981,9 +1549,6 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
-
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
 
