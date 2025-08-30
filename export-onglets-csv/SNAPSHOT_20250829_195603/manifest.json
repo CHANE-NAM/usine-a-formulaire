@@ -1,8 +1,8 @@
 ﻿{
-    "snapshot":  "SNAPSHOT_20250828_181242",
-    "generated_at":  "2025-08-28T21:06:23Z",
+    "snapshot":  "SNAPSHOT_20250829_195603",
+    "generated_at":  "2025-08-29T19:57:33Z",
     "repo_root":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm",
-    "csv_total":  47,
+    "csv_total":  45,
     "projects_total":  4,
     "sheets":  [
                    {
@@ -24,26 +24,6 @@
                                                     ],
                                         "sha256":  "BC503AAACB8CF8F7BAAC7B3380F3859B9A0248D3AC0046379DB31FAF0BA4BC4B",
                                         "bytes":  9793
-                                    },
-                                    {
-                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\ex_Gabarits_Emails.csv",
-                                        "name":  "ex_Gabarits_Emails",
-                                        "rows":  6,
-                                        "cols":  10,
-                                        "headers":  [
-                                                        "ID_Gabarit",
-                                                        "Langue",
-                                                        "Sujet",
-                                                        "Corps_Salutation",
-                                                        "Corps_Introduction",
-                                                        "Corps_Entete_Resultats",
-                                                        "Corps_Conclusion",
-                                                        "Corps_Signature",
-                                                        "Niveau_Details_Resultats",
-                                                        "Niveau_Pieces_Jointes"
-                                                    ],
-                                        "sha256":  "F2AB6C5CE5AC59686DD180B375F73FF3DF42290C367D52DEAFBF15E1BB4E8F9E",
-                                        "bytes":  2711
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\ex_Questions_Couleurs_EN.csv",
@@ -108,23 +88,6 @@
                                                     ],
                                         "sha256":  "1B89D8DFB64995BC34C37F0FAE31962065CCB737F21EADA9ADE3CA4F408F3F26",
                                         "bytes":  3092
-                                    },
-                                    {
-                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\import_csv.csv",
-                                        "name":  "import_csv",
-                                        "rows":  72,
-                                        "cols":  7,
-                                        "headers":  [
-                                                        "Type_Test",
-                                                        "Code_Langue",
-                                                        "Code_Niveau_Email",
-                                                        "Code_Profil",
-                                                        "Element",
-                                                        "Ordre",
-                                                        "Contenu / ID_Document"
-                                                    ],
-                                        "sha256":  "E356695521158FB18A893E1182FC0D2937E5E4AEF1331F090BB60FC373D43796",
-                                        "bytes":  8919
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Liste_Fichiers_Drive.csv",
@@ -638,8 +601,8 @@
                                         "bytes":  628
                                     }
                                 ],
-                       "total_rows":  1766,
-                       "tab_count":  37
+                       "total_rows":  1688,
+                       "tab_count":  35
                    },
                    {
                        "folder":  "CONFIG_V2_Usine_Tests_1kLBqI",
@@ -670,7 +633,7 @@
                                     {
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\Param_tres_G_n_raux.csv",
                                         "name":  "Param_tres_G_n_raux",
-                                        "rows":  16,
+                                        "rows":  15,
                                         "cols":  38,
                                         "headers":  [
                                                         "ID_Gabarit_Email_Repondant",
@@ -712,8 +675,8 @@
                                                         "JSON_Questions",
                                                         "Moteur_Calcul"
                                                     ],
-                                        "sha256":  "C482C9AFEF3EEEB69374209E3198693943D6EE088A9B0A45B73A9F90C59796B9",
-                                        "bytes":  7964
+                                        "sha256":  "4E03807A575A486DC390799EA4BFD2B50E7C4C15433B6033D919CE93F1CA980D",
+                                        "bytes":  7689
                                     },
                                     {
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\R_ponses_au_formulaire_1.csv",
@@ -835,7 +798,7 @@
                                         "bytes":  573
                                     }
                                 ],
-                       "total_rows":  119,
+                       "total_rows":  118,
                        "tab_count":  8
                    },
                    {
@@ -846,8 +809,8 @@
                                     "name":  "Feuille_1",
                                     "rows":  0,
                                     "cols":  1,
-                                    "headers":  "a",
-                                    "sha256":  "CA978112CA1BBDCAFAC231B39A23DC4DA786EFF8147C4E72B9807785AFEE48BB",
+                                    "headers":  "c",
+                                    "sha256":  "2E7D2C03A9507AE265ECF5B5356885A53393A2029D241394997265A1A25AEFC6",
                                     "bytes":  1
                                 },
                        "total_rows":  0,
@@ -871,9 +834,9 @@
                ],
     "gas_projects":  [
                          {
-                             "file":  "scripts__MOTEUR_V2_Usine_Ã_Tests.txt",
-                             "lines":  836,
-                             "sha256":  "80B77C599EDC22EFC249EE5727308E63537171DCB74869990A15E9F3BDE5C32F",
+                             "file":  "scripts__MOTEUR_V2_Usine_à_Tests.txt",
+                             "lines":  840,
+                             "sha256":  "E153E5166A3DDE4D3780305049BE44DC08956D1BD7AE15A60AE19BE6D0CC94CC",
                              "functions":  [
                                                "lancerDeploiementComplet",
                                                "_normHeader",
@@ -887,6 +850,7 @@
                                                "getLangueFullName",
                                                "buildChoices",
                                                "creerItemFormulaire",
+                                               "resolvedType",
                                                "eMin",
                                                "eMax",
                                                "lmin",
@@ -903,9 +867,9 @@
                                            ]
                          },
                          {
-                             "file":  "scripts__CONFIG_V2_Usine_Ã_Tests.txt",
+                             "file":  "scripts__CONFIG_V2_Usine_à_Tests.txt",
                              "lines":  482,
-                             "sha256":  "924CC719B0DE4A81582122305121CECFCB5EF9BB5B7DAE11999266C4347425E6",
+                             "sha256":  "709C13A56BAE621B1B2F46BE606411E9CFE20B5B3377A08B649ECE521044E7C7",
                              "functions":  [
                                                "onOpen",
                                                "showConfigurationSidebar",
@@ -928,7 +892,7 @@
                          {
                              "file":  "scripts__BDD_V2_Tests_Profils.txt",
                              "lines":  172,
-                             "sha256":  "264FAF5E48A56D1281339C6821DE8FEDD4FBA81B3ABF04DD8365342456F70C32",
+                             "sha256":  "B9D2E330766A7D34E1699A6AC7E8A932267659079F73F7D32E8D93CCDF4C7612",
                              "functions":  [
                                                "onOpen",
                                                "listFilesFromFolder",
@@ -939,18 +903,26 @@
                          },
                          {
                              "file":  "scripts__TEMPLATE_V2_Kit_de_Traitement.txt",
-                             "lines":  2713,
-                             "sha256":  "C7285FFC6D49F181D0CCE079BCF29B78F8E6E491117688B095FB4E25CDEC2E65",
+                             "lines":  2867,
+                             "sha256":  "CBE64E400A687F6360AC4FDEEBC2B142264815448D2328E79D8BDC7F36A1F18D",
                              "functions":  [
                                                "readFilesRecursively",
+                                               "DBG",
+                                               "_spyDumpRow_",
+                                               "_spyFindNomEmail_",
                                                "_nettoyerEnTete",
+                                               "_sheetLooksLikeResponses_",
+                                               "ok",
                                                "_pickSheetByNameOrHeuristic_",
                                                "_getReponsesSheet_",
                                                "sys",
+                                               "tryOpenById",
+                                               "pick",
                                                "_creerObjetReponse",
                                                "config",
                                                "genererPdfDepuisModele",
                                                "normalizeAndDedupeCompositionEmailsRows_",
+                                               "_enrichirDonneesPourEmail_",
                                                "onFormSubmit",
                                                "_envoyerEmailDeConfirmation",
                                                "traiterLigne",
@@ -974,7 +946,6 @@
                                                "diagnostic_CompoEmails_v20_1",
                                                "getTestConfiguration",
                                                "_tryReadKeyValueOrHorizontalConfig",
-                                               "isKeyValue",
                                                "getSystemIds",
                                                "getOriginalLanguage",
                                                "getGabaritEmail",
@@ -984,14 +955,7 @@
                                                "buildAndSendEmails",
                                                "findAttachments",
                                                "profilMatch",
-                                               "langueMatch",
-                                               "niveauMatch",
-                                               "mapQuestionsById",
-                                               "_normStr",
-                                               "_normLang",
-                                               "calculerResultats",
-                                               "profilsMap",
-                                               "optDirect"
+                                               "langueMatch"
                                            ]
                          }
                      ]

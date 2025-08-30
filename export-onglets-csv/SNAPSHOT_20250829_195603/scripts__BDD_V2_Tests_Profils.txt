@@ -1,7 +1,7 @@
-﻿=== Projet: [BDD]V2 Tests & Profils (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnees) ===
+﻿=== Projet: [BDD]V2 Tests & Profils (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées) ===
 
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnees\appsscript.json ---
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\appsscript.json ---
 
 {
   "timeZone": "Indian/Mauritius",
@@ -11,7 +11,7 @@
   "runtimeVersion": "V8"
 }
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnees\Code.js ---
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\Code.js ---
 
 /**
 Â * @OnlyCurrentDoc
@@ -125,7 +125,7 @@ function getFilesRecursive(folder, fileList) {
     }
 }
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnees\concat_scripts_repvic.js ---
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\concat_scripts_repvic.js ---
 
 const fs = require('fs');
 const path = require('path');
