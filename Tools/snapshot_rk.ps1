@@ -159,6 +159,7 @@ try {
 }
 
 # -----------------------------
+# -----------------------------
 # 7) Manifest / Brief / Diff (si helpers chargés)
 # -----------------------------
 if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinue)) {
@@ -170,12 +171,16 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
     $prev = Get-ChildItem -LiteralPath $ExportDir -Directory |
             Where-Object { $_.FullName -ne $SnapDir } |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
     if ($prev) {
       $prevManifest = Join-Path $prev.FullName 'manifest.json'
       if (Test-Path -LiteralPath $prevManifest) {
-        Write-DiffMd -PrevManifestPath $prevManifest `
-                     -CurrManifestPath (Join-Path $SnapDir 'manifest.json') `
-                     -OutPath          (Join-Path $SnapDir 'diff.md') | Out-Null
+        $diffArgs = @{
+          PrevManifestPath = $prevManifest
+          CurrManifestPath = (Join-Path $SnapDir 'manifest.json')
+          OutPath          = (Join-Path $SnapDir 'diff.md')
+        }
+        Write-DiffMd @diffArgs | Out-Null
       } else {
         Write-Host "[DIFF] Aucun manifest précédent trouvé."
       }

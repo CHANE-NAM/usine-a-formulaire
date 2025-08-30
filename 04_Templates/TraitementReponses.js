@@ -1,7 +1,8 @@
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 20.7 - L'e-mail de confirmation n'est plus envoyé lors d'un retraitement
-// ==           ou d'un envoi de résultats immédiat.
+// == VERSION : 20.8 - Ajout de l'arrondi des scores et de la gestion de {{Titre_Profil}}.
+// ==           (Précédent: 20.7 - L'e-mail de confirmation n'est plus envoyé 
+// ==           lors d'un retraitement ou d'un envoi de résultats immédiat.)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
@@ -12,9 +13,6 @@ function DBG() {
   const parts = [].slice.call(arguments).map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x)));
   Logger.log('[DBG] ' + parts.join(' '));
 }
-
-// ... (le reste du fichier TraitementReponses.js reste identique jusqu'à la fonction traiterLigne)
-// ... (pour la lisibilité, je ne colle ici que la fonction modifiée)
 
 function _spyDumpRow_(sheet, rowIndex) {
   try {
@@ -149,6 +147,12 @@ function _enrichirDonneesPourEmail_(reponse, resultats) {
   if (R.Votre_nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Votre_nom_et_prenom; } else if (R.Nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Nom_et_prenom; }
   if (donnees.titreProfil && !donnees.Titre_Profil) donnees.Titre_Profil = donnees.titreProfil;
   if (donnees.descriptionProfil && !donnees.Description_Profil) donnees.Description_Profil = donnees.descriptionProfil;
+  
+  // === MODIFICATION V20.8 START ===
+  // Assure que {{Titre_Profil}} est toujours disponible dans l'e-mail
+  if (donnees.profilFinal && !donnees.Titre_Profil) donnees.Titre_Profil = donnees.profilFinal;
+  // === MODIFICATION V20.8 END ===
+
   return donnees;
 }
 function onFormSubmit(e) {
@@ -220,7 +224,6 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
   }
 }
 
-// ... (le reste du fichier reste identique)
 function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}){
   const typeTest = (config.Type_Test || '').toString().trim();
   let codeNiveauEmail = (config.ID_Gabarit_Email_Repondant || '').toString().replace('RESULTATS_', '').trim();
@@ -248,7 +251,17 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Sujet_Email': sujet = contenu; break;
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
-      case 'Ligne_Score': Object.entries(resultats.scoresData).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => { let ligneScore = (contenu || "").replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code).replace(/{{score}}/g, score); corpsHtml += ligneScore + "<br>"; }); break;
+      
+      // === MODIFICATION V20.8 START ===
+      // Arrondit le score à une décimale avant de l'insérer dans l'e-mail.
+      case 'Ligne_Score': 
+        Object.entries(resultats.scoresData).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => { 
+            let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+            let ligneScore = (contenu || "").replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code).replace(/{{score}}/g, scoreArrondi); 
+            corpsHtml += ligneScore + "<br>"; 
+        }); 
+        break;
+      // === MODIFICATION V20.8 END ===
     }
   }
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
