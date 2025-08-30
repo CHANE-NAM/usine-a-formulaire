@@ -1,7 +1,7 @@
 // =================================================================================
 // FICHIER : Utils V2.gs (Projet MOTEUR)
 // RÔLE    : Fonctions utilitaires pour le Moteur / Usine
-// VERSION : 3.2 - alias TEXTE_EMAIL→EMAIL + prise en compte params.mode dans creerItemFormulaire
+// VERSION : 3.3 - Gestion des questions optionnelles via "(optionnel)" dans le titre
 // =================================================================================
 
 // ⚙️ ID de la feuille de configuration centrale (CONFIG)
@@ -180,6 +180,14 @@ function buildChoices(optionsString, params) {
 //  - NEW v3.2 : alias TEXTE_EMAIL → EMAIL ; priorise params.mode si fourni
 // ------------------------------------
 function creerItemFormulaire(form, type, titre, optionsString, description, paramsJSONString) {
+  // ==================== DÉBUT DE LA MODIFICATION ====================
+  // On détermine si la question doit être obligatoire en inspectant le titre.
+  let isRequired = true;
+  if (titre.toLowerCase().includes('(optionnel)')) {
+    isRequired = false;
+  }
+  // ===================== FIN DE LA MODIFICATION =====================
+
   // 1) Résolution [LIEN_FICHIER:...]
   let finalDescription = description;
   const placeholderRegex = /\[LIEN_FICHIER:(.*?)\]/;
@@ -230,14 +238,14 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
 
   if (resolvedType.startsWith('QRM')) {
     if (choices.length > 0) {
-      item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+      item = form.addCheckboxItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired); // MODIFIÉ
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QRM: Options manquantes] " + titre);
     }
 
   } else if (resolvedType.startsWith('QCU')) {
     if (choices.length > 0) {
-      item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(true);
+      item = form.addMultipleChoiceItem().setTitle(titre).setChoiceValues(choices).setRequired(isRequired); // MODIFIÉ
     } else {
       item = form.addParagraphTextItem().setTitle("[Erreur QCU: Options manquantes] " + titre);
     }
@@ -250,7 +258,7 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
         const scaleItem = form.addScaleItem()
           .setTitle(titre)
           .setBounds(Number(eMin), Number(eMax))
-          .setRequired(true);
+          .setRequired(isRequired); // MODIFIÉ
 
         // Labels : label_min / libelle_min / labelMin  (idem pour _max)
         const lmin = (params.label_min ?? params.libelle_min ?? params.labelMin);
@@ -271,16 +279,16 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
     const parts = optionsString ? optionsString.split(';').map(s => s.trim()) : [];
     const min = parts[0] ? Number(parts[0]) : 1;
     const max = parts[parts.length - 1] ? Number(parts[parts.length - 1]) : 5;
-    const scaleItem = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(true);
+    const scaleItem = form.addScaleItem().setTitle(titre).setBounds(min, max).setRequired(isRequired); // MODIFIÉ
     item = scaleItem;
 
   } else if (resolvedType === 'EMAIL') {
-    const textItem = form.addTextItem().setTitle(titre).setRequired(true);
+    const textItem = form.addTextItem().setTitle(titre).setRequired(isRequired); // MODIFIÉ
     const emailValidation = FormApp.createTextValidation().requireTextIsEmail().build();
     item = textItem.setValidation(emailValidation);
 
   } else if (resolvedType === 'TEXTE_COURT') {
-    item = form.addTextItem().setTitle(titre).setRequired(true);
+    item = form.addTextItem().setTitle(titre).setRequired(isRequired); // MODIFIÉ
 
   } else {
     item = form.addParagraphTextItem().setTitle("[Type Inconnu: " + (type || resolvedType) + "] " + titre);
