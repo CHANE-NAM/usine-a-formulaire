@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      .form-row { margin-bottom: 15px; }
+      label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+      input[type="number"] { width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+      button { padding: 10px 15px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+      button:hover { background-color: #185abc; }
+      #status { margin-top: 20px; padding: 10px; border-radius: 4px; }
+      .success { background-color: #e6f4ea; color: #137333; }
+      .error { background-color: #fce8e6; color: #c5221f; }
+    </style>
+  </head>
+  <body>
+    <h4>Catalogue des Tests</h4>
+    <p>Générez un document imprimable à partir d'une ligne de configuration.</p>
+    
+    <div class="form-row">
+      <label for="rowIndex">Numéro de la ligne à utiliser :</label>
+      <input type="number" id="rowIndex" min="2" placeholder="Ex: 5">
+    </div>
+    
+    <div class="form-row">
+      <button onclick="generateDocument()">Générer le Document</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <script>
+      function generateDocument() {
+        const rowIndex = document.getElementById('rowIndex').value;
+        const statusDiv = document.getElementById('status');
+        
+        if (!rowIndex || rowIndex < 2) {
+          alert('Veuillez entrer un numéro de ligne valide (supérieur à 1).');
+          return;
+        }
+
+        statusDiv.className = '';
+        statusDiv.textContent = 'Génération en cours...';
+        document.querySelector('button').disabled = true;
+
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .generatePrintableSheet(parseInt(rowIndex));
+      }
+
+      function onSuccess(fileUrl) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.className = 'success';
+        statusDiv.innerHTML = 'Document généré ! <br><a href="' + fileUrl + '" target="_blank">Cliquez ici pour l\'ouvrir</a>';
+        document.querySelector('button').disabled = false;
+        document.getElementById('rowIndex').value = '';
+      }
+
+      function onFailure(error) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.className = 'error';
+        statusDiv.textContent = 'Erreur: ' + error.message;
+        document.querySelector('button').disabled = false;
+      }
+    </script>
+  </body>
+</html>

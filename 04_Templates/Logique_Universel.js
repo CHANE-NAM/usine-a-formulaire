@@ -1,7 +1,7 @@
 // =================================================================================
 // == FICHIER : Logique_Universel.js
-// == VERSION : 10.6 - La logique MBTI fonctionne avec les versions (ex: MBTI_V2).
-// ==           (Précédent: 10.5 - Correction LIKERT_5)
+// == VERSION : 11.0 - Ajout du calcul du score maximum possible pour tous les tests.
+// ==           (Précédent: 10.6 - La logique MBTI fonctionne avec les versions.)
 // =================================================================================
 
 // --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
@@ -152,6 +152,14 @@ function _normLang(s) {
   return x.toUpperCase();
 }
 
+/**
+ * Calcule les résultats d'un test, y compris les scores de l'utilisateur et les scores maximums possibles.
+ * @param {object} reponsesUtilisateur - Les réponses du formulaire.
+ * @param {string} langueCible - Le code de la langue (ex: 'FR').
+ * @param {object} config - L'objet de configuration du test.
+ * @param {string} langueOrigine - La langue originale de la réponse.
+ * @returns {object} Un objet contenant les scores, le profil final et les scores maximums possibles.
+ */
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
   Logger.log(`[ESPION] Démarrage du calcul des résultats pour le Type_Test: "${config.Type_Test}".`);
   let resultats = { scoresData: {}, sousTotauxParMode: {} };
@@ -167,11 +175,53 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
       Logger.log('[ESPION] AVERTISSEMENT: Impossible de charger les questions pour ' + (config && config.Type_Test) + '. Le calcul est interrompu.');
       return resultats;
     }
-    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats);
+    
+    // ==================== DÉBUT DE LA MODIFICATION V11.0 ====================
+    // Calcul des scores maximums possibles
+    const scoresMax = {};
+    const nbQuestionsUtiliser = config.nbQuestions || Object.keys(questionsMapCible).length;
+    let questionsPrisesEnCompte = 0;
+
+    for (const id in questionsMapCible) {
+      if (questionsPrisesEnCompte >= nbQuestionsUtiliser) break; // Respecte la limite de questions
+      
+      const q = questionsMapCible[id];
+      const params = q.parametres;
+      if (!params || !params.mode) continue;
+
+      let profil = params.profil;
+      let maxVal = 0;
+
+      const mode = String(params.mode).toUpperCase();
+      if (mode === 'ECHELLE_NOTE' || mode === 'LIKERT_5') {
+        maxVal = params.echelle_max || params.max || 0;
+        // Pour LIKERT_5, le profil est parfois dans la première option
+        if (!profil && params.options && params.options[0] && params.options[0].profil) {
+          profil = params.options[0].profil;
+        }
+      } else if (mode === 'QCU_CAT' || mode === 'QRM_CAT') {
+        if (params.options && params.options.length > 0) {
+          // Le max est la plus haute valeur possible parmi les options
+          maxVal = Math.max(...params.options.map(opt => (typeof opt.valeur === 'number' ? opt.valeur : 0)));
+          // Le profil est celui de la première option (supposition)
+          profil = params.options[0].profil;
+        }
+      }
+      
+      if (profil && maxVal > 0) {
+        scoresMax[profil] = (scoresMax[profil] || 0) + maxVal;
+      }
+      questionsPrisesEnCompte++;
+    }
+    
+    resultats.scoresMaxPossible = scoresMax;
+    Logger.log('[ESPION] Scores maximums possibles calculés: ' + JSON.stringify(scoresMax));
+    // ===================== FIN DE LA MODIFICATION V11.0 =====================
+
+    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats, config.nbQuestions);
   }
   
   Logger.log('[ESPION] Scores bruts calculés: ' + JSON.stringify(resultats.scoresData));
-
   if (Object.keys(resultats.scoresData).length > 0) {
     const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibN || langueCible);
     resultats = { ...resultats, ...profilEtReco }; 
@@ -191,13 +241,19 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   return resultats;
 }
 
-function _executerCalcul(reponses, questionsMap, resultats) {
+function _executerCalcul(reponses, questionsMap, resultats, nbQuestionsLimite) {
+  let questionsTraitees = 0;
+  const limite = nbQuestionsLimite || Object.keys(questionsMap).length;
+
   for (const enTeteComplet in reponses) {
+    if (questionsTraitees >= limite) break;
     if (!enTeteComplet.includes(':')) continue;
+    
     const idQuestion = enTeteComplet.split(':')[0].trim();
     const questionConfig = questionsMap[idQuestion];
     if (questionConfig) {
       _aiguillerCalcul(questionConfig.parametres.mode, reponses[enTeteComplet], questionConfig.parametres, resultats);
+      questionsTraitees++;
     }
   }
 }

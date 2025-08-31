@@ -1,11 +1,11 @@
 // =================================================================================
 // FICHIER : Moteur V2.js
 // RÔLE : Fonctions principales de création et d'orchestration des tests.
-// VERSION : 6.2 - Ne crée pas la sélection de langue si un seul onglet de question est trouvé.
+// VERSION : 6.4 - Supprime l'appel à getShortUrl() (obsolète) et conserve getEditUrl().
 // =================================================================================
 
 /**
- * Gère le déploiement complet (création + mise à jour du statut + lien public).
+ * Gère le déploiement complet (création + mise à jour du statut + liens).
  */
 function lancerDeploiementComplet(rowIndex) {
   Logger.log(`Lancement du déploiement complet pour la ligne ${rowIndex}...`);
@@ -33,7 +33,7 @@ function lancerDeploiementComplet(rowIndex) {
     const templateFile = DriveApp.getFileById(systemIds.ID_TEMPLATE_TRAITEMENT_V2);
     const sheetFile = templateFile.makeCopy(nomFichierComplet, dossierCible);
     const reponsesSheetId = sheetFile.getId();
-
+    
     const form = FormApp.create(nomFichierComplet);
     form.setDestination(FormApp.DestinationType.SPREADSHEET, reponsesSheetId);
     form.setProgressBar(true);
@@ -44,8 +44,11 @@ function lancerDeploiementComplet(rowIndex) {
     const formFile = DriveApp.getFileById(form.getId());
     formFile.moveTo(dossierCible);
 
+    // Récupération des URLs nécessaires
     const formUrl = form.getPublishedUrl();
-    Logger.log("URL longue obtenue avec succès via getPublishedUrl() : " + formUrl);
+    const editUrl = form.getEditUrl();
+    Logger.log("URL publique obtenue : " + formUrl);
+    Logger.log("URL d'édition obtenue : " + editUrl);
     
     // --- Génération des questions ---
     if (!systemIds.ID_BDD) throw new Error("ID_BDD introuvable.");
@@ -71,27 +74,24 @@ function lancerDeploiementComplet(rowIndex) {
         });
       }
     }
-
-    // ==================== DÉBUT DE LA MODIFICATION V6.2 ====================
-    // Étape 1 : On identifie toutes les langues disponibles pour ce test
+    
+    // Identification des langues
     const toutesLesFeuillesBDD = bdd.getSheets();
     const regexLangues = new RegExp('^Questions_' + config['Type_Test'] + '_([A-Z]{2})$', 'i');
     const languesAInclure = [];
+    
     toutesLesFeuillesBDD.forEach(feuille => {
       const match = feuille.getName().match(regexLangues);
       if (match && match[1]) languesAInclure.push({ code: match[1].toUpperCase(), nomComplet: getLangueFullName(match[1]), feuille: feuille });
     });
-
+    
     if (languesAInclure.length === 0) {
         throw new Error("Aucune feuille de questions trouvée pour le type '" + config['Type_Test'] + "'.");
     }
 
-    // Étape 2 : On applique une logique différente s'il y a une ou plusieurs langues
+    // Logique multi-langues ou langue unique
     if (languesAInclure.length > 1) {
-        // CAS 1 : MULTI-LANGUES (comportement original)
-        // On crée la question de sélection de langue et les pages associées.
-        Logger.log(`Mode multi-langues détecté (${languesAInclure.length} langues). Création de la sélection de langue.`);
-        
+        Logger.log(`Mode multi-langues détecté (${languesAInclure.length} langues).`);
         const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
         const choices = [];
         languesAInclure.forEach(langue => {
@@ -100,6 +100,7 @@ function lancerDeploiementComplet(rowIndex) {
             
             const nbQuestionsDisponibles = langue.feuille.getLastRow() - 1;
             let nbQuestionsAUtiliser = (config['nbQuestions'] && config['nbQuestions'] > 0) ? Math.min(config['nbQuestions'], nbQuestionsDisponibles) : nbQuestionsDisponibles;
+        
             if (nbQuestionsAUtiliser <= 0) return;
 
             const questionsData = langue.feuille.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
@@ -112,16 +113,11 @@ function lancerDeploiementComplet(rowIndex) {
             });
         });
         itemLangue.setChoices(choices);
-
     } else {
-        // CAS 2 : LANGUE UNIQUE (nouveau comportement)
-        // On n'ajoute pas la question de langue, on insère directement les questions du test.
         Logger.log(`Mode langue unique détecté. Insertion directe des questions.`);
-        
         const uniqueLangue = languesAInclure[0];
         const nbQuestionsDisponibles = uniqueLangue.feuille.getLastRow() - 1;
         let nbQuestionsAUtiliser = (config['nbQuestions'] && config['nbQuestions'] > 0) ? Math.min(config['nbQuestions'], nbQuestionsDisponibles) : nbQuestionsDisponibles;
-
         if (nbQuestionsAUtiliser > 0) {
             const questionsData = uniqueLangue.feuille.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
             questionsData.forEach((q_data) => {
@@ -132,33 +128,29 @@ function lancerDeploiementComplet(rowIndex) {
             });
         }
     }
-    // ===================== FIN DE LA MODIFICATION V6.2 =====================
 
     // --- MISE À JOUR DANS LA FEUILLE CONFIG ---
     const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName("Paramètres Généraux");
     const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
     const colIndex = {};
-    headers.forEach((header, i) => { if (header) colIndex[header] = i; });
-
-    const STATUT_COL = colIndex['Statut'];
-    const ID_UNIQUE_COL = colIndex['Id_Unique'];
-    const NOM_FICHIER_COL = colIndex['Nom_Fichier_Complet'];
-    const ID_FORM_COL = colIndex['ID_Formulaire_Cible'];
-    const ID_SHEET_COL = colIndex['ID_Sheet_Cible'];
-    const LIEN_FORM_COL = colIndex['Lien_Formulaire_Public'];
+    headers.forEach((header, i) => { if (header) colIndex[header.trim()] = i; });
 
     const idUnique = sheetFile.getId().slice(0, 8) + '-' + formFile.getId().slice(0, 8);
     
-    configSheet.getRange(rowIndex, STATUT_COL + 1).setValue('Actif - Déclencheur à activer'); 
-    configSheet.getRange(rowIndex, ID_UNIQUE_COL + 1).setValue(idUnique);
-    configSheet.getRange(rowIndex, NOM_FICHIER_COL + 1).setValue(nomFichierComplet);
-    if (ID_FORM_COL !== undefined) configSheet.getRange(rowIndex, ID_FORM_COL + 1).setValue(formFile.getId());
-    if (ID_SHEET_COL !== undefined) configSheet.getRange(rowIndex, ID_SHEET_COL + 1).setValue(sheetFile.getId());
-    if (LIEN_FORM_COL !== undefined) configSheet.getRange(rowIndex, LIEN_FORM_COL + 1).setValue(formUrl);
+    configSheet.getRange(rowIndex, colIndex['Statut'] + 1).setValue('Actif - Déclencheur à activer');
+    configSheet.getRange(rowIndex, colIndex['Id_Unique'] + 1).setValue(idUnique);
+    configSheet.getRange(rowIndex, colIndex['Nom_Fichier_Complet'] + 1).setValue(nomFichierComplet);
+    if (colIndex['ID_Formulaire_Cible'] !== undefined) configSheet.getRange(rowIndex, colIndex['ID_Formulaire_Cible'] + 1).setValue(formFile.getId());
+    if (colIndex['ID_Sheet_Cible'] !== undefined) configSheet.getRange(rowIndex, colIndex['ID_Sheet_Cible'] + 1).setValue(sheetFile.getId());
+    if (colIndex['Lien_Formulaire_Public'] !== undefined) configSheet.getRange(rowIndex, colIndex['Lien_Formulaire_Public'] + 1).setValue(formUrl);
+    
+    const colNameEditUrl = Object.keys(colIndex).find(k => k.toLowerCase().includes('accès direct formulaire'));
+    if (colNameEditUrl) {
+      configSheet.getRange(rowIndex, colIndex[colNameEditUrl] + 1).setFormula(`=HYPERLINK("${editUrl}"; "Ouvrir le formulaire")`);
+    }
     
     SpreadsheetApp.flush();
     Logger.log(`Ligne ${rowIndex} mise à jour avec le statut 'Actif - Déclencheur à activer'.`);
-    
     return { nomFichier: nomFichierComplet, urlSheet: sheetFile.getUrl(), urlForm: formUrl };
 
   } catch(e) {

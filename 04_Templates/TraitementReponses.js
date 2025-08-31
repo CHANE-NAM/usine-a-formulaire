@@ -1,7 +1,7 @@
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 20.9 - Affiche le score total par dichotomie (ex: / 8) pour le MBTI.
-// ==           (Précédent: 20.8 - Ajout de l'arrondi des scores et de la gestion de {{Titre_Profil}}.)
+// == VERSION : 21.1 - La logique Ligne_Score construit la chaîne elle-même pour plus de robustesse.
+// ==           (Précédent: 21.0 - Logique de Ligne_Score rendue générique.)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
@@ -22,7 +22,6 @@ function _spyDumpRow_(sheet, rowIndex) {
     const V = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
     const subset = {};
     for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i];
-    // 25 1res colonnes
     DBG('DUMP row', rowIndex, 'subset=', subset);
     return { headers: H, values: V };
   } catch (e) { DBG('spyDumpRow ERROR', e.message); }
@@ -241,33 +240,49 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       
-      // ==================== DÉBUT MODIFICATION V20.9 ====================
-      case 'Ligne_Score': 
-        const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
-        
-        // On ne traite que les profils principaux pour le MBTI, pas les sous-scores si un jour il y en a.
-        const codesAAfficher = Object.keys(opposites);
-        
-        Object.entries(resultats.scoresData)
-          .filter(([code, score]) => codesAAfficher.includes(code)) // Filtre pour ne garder que les 8 profils
-          .sort((a, b) => b[1] - a[1]) // Tri par score décroissant
-          .forEach(([code, score]) => {
-            const oppositeCode = opposites[code];
-            // Calcul du total pour la dichotomie (ex: E+I), avec une sécurité si un score est manquant.
-            const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[oppositeCode] || 0);
+      // ==================== DÉBUT MODIFICATION V21.1 ====================
+      case 'Ligne_Score':
+        // CAS 1 : Logique spécifique pour les tests de type MBTI
+        if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
+          const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
+          const codesAAfficher = Object.keys(opposites);
+          
+          Object.entries(resultats.scoresData)
+            .filter(([code, score]) => codesAAfficher.includes(code))
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([code, score]) => {
+              const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[opposites[code]] || 0);
+              let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+              let nomProfil = resultats.mapCodeToName[code] || code;
+              
+              // On utilise le modèle de la BDD pour la flexibilité
+              let ligneScore = (contenu || `- {{nom_profil}} : {{score}} / {{total_possible}} points`)
+                .replace(/{{nom_profil}}/g, nomProfil)
+                .replace(/{{score}}/g, scoreArrondi)
+                .replace(/{{total_possible}}/g, totalDichotomy);
+              corpsHtml += ligneScore + "<br>";
+            });
+        } else {
+          // CAS 2 : Logique générique pour tous les autres tests (ANCRES, Couleurs, etc.)
+          Object.entries(resultats.scoresData)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([code, score]) => {
+              const scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+              const nomProfil = resultats.mapCodeToName[code] || code;
+              const totalPossible = resultats.scoresMaxPossible ? resultats.scoresMaxPossible[code] : null;
 
-            let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-            
-            // Remplace les placeholders dans le gabarit de la ligne.
-            let ligneScore = (contenu || "")
-              .replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code)
-              .replace(/{{score}}/g, scoreArrondi)
-              .replace(/{{total_possible}}/g, totalDichotomy); // Nouveau placeholder pour le total
-            
-            corpsHtml += ligneScore + "<br>"; 
-        });
+              // On construit la chaîne manuellement pour être 100% sûr du résultat
+              let ligneScore = `- ${nomProfil} : ${scoreArrondi}`;
+              if (totalPossible != null && totalPossible > 0) {
+                ligneScore += ` / ${totalPossible}`;
+              }
+              ligneScore += " points";
+              
+              corpsHtml += ligneScore + "<br>";
+            });
+        }
         break;
-      // ===================== FIN MODIFICATION V20.9 =====================
+      // ===================== FIN MODIFICATION V21.1 =====================
     }
   }
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
