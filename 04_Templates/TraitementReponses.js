@@ -1,12 +1,12 @@
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 20.8 - Ajout de l'arrondi des scores et de la gestion de {{Titre_Profil}}.
-// ==           (Précédent: 20.7 - L'e-mail de confirmation n'est plus envoyé 
-// ==           lors d'un retraitement ou d'un envoi de résultats immédiat.)
+// == VERSION : 20.9 - Affiche le score total par dichotomie (ex: / 8) pour le MBTI.
+// ==           (Précédent: 20.8 - Ajout de l'arrondi des scores et de la gestion de {{Titre_Profil}}.)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
-var __DBG = true; // ← mets false pour couper les logs
+var __DBG = true;
+// ← mets false pour couper les logs
 
 function DBG() {
   if (!__DBG) return;
@@ -21,7 +21,8 @@ function _spyDumpRow_(sheet, rowIndex) {
     const H = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     const V = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
     const subset = {};
-    for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i]; // 25 1res colonnes
+    for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i];
+    // 25 1res colonnes
     DBG('DUMP row', rowIndex, 'subset=', subset);
     return { headers: H, values: V };
   } catch (e) { DBG('spyDumpRow ERROR', e.message); }
@@ -82,13 +83,11 @@ function _getReponsesSheet_(config, options) {
   let ss = null, used = '';
   function tryOpenById(id, tag) {
     if (!id) return null;
-    try {
-      const ssp = SpreadsheetApp.openById(id);
-      DBG('tryOpenById OK', tag, id);
-      return { ss: ssp, used: `${tag}(${id})` };
-    } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
+    try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) || ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) || ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
+    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+    ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
   if (!ss) throw new Error("Impossible d’ouvrir le classeur de réponses. Configure-le via le menu “Configurer la feuille de réponses…” (RESPONSES_SSID).");
@@ -143,16 +142,13 @@ function _enrichirDonneesPourEmail_(reponse, resultats) {
   const R = reponse || {};
   const donnees = { ...R, ...(resultats || {}) };
   const email = R.Votre_adresse_e_mail || R.Votre_adresse_email || R.Adresse_e_mail || R.emailRepondant || '';
-  if (email) { if (!donnees.Votre_adresse_e_mail) donnees.Votre_adresse_e_mail = email; if (!donnees.Votre_adresse_email) donnees.Votre_adresse_email = email; }
-  if (R.Votre_nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Votre_nom_et_prenom; } else if (R.Nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Nom_et_prenom; }
+  if (email) { if (!donnees.Votre_adresse_e_mail) donnees.Votre_adresse_e_mail = email;
+  if (!donnees.Votre_adresse_email) donnees.Votre_adresse_email = email; }
+  if (R.Votre_nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Votre_nom_et_prenom;
+  } else if (R.Nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Nom_et_prenom; }
   if (donnees.titreProfil && !donnees.Titre_Profil) donnees.Titre_Profil = donnees.titreProfil;
   if (donnees.descriptionProfil && !donnees.Description_Profil) donnees.Description_Profil = donnees.descriptionProfil;
-  
-  // === MODIFICATION V20.8 START ===
-  // Assure que {{Titre_Profil}} est toujours disponible dans l'e-mail
   if (donnees.profilFinal && !donnees.Titre_Profil) donnees.Titre_Profil = donnees.profilFinal;
-  // === MODIFICATION V20.8 END ===
-
   return donnees;
 }
 function onFormSubmit(e) {
@@ -199,17 +195,10 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
     const reponse = _creerObjetReponse(rowIndex, optionsSurcharge);
     const langueOrigine = getOriginalLanguage(reponse);
     const langueCible = optionsSurcharge.langue || langueOrigine;
-
-    // --- MODIFICATION V20.7 START ---
-    // On n'envoie l'email de confirmation QUE si l'envoi des résultats est différé
-    // ET qu'il ne s'agit pas d'un retraitement manuel.
     if (!optionsSurcharge.isRetraitement && config.Repondant_Quand !== 'Immediat') {
       _envoyerEmailDeConfirmation(config, reponse, langueCible);
     }
-    // --- MODIFICATION V20.7 END ---
-
     const resultats = calculerResultats(reponse, langueCible, config, langueOrigine);
-
     if (optionsSurcharge.isRetraitement || config.Repondant_Quand === 'Immediat') {
       if (config.Moteur_Calcul === 'Universel') {
         Logger.log("Moteur UNIVERSEL → envoi immédiat.");
@@ -252,23 +241,45 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       
-      // === MODIFICATION V20.8 START ===
-      // Arrondit le score à une décimale avant de l'insérer dans l'e-mail.
+      // ==================== DÉBUT MODIFICATION V20.9 ====================
       case 'Ligne_Score': 
-        Object.entries(resultats.scoresData).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => { 
+        const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
+        
+        // On ne traite que les profils principaux pour le MBTI, pas les sous-scores si un jour il y en a.
+        const codesAAfficher = Object.keys(opposites);
+        
+        Object.entries(resultats.scoresData)
+          .filter(([code, score]) => codesAAfficher.includes(code)) // Filtre pour ne garder que les 8 profils
+          .sort((a, b) => b[1] - a[1]) // Tri par score décroissant
+          .forEach(([code, score]) => {
+            const oppositeCode = opposites[code];
+            // Calcul du total pour la dichotomie (ex: E+I), avec une sécurité si un score est manquant.
+            const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[oppositeCode] || 0);
+
             let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-            let ligneScore = (contenu || "").replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code).replace(/{{score}}/g, scoreArrondi); 
+            
+            // Remplace les placeholders dans le gabarit de la ligne.
+            let ligneScore = (contenu || "")
+              .replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code)
+              .replace(/{{score}}/g, scoreArrondi)
+              .replace(/{{total_possible}}/g, totalDichotomy); // Nouveau placeholder pour le total
+            
             corpsHtml += ligneScore + "<br>"; 
-        }); 
+        });
         break;
-      // === MODIFICATION V20.8 END ===
+      // ===================== FIN MODIFICATION V20.9 =====================
     }
   }
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
-  for (const key in donneesPourEmail) { const placeholder = `{{${key}}}`; const valeur = donneesPourEmail[key] || ''; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'); sujet = sujet.replace(regex, valeur); corpsHtml = corpsHtml.replace(regex, valeur); if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur); }
+  for (const key in donneesPourEmail) { const placeholder = `{{${key}}}`; const valeur = donneesPourEmail[key] || '';
+  const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'); sujet = sujet.replace(regex, valeur); corpsHtml = corpsHtml.replace(regex, valeur);
+  if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur); }
   const variablesFusion = { ...donneesPourEmail };
   const piecesJointes = [];
-  for (const contenuDoc of Array.from(piecesJointesIds)) { let candidate = contenuDoc; if (candidate.startsWith("{{") && candidate.endsWith("}}")) { const cle = candidate.slice(2, -2); candidate = variablesFusion[cle] || ""; } if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) { try { const nomRapport = (resultats.titreProfil || resultats.profilFinal || config.Type_Test || "Rapport"); const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport); piecesJointes.push(pdf); } catch(e) { Logger.log("Fusion Doc->PDF échouée pour " + candidate + " : " + e.message); try { piecesJointes.push(DriveApp.getFileById(candidate).getBlob()); } catch(_) {} } } else { Logger.log("Ignoré (Document) : valeur non reconnue " + candidate); } }
+  for (const contenuDoc of Array.from(piecesJointesIds)) { let candidate = contenuDoc; if (candidate.startsWith("{{") && candidate.endsWith("}}")) { const cle = candidate.slice(2, -2);
+  candidate = variablesFusion[cle] || ""; } if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) { try { const nomRapport = (resultats.titreProfil || resultats.profilFinal || config.Type_Test || "Rapport");
+  const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport); piecesJointes.push(pdf); } catch(e) { Logger.log("Fusion Doc->PDF échouée pour " + candidate + " : " + e.message);
+  try { piecesJointes.push(DriveApp.getFileById(candidate).getBlob()); } catch(_) {} } } else { Logger.log("Ignoré (Document) : valeur non reconnue " + candidate); } }
   const T = loadTraductions(langueCible);
   const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || reponse.Adresse_e_mail || reponse.emailRepondant;
   const override = optionsSurcharge.overrideRecipients === true;
@@ -276,9 +287,17 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   const dryRun = optionsSurcharge.dryRun === true;
   const destS = optionsSurcharge.destinataires || {};
   const adressesUniques = new Set();
-  if (override) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); } } else { if (Object.keys(destS).length > 0) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); } } else { if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email); if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) adressesUniques.add(config.Formateur_Email); } if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email); }
+  if (override) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
+  if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail);
+  if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
+  } } else { if (Object.keys(destS).length > 0) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
+  if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
+  } } else { if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email);
+  if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) adressesUniques.add(config.Formateur_Email); } if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email); }
   if (dryRun) { Logger.log('— DRY-RUN — AUCUN EMAIL ENVOYÉ —'); Logger.log('Destinataires simulés : ' + Array.from(adressesUniques).join(', ')); Logger.log('Sujet (après remplacements) : ' + sujet); Logger.log('Corps (aperçu 400c) : ' + (corpsHtml || '').slice(0, 400)); Logger.log('Pièces jointes (nb) : ' + piecesJointes.length + (piecesJointesIds.size ? ' | Modèles: ' + Array.from(piecesJointesIds).join(', ') : '')); return; }
-  adressesUniques.forEach(adresse => { try { let sujetFinal = sujet; let corpsHtmlFinal = corpsHtml; if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) { sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet; if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml; } const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes }; const aliasExpediteur = optionsSurcharge.alias || config.Email_Alias; if (aliasExpediteur && aliasExpediteur.trim() !== '') mailOptions.from = aliasExpediteur; GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions); Logger.log(`E-mail de RÉSULTATS [${langueCible}] envoyé à ${adresse}.`); } catch (e) { Logger.log(`Echec de l'envoi des résultats à ${adresse}. Erreur: ${e.message}`); } });
+  adressesUniques.forEach(adresse => { try { let sujetFinal = sujet; let corpsHtmlFinal = corpsHtml; if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) { sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet; if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml; } const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes }; const aliasExpediteur = optionsSurcharge.alias || config.Email_Alias; if (aliasExpediteur && aliasExpediteur.trim() !== '') mailOptions.from = aliasExpediteur;
+  GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions); Logger.log(`E-mail de RÉSULTATS [${langueCible}] envoyé à ${adresse}.`);
+  } catch (e) { Logger.log(`Echec de l'envoi des résultats à ${adresse}. Erreur: ${e.message}`); } });
 }
 function getDonneesPourRetraitement(rowIndex) {
   try {
@@ -302,7 +321,9 @@ function retraitementTestSansEnvoi(rowIndex, options) {
   options.dryRun = true;
   options.overrideRecipients = true;
   options.ignoreDeveloppeurEmail = true;
-  if (!rowIndex) { const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {}; const sh = _getReponsesSheet_(config, options); const lr = sh.getLastRow(); if (lr < 2) throw new Error("Aucune donnée dans la feuille de réponses (seulement l’en-tête)."); rowIndex = lr; }
+  if (!rowIndex) { const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {};
+  const sh = _getReponsesSheet_(config, options); const lr = sh.getLastRow(); if (lr < 2) throw new Error("Aucune donnée dans la feuille de réponses (seulement l’en-tête).");
+  rowIndex = lr; }
   traiterLigne(rowIndex, options);
 }
 function diagnostic_SourceReponses() {

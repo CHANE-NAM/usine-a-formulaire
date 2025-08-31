@@ -1,7 +1,7 @@
 // =================================================================================
 // == FICHIER : Logique_Universel.js
-// == VERSION : 10.5 - Correction du calcul LIKERT_5 qui n'était pas pris en compte.
-// ==           (Précédent: 10.4 - Correction faute de frappe "Rédondant" -> "Répondant")
+// == VERSION : 10.6 - La logique MBTI fonctionne avec les versions (ex: MBTI_V2).
+// ==           (Précédent: 10.5 - Correction LIKERT_5)
 // =================================================================================
 
 // --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
@@ -248,10 +248,14 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
 
 function _determinerProfilFinal(scoresData, typeTest, langue) {
   if (!scoresData || Object.keys(scoresData).length === 0) return { profilFinal: "" };
+  
   if (String(typeTest || '').toLowerCase().startsWith('r&k_')) {
     return _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue);
   }
-  if (String(typeTest || '').toUpperCase() === 'MBTI') {
+  
+  // ==================== DÉBUT MODIFICATION V10.6 ====================
+  if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
+  // ===================== FIN MODIFICATION V10.6 =====================
     let profil = "";
     profil += (scoresData.E || 0) > (scoresData.I || 0) ? 'E' : 'I';
     profil += (scoresData.S || 0) > (scoresData.N || 0) ? 'S' : 'N';
