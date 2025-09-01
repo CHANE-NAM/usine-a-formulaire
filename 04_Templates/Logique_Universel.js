@@ -1,7 +1,7 @@
 // =================================================================================
-// == FICHIER : Logique_Universel.js
-// == VERSION : 11.0 - Ajout du calcul du score maximum possible pour tous les tests.
-// ==           (Précédent: 10.6 - La logique MBTI fonctionne avec les versions.)
+// == FICHIER : Logique_Universel.gs
+// == VERSION : 11.1 - CORRIGÉ : Le calcul du score max prend en compte TOUS les profils d'une question QCU.
+// ==           (Précédent: 11.0 - Ajout du calcul du score maximum possible.)
 // =================================================================================
 
 // --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
@@ -169,56 +169,60 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   if (config.Type_Test === 'r&K_Environnement') {
     resultats = _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur);
   } else {
-    const langOriN = _normLang(langueOrigine);
     const questionsMapCible = _chargerQuestions(config.Type_Test, langCibN || langueCible);
     if (!questionsMapCible) {
       Logger.log('[ESPION] AVERTISSEMENT: Impossible de charger les questions pour ' + (config && config.Type_Test) + '. Le calcul est interrompu.');
       return resultats;
     }
     
-    // ==================== DÉBUT DE LA MODIFICATION V11.0 ====================
-    // Calcul des scores maximums possibles
+    // --- Calcul des scores de l'utilisateur (basé sur ses réponses) ---
+    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats, config.nbQuestions);
+  
+    // --- Calcul du score maximum théorique possible ---
     const scoresMax = {};
     const nbQuestionsUtiliser = config.nbQuestions || Object.keys(questionsMapCible).length;
     let questionsPrisesEnCompte = 0;
 
     for (const id in questionsMapCible) {
-      if (questionsPrisesEnCompte >= nbQuestionsUtiliser) break; // Respecte la limite de questions
+      if (questionsPrisesEnCompte >= nbQuestionsUtiliser) break;
       
       const q = questionsMapCible[id];
       const params = q.parametres;
       if (!params || !params.mode) continue;
 
-      let profil = params.profil;
-      let maxVal = 0;
-
       const mode = String(params.mode).toUpperCase();
-      if (mode === 'ECHELLE_NOTE' || mode === 'LIKERT_5') {
-        maxVal = params.echelle_max || params.max || 0;
-        // Pour LIKERT_5, le profil est parfois dans la première option
-        if (!profil && params.options && params.options[0] && params.options[0].profil) {
-          profil = params.options[0].profil;
-        }
-      } else if (mode === 'QCU_CAT' || mode === 'QRM_CAT') {
-        if (params.options && params.options.length > 0) {
-          // Le max est la plus haute valeur possible parmi les options
-          maxVal = Math.max(...params.options.map(opt => (typeof opt.valeur === 'number' ? opt.valeur : 0)));
-          // Le profil est celui de la première option (supposition)
-          profil = params.options[0].profil;
+
+      // ==================== DÉBUT DE LA CORRECTION v11.1 ====================
+      if ((mode === 'QCU_CAT' || mode === 'QRM_CAT') && params.options && params.options.length > 0) {
+          // 1. Trouver le score le plus élevé possible DANS CETTE QUESTION
+          const maxScoreInQuestion = Math.max(...params.options.map(opt => (typeof opt.valeur === 'number' ? opt.valeur : 0)));
+
+          if (maxScoreInQuestion > 0) {
+              // 2. Identifier tous les profils uniques qui peuvent marquer des points dans cette question
+              const profilesInQuestion = [...new Set(params.options.map(opt => opt.profil).filter(Boolean))];
+              
+              // 3. Ajouter le score maximum à CHACUN de ces profils.
+              //    Car un utilisateur pourrait théoriquement choisir l'option qui donne le max.
+              profilesInQuestion.forEach(profil => {
+                  scoresMax[profil] = (scoresMax[profil] || 0) + maxScoreInQuestion;
+              });
+          }
+      } 
+      // ===================== FIN DE LA CORRECTION v11.1 =====================
+      
+      else if (mode === 'ECHELLE_NOTE' || mode === 'LIKERT_5') {
+        const profil = params.profil || (params.options && params.options[0] ? params.options[0].profil : null);
+        const maxVal = params.echelle_max || params.max || 0;
+        if (profil && maxVal > 0) {
+          scoresMax[profil] = (scoresMax[profil] || 0) + maxVal;
         }
       }
       
-      if (profil && maxVal > 0) {
-        scoresMax[profil] = (scoresMax[profil] || 0) + maxVal;
-      }
       questionsPrisesEnCompte++;
     }
     
     resultats.scoresMaxPossible = scoresMax;
-    Logger.log('[ESPION] Scores maximums possibles calculés: ' + JSON.stringify(scoresMax));
-    // ===================== FIN DE LA MODIFICATION V11.0 =====================
-
-    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats, config.nbQuestions);
+    Logger.log('[ESPION] Scores maximums possibles (CORRIGÉ) : ' + JSON.stringify(scoresMax));
   }
   
   Logger.log('[ESPION] Scores bruts calculés: ' + JSON.stringify(resultats.scoresData));
@@ -236,8 +240,8 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   }
 
   Logger.log("[ESPION] Calculs terminés. Objet de résultats final (partiel): " + 
-             `profilFinal="${resultats.profilFinal}", ` +
-             `Recommandation="${(resultats.Recommandation || '').substring(0,50)}..."`);
+               `profilFinal="${resultats.profilFinal}", ` +
+               `Recommandation="${(resultats.Recommandation || '').substring(0,50)}..."`);
   return resultats;
 }
 
@@ -265,7 +269,7 @@ function _aiguillerCalcul(mode, reponse, parametres, resultats) {
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     case 'LIKERT_5':     _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     default:
-      if (__DBG) Logger.log('Mode de traitement inconnu: "%s" → réponse ignorée', mode);
+      // Ancien __DBG
       break;
   }
 }
