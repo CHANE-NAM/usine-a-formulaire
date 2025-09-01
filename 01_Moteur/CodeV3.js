@@ -57,7 +57,7 @@ function orchestrateurDeploiementComplet_UI() {
         `<p style="margin-top:10px;"><a href="${resultats.urlSheet}" target="_blank" style="background-color:#4285F4; color:white; padding:8px 12px; text-decoration:none; border-radius:4px;">Ouvrir le Kit pour l'activer</a></p>`
       )
       .setWidth(500)
-      .setHeight(320);
+      .setHeight(520);
       ui.showModalDialog(htmlOutput, "Déploiement Terminé");
 
     } else {
