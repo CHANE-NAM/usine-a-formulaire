@@ -94,13 +94,13 @@ try {
 
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 20.8 - Ajout de l'arrondi des scores et de la gestion de {{Titre_Profil}}.
-// ==           (PrÃ©cÃ©dent: 20.7 - L'e-mail de confirmation n'est plus envoyÃ© 
-// ==           lors d'un retraitement ou d'un envoi de rÃ©sultats immÃ©diat.)
+// == VERSION : 21.1 - La logique Ligne_Score construit la chaÃ®ne elle-mÃªme pour plus de robustesse.
+// ==           (PrÃ©cÃ©dent: 21.0 - Logique de Ligne_Score rendue gÃ©nÃ©rique.)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
-var __DBG = true; // â† mets false pour couper les logs
+var __DBG = true;
+// â† mets false pour couper les logs
 
 function DBG() {
   if (!__DBG) return;
@@ -115,7 +115,7 @@ function _spyDumpRow_(sheet, rowIndex) {
     const H = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     const V = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
     const subset = {};
-    for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i]; // 25 1res colonnes
+    for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i];
     DBG('DUMP row', rowIndex, 'subset=', subset);
     return { headers: H, values: V };
   } catch (e) { DBG('spyDumpRow ERROR', e.message); }
@@ -176,13 +176,12 @@ function _getReponsesSheet_(config, options) {
   let ss = null, used = '';
   function tryOpenById(id, tag) {
     if (!id) return null;
-   
+    try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
 
-g}(${id})` };
-    } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
-  }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) || ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) || ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
+sSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
+    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+    ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
   if (!ss) throw new Error("Impossible dâ€™ouvrir le classeur de rÃ©ponses. Configure-le via le menu â€œConfigurer la feuille de rÃ©ponsesâ€¦â€ (RESPONSES_SSID).");
@@ -237,16 +236,13 @@ function _enrichirDonneesPourEmail_(reponse, resultats) {
   const R = reponse || {};
   const donnees = { ...R, ...(resultats || {}) };
   const email = R.Votre_adresse_e_mail || R.Votre_adresse_email || R.Adresse_e_mail || R.emailRepondant || '';
-  if (email) { if (!donnees.Votre_adresse_e_mail) donnees.Votre_adresse_e_mail = email; if (!donnees.Votre_adresse_email) donnees.Votre_adresse_email = email; }
-  if (R.Votre_nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Votre_nom_et_prenom; } else if (R.Nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Nom_et_prenom; }
+  if (email) { if (!donnees.Votre_adresse_e_mail) donnees.Votre_adresse_e_mail = email;
+  if (!donnees.Votre_adresse_email) donnees.Votre_adresse_email = email; }
+  if (R.Votre_nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Votre_nom_et_prenom;
+  } else if (R.Nom_et_prenom && !donnees.Votre_nom_et_prenom) { donnees.Votre_nom_et_prenom = R.Nom_et_prenom; }
   if (donnees.titreProfil && !donnees.Titre_Profil) donnees.Titre_Profil = donnees.titreProfil;
   if (donnees.descriptionProfil && !donnees.Description_Profil) donnees.Description_Profil = donnees.descriptionProfil;
-  
-  // === MODIFICATION V20.8 START ===
-  // Assure que {{Titre_Profil}} est toujours disponible dans l'e-mail
   if (donnees.profilFinal && !donnees.Titre_Profil) donnees.Titre_Profil = donnees.profilFinal;
-  // === MODIFICATION V20.8 END ===
-
   return donnees;
 }
 function onFormSubmit(e) {
@@ -293,17 +289,10 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
     const reponse = _creerObjetReponse(rowIndex, optionsSurcharge);
     const langueOrigine = getOriginalLanguage(reponse);
     const langueCible = optionsSurcharge.langue || langueOrigine;
-
-    // --- MODIFICATION V20.7 START ---
-    // On n'envoie l'email de confirmation QUE si l'envoi des rÃ©sultats est diffÃ©rÃ©
-    // ET qu'il ne s'agit pas d'un retraitement manuel.
     if (!optionsSurcharge.isRetraitement && config.Repondant_Quand !== 'Immediat') {
       _envoyerEmailDeConfirmation(config, reponse, langueCible);
     }
-    // --- MODIFICATION V20.7 END ---
-
     const resultats = calculerResultats(reponse, langueCible, config, langueOrigine);
-
     if (optionsSurcharge.isRetraitement || config.Repondant_Quand === 'Immediat') {
       if (config.Moteur_Calcul === 'Universel') {
         Logger.log("Moteur UNIVERSEL â†’ envoi immÃ©diat.");
@@ -346,23 +335,61 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       
-      // === MODIFICATION V20.8 START ===
-      // Arrondit le score Ã  une dÃ©cimale avant de l'insÃ©rer dans l'e-mail.
-      case 'Ligne_Score': 
-        Object.entries(resultats.scoresData).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => { 
-            let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-            let ligneScore = (contenu || "").replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code).replace(/{{score}}/g, scoreArrondi); 
-            corpsHtml += ligneScore + "<br>"; 
-        }); 
+      // ==================== DÃ‰BUT MODIFICATION V21.1 ====================
+      case 'Ligne_Score':
+        // CAS 1 : Logique spÃ©cifique pour les tests de type MBTI
+        if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
+          const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
+          const codesAAfficher = Object.keys(opposites);
+          
+          Object.entries(resultats.scoresData)
+            .filter(([code, score]) => codesAAfficher.includes(code))
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([code, score]) => {
+              const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[opposites[code]] || 0);
+              let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+              let nomProfil = resultats.mapCodeToName[code] || code;
+              
+              // On utilise le modÃ¨le de la BDD pour la flexibilitÃ©
+              let ligneScore = (contenu || `- {{nom_profil}} : {{score}} / {{total_possible}} points`)
+                .replace(/{{nom_profil}}/g, nomProfil)
+                .replace(/{{score}}/g, scoreArrondi)
+                .replace(/{{total_possible}}/g, totalDichotomy);
+              corpsHtml += ligneScore + "<br>";
+            });
+        } else {
+          // CAS 2 : Logique gÃ©nÃ©rique pour tous les autres tests (ANCRES, Couleurs, etc.)
+          Object.entries(resultats.scoresData)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([code, score]) => {
+              const scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+              const nomProfil = resultats.mapCodeToName[code] || code;
+              const totalPossible = resultats.scoresMaxPossible ? resultats.scoresMaxPossible[code] : null;
+
+              // On construit la chaÃ®ne manuellement pour Ãªtre 100% sÃ»r du rÃ©sultat
+              let ligneScore = `- ${nomProfil} : ${scoreArrondi}`;
+              if (totalPossible != null && totalPossible > 0) {
+                ligneScore += ` / ${totalPossible}`;
+              }
+              ligneScore += " points";
+              
+              corpsHtml += ligneScore + "<br>";
+            });
+        }
         break;
-      // === MODIFICATION V20.8 END ===
+      // ===================== FIN MODIFICATION V21.1 =====================
     }
   }
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
-  for (const key in donneesPourEmail) { const placeholder = `{{${key}}}`; const valeur = donneesPourEmail[key] || ''; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'); sujet = sujet.replace(regex, valeur); corpsHtml = corpsHtml.replace(regex, valeur); if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur); }
+  for (const key in donneesPourEmail) { const placeholder = `{{${key}}}`; const valeur = donneesPourEmail[key] || '';
+  const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'); sujet = sujet.replace(regex, valeur); corpsHtml = corpsHtml.replace(regex, valeur);
+  if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur); }
   const variablesFusion = { ...donneesPourEmail };
   const piecesJointes = [];
-  for (const contenuDoc of Array.from(piecesJointesIds)) { let candidate = contenuDoc; if (candidate.startsWith("{{") && candidate.endsWith("}}")) { const cle = candidate.slice(2, -2); candidate = variablesFusion[cle] || ""; } if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) { try { const nomRapport = (resultats.titreProfil || resultats.profilFinal || config.Type_Test || "Rapport"); const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport); piecesJointes.push(pdf); } catch(e) { Logger.log("Fusion Doc->PDF Ã©chouÃ©e pour " + candidate + " : " + e.message); try { piecesJointes.push(DriveApp.getFileById(candidate).getBlob()); } catch(_) {} } } else { Logger.log("IgnorÃ© (Document) : valeur non reconnue " + candidate); } }
+  for (const contenuDoc of Array.from(piecesJointesIds)) { let candidate = contenuDoc; if (candidate.startsWith("{{") && candidate.endsWith("}}")) { const cle = candidate.slice(2, -2);
+  candidate = variablesFusion[cle] || ""; } if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) { try { const nomRapport = (resultats.titreProfil || resultats.profilFinal || config.Type_Test || "Rapport");
+  const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport); piecesJointes.push(pdf); } catch(e) { Logger.log("Fusion Doc->PDF Ã©chouÃ©e pour " + candidate + " : " + e.message);
+  try { piecesJointes.push(DriveApp.getFileById(candidate).getBlob()); } catch(_) {} } } else { Logger.log("IgnorÃ© (Document) : valeur non reconnue " + candidate); } }
   const T = loadTraductions(langueCible);
   const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || reponse.Adresse_e_mail || reponse.emailRepondant;
   const override = optionsSurcharge.overrideRecipients === true;
@@ -370,9 +397,17 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   const dryRun = optionsSurcharge.dryRun === true;
   const destS = optionsSurcharge.destinataires || {};
   const adressesUniques = new Set();
-  if (override) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); } } else { if (Object.keys(destS).length > 0) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); } } else { if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email); if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) adressesUniques.add(config.Formateur_Email); } if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email); }
+  if (override) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
+  if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail); if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail);
+  if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
+  } } else { if (Object.keys(destS).length > 0) { if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
+  if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail); if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
+  } } else { if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal); if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email);
+  if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) adressesUniques.add(config.Formateur_Email); } if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email); }
   if (dryRun) { Logger.log('â€” DRY-RUN â€” AUCUN EMAIL ENVOYÃ‰ â€”'); Logger.log('Destinataires simulÃ©s : ' + Array.from(adressesUniques).join(', ')); Logger.log('Sujet (aprÃ¨s remplacements) : ' + sujet); Logger.log('Corps (aperÃ§u 400c) : ' + (corpsHtml || '').slice(0, 400)); Logger.log('PiÃ¨ces jointes (nb) : ' + piecesJointes.length + (piecesJointesIds.size ? ' | ModÃ¨les: ' + Array.from(piecesJointesIds).join(', ') : '')); return; }
-  adressesUniques.forEach(adresse => { try { let sujetFinal = sujet; let corpsHtmlFinal = corpsHtml; if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) { sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet; if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml; } const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes }; const aliasExpediteur = optionsSurcharge.alias || config.Email_Alias; if (aliasExpediteur && aliasExpediteur.trim() !== '') mailOptions.from = aliasExpediteur; GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions); Logger.log(`E-mail de RÃ‰SULTATS [${langueCible}] envoyÃ© Ã  ${adresse}.`); } catch (e) { Logger.log(`Echec de l'envoi des rÃ©sultats Ã  ${adresse}. Erreur: ${e.message}`); } });
+  adressesUniques.forEach(adresse => { try { let sujetFinal = sujet; let corpsHtmlFinal = corpsHtml; if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) { sujetFinal = (T.PREFIXE_COPIE_EMAIL || "Copie : ") + sujet; if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml; } const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes }; const aliasExpediteur = optionsSurcharge.alias || config.Email_Alias; if (aliasExpediteur && aliasExpediteur.trim() !== '') mailOptions.from = aliasExpediteur;
+  GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", mailOptions); Logger.log(`E-mail de RÃ‰SULTATS [${langueCible}] envoyÃ© Ã  ${adresse}.`);
+  } catch (e) { Logger.log(`Echec de l'envoi des rÃ©sultats Ã  ${adresse}. Erreur: ${e.message}`); } });
 }
 function getDonneesPourRetraitement(rowIndex) {
   try {
@@ -396,7 +431,9 @@ function retraitementTestSansEnvoi(rowIndex, options) {
   options.dryRun = true;
   options.overrideRecipients = true;
   options.ignoreDeveloppeurEmail = true;
-  if (!rowIndex) { const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {}; const sh = _getReponsesSheet_(config, options); const lr = sh.getLastRow(); if (lr < 2) throw new Error("Aucune donnÃ©e dans la feuille de rÃ©ponses (seulement lâ€™en-tÃªte)."); rowIndex = lr; }
+  if (!rowIndex) { const config = (typeof getTestConfiguration === 'function') ? getTestConfiguration() : {};
+  const sh = _getReponsesSheet_(config, options); const lr = sh.getLastRow(); if (lr < 2) throw new Error("Aucune donnÃ©e dans la feuille de rÃ©ponses (seulement lâ€™en-tÃªte).");
+  rowIndex = lr; }
   traiterLigne(rowIndex, options);
 }
 function diagnostic_SourceReponses() {
@@ -820,9 +857,9 @@ function mapQuestionsById(bdd, nomFeuille) {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
 
 // =================================================================================
-// == FICHIER : Logique_Universel.js
-// == VERSION : 10.5 - Correction du calcul LIKERT_5 qui n'Ã©tait pas pris en compte.
-// ==           (PrÃ©cÃ©dent: 10.4 - Correction faute de frappe "RÃ©dondant" -> "RÃ©pondant")
+// == FICHIER : Logique_Universel.gs
+// == VERSION : 11.1 - CORRIGÃ‰ : Le calcul du score max prend en compte TOUS les profils d'une question QCU.
+// ==           (PrÃ©cÃ©dent: 11.0 - Ajout du calcul du score maximum possible.)
 // =================================================================================
 
 // --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
@@ -973,6 +1010,14 @@ function _normLang(s) {
   return x.toUpperCase();
 }
 
+/**
+ * Calcule les rÃ©sultats d'un test, y compris les scores de l'utilisateur et les scores maximums possibles.
+ * @param {object} reponsesUtilisateur - Les rÃ©ponses du formulaire.
+ * @param {string} langueCible - Le code de la langue (ex: 'FR').
+ * @param {object} config - L'objet de configuration du test.
+ * @param {string} langueOrigine - La langue originale de la rÃ©ponse.
+ * @returns {object} Un objet contenant les scores, le profil final et les scores maximums possibles.
+ */
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
   Logger.log(`[ESPION] DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}".`);
   let resultats = { scoresData: {}, sousTotauxParMode: {} };
@@ -982,17 +1027,63 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   if (config.Type_Test === 'r&K_Environnement') {
     resultats = _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur);
   } else {
-    const langOriN = _normLang(langueOrigine);
     const questionsMapCible = _chargerQuestions(config.Type_Test, langCibN || langueCible);
     if (!questionsMapCible) {
       Logger.log('[ESPION] AVERTISSEMENT: Impossible de charger les questions pour ' + (config && config.Type_Test) + '. Le calcul est interrompu.');
       return resultats;
     }
-    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats);
+    
+    // --- Calcul des scores de l'utilisateur (basÃ© sur ses rÃ©ponses) ---
+    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats, config.nbQuestions);
+  
+    // --- Calcul du score maximum thÃ©orique possible ---
+    const scoresMax = {};
+    const nbQuestionsUtiliser = config.nbQuestions || Object.keys(questionsMapCible).length;
+    let questionsPrisesEnCompte = 0;
+
+    for (const id in questionsMapCible) {
+      if (questionsPrisesEnCompte >= nbQuestionsUtiliser) break;
+      
+      const q = questionsMapCible[id];
+      const params = q.parametres;
+      if (!params || !params.mode) continue;
+
+      const mode = String(params.mode).toUpperCase();
+
+      // ==================== DÃ‰BUT DE LA CORRECTION v11.1 ====================
+      if ((mode === 'QCU_CAT' || mode === 'QRM_CAT') && params.options && params.options.length > 0) {
+          // 1. Trouver le score le plus Ã©levÃ© possible DANS CETTE QUESTION
+          const maxScoreInQuestion = Math.max(...params.options.map(opt => (typeof opt.valeur === 'number' ? opt.valeur : 0)));
+
+          if (maxScoreInQuestion > 0) {
+              // 2. Identifier tous les profils uniques qui peuvent marquer des points dans cette question
+              const profilesInQuestion = [...new Set(params.options.map(opt => opt.profil).filter(Boolean))];
+              
+              // 3. Ajouter le score maximum Ã  CHACUN de ces profils.
+              //    Car un utilisateur pourrait thÃ©oriquement choisir l'option qui donne le max.
+              profilesInQuestion.forEach(profil => {
+                  scoresMax[profil] = (scoresMax[profil] || 0) + maxScoreInQuestion;
+              });
+          }
+      } 
+      // ===================== FIN DE LA CORRECTION v11.1 =====================
+      
+      else if (mode === 'ECHELLE_NOTE' || mode === 'LIKERT_5') {
+        const profil = params.profil || (params.options && params.options[0] ? params.options[0].profil : null);
+        const maxVal = params.echelle_max || params.max || 0;
+        if (profil && maxVal > 0) {
+          scoresMax[profil] = (scoresMax[profil] || 0) + maxVal;
+        }
+      }
+      
+      questionsPrisesEnCompte++;
+    }
+    
+    resultats.scoresMaxPossible = scoresMax;
+    Logger.log('[ESPION] Scores maximums possibles (CORRIGÃ‰) : ' + JSON.stringify(scoresMax));
   }
   
   Logger.log('[ESPION] Scores bruts calculÃ©s: ' + JSON.stringify(resultats.scoresData));
-
   if (Object.keys(resultats.scoresData).length > 0) {
     const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibN || langueCible);
     resultats = { ...resultats, ...profilEtReco }; 
@@ -1007,18 +1098,24 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   }
 
   Logger.log("[ESPION] Calculs terminÃ©s. Objet de rÃ©sultats final (partiel): " + 
-             `profilFinal="${resultats.profilFinal}", ` +
-             `Recommandation="${(resultats.Recommandation || '').substring(0,50)}..."`);
+               `profilFinal="${resultats.profilFinal}", ` +
+               `Recommandation="${(resultats.Recommandation || '').substring(0,50)}..."`);
   return resultats;
 }
 
-function _executerCalcul(reponses, questionsMap, resultats) {
+function _executerCalcul(reponses, questionsMap, resultats, nbQuestionsLimite) {
+  let questionsTraitees = 0;
+  const limite = nbQuestionsLimite || Object.keys(questionsMap).length;
+
   for (const enTeteComplet in reponses) {
+    if (questionsTraitees >= limite) break;
     if (!enTeteComplet.includes(':')) continue;
+    
     const idQuestion = enTeteComplet.split(':')[0].trim();
     const questionConfig = questionsMap[idQuestion];
     if (questionConfig) {
       _aiguillerCalcul(questionConfig.parametres.mode, reponses[enTeteComplet], questionConfig.parametres, resultats);
+      questionsTraitees++;
     }
   }
 }
@@ -1030,7 +1127,7 @@ function _aiguillerCalcul(mode, reponse, parametres, resultats) {
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     case 'LIKERT_5':     _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     default:
-      if (__DBG) Logger.log('Mode de traitement inconnu: "%s" â†’ rÃ©ponse ignorÃ©e', mode);
+      // Ancien __DBG
       break;
   }
 }
@@ -1069,10 +1166,14 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
 
 function _determinerProfilFinal(scoresData, typeTest, langue) {
   if (!scoresData || Object.keys(scoresData).length === 0) return { profilFinal: "" };
+  
   if (String(typeTest || '').toLowerCase().startsWith('r&k_')) {
     return _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue);
   }
-  if (String(typeTest || '').toUpperCase() === 'MBTI') {
+  
+  // ==================== DÃ‰BUT MODIFICATION V10.6 ====================
+  if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
+  // ===================== FIN MODIFICATION V10.6 =====================
     let profil = "";
     profil += (scoresData.E || 0) > (scoresData.I || 0) ? 'E' : 'I';
     profil += (scoresData.S || 0) > (scoresData.N || 0) ? 'S' : 'N';
@@ -1152,6 +1253,7 @@ function _chargerQuestions(typeTest, langue) {
     return null;
   }
 }
+
 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
 
@@ -1255,10 +1357,10 @@ function activerTraitementAutomatique() {
     .onFormSubmit()
     .create();
 
-  SpreadsheetApp.getUi().alert('âœ… DÃ©clen
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
+  SpreadsheetApp.getUi().alert('âœ… DÃ©clencheur activÃ© ! Le traitement automatique des rÃ©ponses est maintenant opÃ©rationnel.');
+}
 
-============================================
+/* ============================================================================
  * SOUS-MENU "Usine Ã  Tests" : helpers & actions
  * NÃ©cessite : getTestConfiguration(), getOriginalLanguage(),
  * _creerObjetReponse(), _getReponsesSheet_(), retraitementTestSansEnvoi(), traiterLigne()
@@ -1370,6 +1472,9 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs

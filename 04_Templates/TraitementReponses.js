@@ -1,7 +1,7 @@
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 21.1 - La logique Ligne_Score construit la chaîne elle-même pour plus de robustesse.
-// ==           (Précédent: 21.0 - Logique de Ligne_Score rendue générique.)
+// == VERSION : 21.3 - Le suffixe des scores (%) est étendu à tous les tests r&K.
+// ==           (Précédent: 21.2 - Suffixe conditionnel au type de test)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
@@ -240,9 +240,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       
-      // ==================== DÉBUT MODIFICATION V21.1 ====================
       case 'Ligne_Score':
-        // CAS 1 : Logique spécifique pour les tests de type MBTI
         if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
           const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
           const codesAAfficher = Object.keys(opposites);
@@ -255,7 +253,6 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
               let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
               let nomProfil = resultats.mapCodeToName[code] || code;
               
-              // On utilise le modèle de la BDD pour la flexibilité
               let ligneScore = (contenu || `- {{nom_profil}} : {{score}} / {{total_possible}} points`)
                 .replace(/{{nom_profil}}/g, nomProfil)
                 .replace(/{{score}}/g, scoreArrondi)
@@ -263,26 +260,35 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
               corpsHtml += ligneScore + "<br>";
             });
         } else {
-          // CAS 2 : Logique générique pour tous les autres tests (ANCRES, Couleurs, etc.)
-          Object.entries(resultats.scoresData)
+            // --- On utilise TOUJOURS resultats.scoresData pour l'affichage ---
+            const scoresAAfficher = resultats.scoresData;
+
+            Object.entries(scoresAAfficher)
             .sort((a, b) => b[1] - a[1])
             .forEach(([code, score]) => {
               const scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
               const nomProfil = resultats.mapCodeToName[code] || code;
               const totalPossible = resultats.scoresMaxPossible ? resultats.scoresMaxPossible[code] : null;
 
-              // On construit la chaîne manuellement pour être 100% sûr du résultat
               let ligneScore = `- ${nomProfil} : ${scoreArrondi}`;
-              if (totalPossible != null && totalPossible > 0) {
-                ligneScore += ` / ${totalPossible}`;
+              
+              // --- DEBUT MODIFICATION : On étend la liste des tests affichant un % ---
+              const testsAvecPourcentage = ['r&K_Environnement', 'r&K_Resilience', 'r&K_Adaptabilite', 'r&K_Creativite'];
+              let suffixe = " points"; // Suffixe par défaut
+              if (testsAvecPourcentage.includes(typeTest)) {
+                  suffixe = " %"; // Suffixe pour les tests concernés
               }
-              ligneScore += " points";
+              // --- FIN MODIFICATION ---
+
+              if (totalPossible != null && totalPossible > 0) {
+                  ligneScore += ` / ${totalPossible}`;
+              }
+              ligneScore += suffixe; // On ajoute le suffixe déterminé
               
               corpsHtml += ligneScore + "<br>";
             });
         }
         break;
-      // ===================== FIN MODIFICATION V21.1 =====================
     }
   }
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);

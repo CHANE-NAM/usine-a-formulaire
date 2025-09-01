@@ -1,8 +1,8 @@
 ﻿{
-    "snapshot":  "SNAPSHOT_20250830_184558",
-    "generated_at":  "2025-08-30T18:47:22Z",
+    "snapshot":  "SNAPSHOT_20250901_123743",
+    "generated_at":  "2025-09-01T12:39:30Z",
     "repo_root":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm",
-    "csv_total":  45,
+    "csv_total":  48,
     "projects_total":  4,
     "sheets":  [
                    {
@@ -28,34 +28,19 @@
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\ex_Questions_Couleurs_EN.csv",
                                         "name":  "ex_Questions_Couleurs_EN",
-                                        "rows":  50,
-                                        "cols":  6,
+                                        "rows":  40,
+                                        "cols":  7,
                                         "headers":  [
                                                         "ID",
                                                         "TypeQuestion",
-                                                        "TitreQuestion",
+                                                        "Titre",
                                                         "Options",
                                                         "Logique",
-                                                        "description/libÃ©lÃ©s"
+                                                        "Description",
+                                                        "ParamÃ¨tres (JSON)"
                                                     ],
-                                        "sha256":  "B48F28D6BC898FC3A0E1739629D81AC8B2FD8A236A50B46BDEB0AFBE10B6E578",
-                                        "bytes":  8155
-                                    },
-                                    {
-                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\ex_Questions_Couleurs_FR.csv",
-                                        "name":  "ex_Questions_Couleurs_FR",
-                                        "rows":  50,
-                                        "cols":  6,
-                                        "headers":  [
-                                                        "ID",
-                                                        "TypeQuestion",
-                                                        "TitreQuestion",
-                                                        "Options",
-                                                        "Logique",
-                                                        "description/libÃ©lÃ©s"
-                                                    ],
-                                        "sha256":  "B54E4D50D59AC9603F4EAAEC83E7183DC3AEE505EC9C35EABE306DA460F5A26A",
-                                        "bytes":  9767
+                                        "sha256":  "27015BC6C7E3E0BF36D90DB250576D693FFBA39487DE2BF0CE429662068E534A",
+                                        "bytes":  13102
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\ex_sys_PiecesJointes.csv",
@@ -157,7 +142,7 @@
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_ANCRES_FR.csv",
                                         "name":  "Profils_ANCRES_FR",
                                         "rows":  8,
-                                        "cols":  11,
+                                        "cols":  13,
                                         "headers":  [
                                                         "Code_Profil",
                                                         "Nom_Complet",
@@ -169,15 +154,17 @@
                                                         "Detail_4",
                                                         "Detail_5",
                                                         "Detail_6",
-                                                        "Detail_7"
+                                                        "Detail_7",
+                                                        "",
+                                                        "ex titre_Profil"
                                                     ],
-                                        "sha256":  "832C62E61A3C150F3FB57298AE683C16E40B75BBD6C1D0F775080F4175B5EBE2",
-                                        "bytes":  1352
+                                        "sha256":  "E244B1C98E99377ECA9F2F38BFCB9D3EADADA414EB515581357E9FC1BBB0A4B0",
+                                        "bytes":  1441
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_Couleurs_EN.csv",
                                         "name":  "Profils_Couleurs_EN",
-                                        "rows":  6,
+                                        "rows":  4,
                                         "cols":  11,
                                         "headers":  [
                                                         "Code_Profil",
@@ -192,8 +179,8 @@
                                                         "Detail_6",
                                                         "Detail_7"
                                                     ],
-                                        "sha256":  "D9BFAD64190A31DAA9E21C878A403DFB9AE00B9A7CCB27C348A604C21A8B64C4",
-                                        "bytes":  2460
+                                        "sha256":  "A452213FE40768A103ABAAF2EEA621BB7A66F82E1A1032B7AEB1C2A0C65D330F",
+                                        "bytes":  1077
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_Couleurs_FR.csv",
@@ -240,6 +227,48 @@
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_MBTI_FR.csv",
                                         "name":  "Profils_MBTI_FR",
+                                        "rows":  16,
+                                        "cols":  11,
+                                        "headers":  [
+                                                        "Code_Profil",
+                                                        "Nom_Complet",
+                                                        "Titre_Profil",
+                                                        "Description_Profil",
+                                                        "Detail_1",
+                                                        "Detail_2",
+                                                        "Detail_3",
+                                                        "Detail_4",
+                                                        "Detail_5",
+                                                        "Detail_6",
+                                                        "Detail_7"
+                                                    ],
+                                        "sha256":  "5EBC79B12E35FC12D4F9F0460253F981EF5060456BC80287EE61550FB44D6F99",
+                                        "bytes":  1675
+                                    },
+                                    {
+                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_MBTI_V2_EN.csv",
+                                        "name":  "Profils_MBTI_V2_EN",
+                                        "rows":  16,
+                                        "cols":  11,
+                                        "headers":  [
+                                                        "Code_Profil",
+                                                        "Nom_Complet",
+                                                        "Titre_Profil",
+                                                        "Description_Profil",
+                                                        "Detail_1",
+                                                        "Detail_2",
+                                                        "Detail_3",
+                                                        "Detail_4",
+                                                        "Detail_5",
+                                                        "Detail_6",
+                                                        "Detail_7"
+                                                    ],
+                                        "sha256":  "9823274661C76D57486483ABF3289120ADA82A3812DC155B24FAC22E9596D76F",
+                                        "bytes":  1415
+                                    },
+                                    {
+                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_MBTI_V2_FR.csv",
+                                        "name":  "Profils_MBTI_V2_FR",
                                         "rows":  16,
                                         "cols":  11,
                                         "headers":  [
@@ -355,7 +384,7 @@
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_Couleurs_EN.csv",
                                         "name":  "Questions_Couleurs_EN",
-                                        "rows":  40,
+                                        "rows":  50,
                                         "cols":  7,
                                         "headers":  [
                                                         "ID",
@@ -366,8 +395,8 @@
                                                         "Description",
                                                         "ParamÃ¨tres (JSON)"
                                                     ],
-                                        "sha256":  "27015BC6C7E3E0BF36D90DB250576D693FFBA39487DE2BF0CE429662068E534A",
-                                        "bytes":  13102
+                                        "sha256":  "BA54640D104A663118ABA9322C70E6164A51EF45B89FED30A02568BB57B67121",
+                                        "bytes":  13415
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_Couleurs_FR.csv",
@@ -383,8 +412,8 @@
                                                         "Description",
                                                         "ParamÃ¨tres (JSON)"
                                                     ],
-                                        "sha256":  "E61C553DB9E4E3C3724FB9B06BCC289DBEE400380611E24E66CE5BFCFD617397",
-                                        "bytes":  14346
+                                        "sha256":  "8EF242F989939FE9FE12531DFBE3BE3567AFE48245360F61E196D47477117490",
+                                        "bytes":  14645
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_MBTI_EN.csv",
@@ -419,6 +448,40 @@
                                                     ],
                                         "sha256":  "15F9F26397BEC752A82FE240AD689E2A635679D62BE06F366824056870B0753A",
                                         "bytes":  13348
+                                    },
+                                    {
+                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_MBTI_V2_EN.csv",
+                                        "name":  "Questions_MBTI_V2_EN",
+                                        "rows":  48,
+                                        "cols":  7,
+                                        "headers":  [
+                                                        "ID",
+                                                        "TypeQuestion",
+                                                        "Titre",
+                                                        "Options",
+                                                        "Logique",
+                                                        "Description",
+                                                        "ParamÃ¨tres (JSON)"
+                                                    ],
+                                        "sha256":  "BE80F07FC9A9409016F1E5DC14D2E06B876E7744781C850EA681651A67F65C79",
+                                        "bytes":  14064
+                                    },
+                                    {
+                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_MBTI_V2_FR.csv",
+                                        "name":  "Questions_MBTI_V2_FR",
+                                        "rows":  48,
+                                        "cols":  7,
+                                        "headers":  [
+                                                        "ID",
+                                                        "TypeQuestion",
+                                                        "Titre",
+                                                        "Options",
+                                                        "Logique",
+                                                        "Description",
+                                                        "ParamÃ¨tres (JSON)"
+                                                    ],
+                                        "sha256":  "86EF846FB975BC1B013FFCFEAD859CA78079B59487EA436E16C94D7C801DBC92",
+                                        "bytes":  15040
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_META_FR.csv",
@@ -542,7 +605,7 @@
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\sys_Composition_Emails.csv",
                                         "name":  "sys_Composition_Emails",
-                                        "rows":  627,
+                                        "rows":  747,
                                         "cols":  7,
                                         "headers":  [
                                                         "Type_Test",
@@ -553,8 +616,8 @@
                                                         "Ordre",
                                                         "Contenu / ID_Document"
                                                     ],
-                                        "sha256":  "3C12567C337CEA8B69D1AEB1A6365A6B4DB6607BB480898D63A6476CFE6ED532",
-                                        "bytes":  66977
+                                        "sha256":  "96A50FAE34C8196AFB2DAB2DDA5FE4B33B7B6354399FBD47D6066055DC59BBDE",
+                                        "bytes":  76030
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\sys_Formatage_Scores.csv",
@@ -601,8 +664,8 @@
                                         "bytes":  628
                                     }
                                 ],
-                       "total_rows":  1680,
-                       "tab_count":  35
+                       "total_rows":  1876,
+                       "tab_count":  38
                    },
                    {
                        "folder":  "CONFIG_V2_Usine_Tests_1kLBqI",
@@ -633,7 +696,7 @@
                                     {
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\Param_tres_G_n_raux.csv",
                                         "name":  "Param_tres_G_n_raux",
-                                        "rows":  6,
+                                        "rows":  5,
                                         "cols":  37,
                                         "headers":  [
                                                         "ID_Gabarit_Email_Repondant",
@@ -674,8 +737,8 @@
                                                         "JSON_Questions",
                                                         "Moteur_Calcul"
                                                     ],
-                                        "sha256":  "D29E8A33E0CBEE6911EA00EAEE88D7E5AC1D84D0BF4004082C339400C768C776",
-                                        "bytes":  3442
+                                        "sha256":  "EAEF0EE7BB49CA8A14C23FEDF0481F57DC12780E2C15B90A34EEDC4E14D88851",
+                                        "bytes":  2896
                                     },
                                     {
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\R_ponses_au_formulaire_1.csv",
@@ -762,23 +825,21 @@
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\sys_ID_Fichiers.csv",
                                         "name":  "sys_ID_Fichiers",
                                         "rows":  11,
-                                        "cols":  7,
+                                        "cols":  5,
                                         "headers":  [
                                                         "ClÃ©",
                                                         "ID",
                                                         "ID Script",
                                                         "nom_fich_google_Sheet",
-                                                        "ID google Sheet",
-                                                        "",
-                                                        "Id backup"
+                                                        "ID google Sheet"
                                                     ],
-                                        "sha256":  "65FB4D7865A20C52AA2BAE03016552E1E412FC04FE718C3E9080C9C64E42DA93",
-                                        "bytes":  1803
+                                        "sha256":  "B5E5242A3AB817D0025D9BBE816ED1FE49D9FB1A2FD43F9F8EA89896AFC73942",
+                                        "bytes":  1401
                                     },
                                     {
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\sys_Options_Parametres.csv",
                                         "name":  "sys_Options_Parametres",
-                                        "rows":  8,
+                                        "rows":  9,
                                         "cols":  11,
                                         "headers":  [
                                                         "Statut",
@@ -793,8 +854,8 @@
                                                         "Formateur_Quand",
                                                         "Formateur_Contenu"
                                                     ],
-                                        "sha256":  "A1110793573358AF4A834AC231020372570D7E936A9397371596BA79C376F9C2",
-                                        "bytes":  573
+                                        "sha256":  "95629DE572C37C6BADFB4B2E3275C6F1FD9546D1B040F5B5875F3AE0E103A41E",
+                                        "bytes":  581
                                     }
                                 ],
                        "total_rows":  109,
@@ -823,8 +884,8 @@
                                     "name":  "Feuille_1",
                                     "rows":  2,
                                     "cols":  1,
-                                    "headers":  "a",
-                                    "sha256":  "AFE102C95FBCC9472691E340BA05CAF780146FE540D21E0921872968A312D8AE",
+                                    "headers":  "q",
+                                    "sha256":  "A55FC3DD919719DC9A8C5B1C3B63F0969D9424A5AAA51B77814BE81C150FD832",
                                     "bytes":  58
                                 },
                        "total_rows":  2,
@@ -834,8 +895,8 @@
     "gas_projects":  [
                          {
                              "file":  "scripts__MOTEUR_V2_Usine_à_Tests.txt",
-                             "lines":  879,
-                             "sha256":  "E1843AA517C404A470CA402B2B3671BA95054209274DCD748C600B3A55692C23",
+                             "lines":  1234,
+                             "sha256":  "324750437B0B7147A985BA84D0C48028C1A6A41BB04E577CD770B02C2610053E",
                              "functions":  [
                                                "lancerDeploiementComplet",
                                                "nbQuestionsAUtiliser",
@@ -863,19 +924,31 @@
                                                "convertirQuestionsEnJSON",
                                                "readFilesRecursively",
                                                "testCreationFormulaire",
-                                               "normalizeAndDedupeCompositionEmails_"
+                                               "normalizeAndDedupeCompositionEmails_",
+                                               "_identifierLangues",
+                                               "_construireQuestionsFormulaire",
+                                               "_ajouterQuestionsDepuisFeuille",
+                                               "choices"
                                            ]
                          },
                          {
                              "file":  "scripts__CONFIG_V2_Usine_à_Tests.txt",
-                             "lines":  482,
-                             "sha256":  "709C13A56BAE621B1B2F46BE606411E9CFE20B5B3377A08B649ECE521044E7C7",
+                             "lines":  588,
+                             "sha256":  "262CD9E93F6617A6A2F371E263C9260A3130C1D1A060DA82C8A83B160FCF62C0",
                              "functions":  [
                                                "onOpen",
                                                "showConfigurationSidebar",
                                                "getInitialData",
                                                "getQuestionCountForTestType",
                                                "processNewTestConfiguration",
+                                               "showEditSidebar_UI",
+                                               "showEditSidebar",
+                                               "getTestDataForEdit",
+                                               "updateTestData",
+                                               "showDuplicateUI",
+                                               "duplicateTestConfiguration",
+                                               "showPrintableSheetUI",
+                                               "generatePrintableSheet",
                                                "getSystemIds",
                                                "readFilesRecursively",
                                                "convertirLiensExistantsEnCourts",
@@ -903,8 +976,8 @@
                          },
                          {
                              "file":  "scripts__TEMPLATE_V2_Kit_de_Traitement.txt",
-                             "lines":  2321,
-                             "sha256":  "3DDDD0DD4588997520BC60564AC52F816AA224E31803FE65F28B16A0BDF84146",
+                             "lines":  2422,
+                             "sha256":  "682E8B6EC8B514C5721D42BB0C8362C6D464ED4A82E95A8D5E53B3725120D774",
                              "functions":  [
                                                "readFilesRecursively",
                                                "DBG",
@@ -917,7 +990,6 @@
                                                "_getReponsesSheet_",
                                                "sys",
                                                "tryOpenById",
-                                               "pick",
                                                "_creerObjetReponse",
                                                "config",
                                                "genererPdfDepuisModele",
@@ -931,6 +1003,7 @@
                                                "codeNiveauEmail",
                                                "profilFinal",
                                                "elementType",
+                                               "totalDichotomy",
                                                "scoreArrondi",
                                                "ligneScore",
                                                "getDonneesPourRetraitement",

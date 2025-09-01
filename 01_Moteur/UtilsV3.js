@@ -33,7 +33,6 @@ function getConfigurationFromRow(rowIndex) {
 
   const lastCol = sheet.getLastColumn();
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
-  
   if (!rowIndex || isNaN(rowIndex) || rowIndex < 2) {
       throw new Error('getConfigurationFromRow: rowIndex invalide (' + rowIndex + ')');
   }
@@ -56,7 +55,6 @@ function _identifierLangues(bdd, typeTest) {
     const toutesLesFeuillesBDD = bdd.getSheets();
     const regexLangues = new RegExp('^Questions_' + typeTest + '_([A-Z]{2})$', 'i');
     const languesAInclure = [];
-    
     toutesLesFeuillesBDD.forEach(feuille => {
         const match = feuille.getName().match(regexLangues);
         if (match && match[1]) {
@@ -67,12 +65,25 @@ function _identifierLangues(bdd, typeTest) {
             });
         }
     });
-    
+
+    // --- AJOUT : On trie les langues pour garantir un ordre constant (FR, EN...) ---
+    const ordreLangues = ['FR', 'EN', 'ES', 'DE']; // Ordre de priorité
+    languesAInclure.sort((a, b) => {
+        const indexA = ordreLangues.indexOf(a.code);
+        const indexB = ordreLangues.indexOf(b.code);
+        if (indexA === -1) return 1; // Mettre les langues non listées à la fin
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+    });
+    Logger.log(`Langues triées pour la génération : ${languesAInclure.map(l => l.code).join(', ')}`);
+    // --- FIN DE L'AJOUT ---
+
     if (languesAInclure.length === 0) {
         throw new Error("Aucune feuille de questions trouvée pour le type '" + typeTest + "'.");
     }
     return languesAInclure;
 }
+
 
 /**
  * Construit les questions dans le formulaire, en gérant le multi-langues.
@@ -89,11 +100,13 @@ function _construireQuestionsFormulaire(form, languesAInclure, nbQuestionsConfig
             _ajouterQuestionsDepuisFeuille(form, langue.feuille, nbQuestionsConfig);
             
             // --- DÉBUT DE LA CORRECTION v8.1 ---
+        
             // On s'assure que la redirection vers la page de soumission est bien appliquée
             // à l'objet 'page' que nous venons de créer, qui est un PageBreakItem.
             if (page && typeof page.setGoToPage === 'function') {
                 page.setGoToPage(FormApp.PageNavigationType.SUBMIT);
             }
+            
             // --- FIN DE LA CORRECTION v8.1 ---
         });
         itemLangue.setChoices(choices);
@@ -110,11 +123,11 @@ function _construireQuestionsFormulaire(form, languesAInclure, nbQuestionsConfig
 function _ajouterQuestionsDepuisFeuille(form, feuilleQuestions, nbQuestionsConfig) {
     const nbQuestionsDisponibles = feuilleQuestions.getLastRow() - 1;
     let nbQuestionsAUtiliser = (nbQuestionsConfig && nbQuestionsConfig > 0) 
-        ? Math.min(nbQuestionsConfig, nbQuestionsDisponibles) 
+        ?
+        Math.min(nbQuestionsConfig, nbQuestionsDisponibles) 
         : nbQuestionsDisponibles;
 
     if (nbQuestionsAUtiliser <= 0) return;
-
     const questionsData = feuilleQuestions.getRange(2, 1, nbQuestionsAUtiliser, 7).getValues();
     questionsData.forEach(q_data => {
         const [id, type_old, titre, options, logique, description, params_json] = q_data;
@@ -145,14 +158,16 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
   if (resolvedType === 'TEXTE_EMAIL') resolvedType = 'EMAIL';
 
   let item;
-  const choices = (params && params.options) ? params.options.map(o => o.libelle) : (optionsString || '').split(';').map(s => s.trim()).filter(Boolean);
+  const choices = (params && params.options) ?
+    params.options.map(o => o.libelle) : (optionsString || '').split(';').map(s => s.trim()).filter(Boolean);
 
   switch (resolvedType) {
     case 'QRM_CAT':
     case 'QCU_CAT':
       if (choices.length > 0) {
         item = (resolvedType.startsWith('QRM')) 
-          ? form.addCheckboxItem() 
+          ?
+          form.addCheckboxItem() 
           : form.addMultipleChoiceItem();
         item.setTitle(titre).setChoiceValues(choices).setRequired(isRequired);
       } else {
@@ -178,11 +193,9 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
       item = form.addTextItem().setTitle(titre).setRequired(isRequired);
       item.setValidation(FormApp.createTextValidation().requireTextIsEmail().build());
       break;
-    
     case 'TEXTE_COURT':
       item = form.addTextItem().setTitle(titre).setRequired(isRequired);
       break;
-
     default:
       item = form.addParagraphTextItem().setTitle(`[Type Inconnu: ${resolvedType}] ${titre}`);
   }
@@ -199,4 +212,3 @@ function getLangueFullName(code) {
   const map = { FR: 'Français', EN: 'English', ES: 'Español', DE: 'Deutsch' };
   return map[String(code || '').toUpperCase()] || code;
 }
-
