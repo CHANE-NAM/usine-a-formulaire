@@ -94,8 +94,8 @@ try {
 
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 20.9 - Affiche le score total par dichotomie (ex: / 8) pour le MBTI.
-// ==           (PrÃ©cÃ©dent: 20.8 - Ajout de l'arrondi des scores et de la gestion de {{Titre_Profil}}.)
+// == VERSION : 21.3 - Le suffixe des scores (%) est Ã©tendu Ã  tous les tests r&K.
+// ==           (PrÃ©cÃ©dent: 21.2 - Suffixe conditionnel au type de test)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
@@ -116,7 +116,6 @@ function _spyDumpRow_(sheet, rowIndex) {
     const V = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
     const subset = {};
     for (let i = 0; i < Math.min(H.length, 25); i++) subset[H[i]] = V[i];
-    // 25 1res colonnes
     DBG('DUMP row', rowIndex, 'subset=', subset);
     return { headers: H, values: V };
   } catch (e) { DBG('spyDumpRow ERROR', e.message); }
@@ -335,33 +334,55 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       
-      // ==================== DÃ‰BUT MODIFICATION V20.9 ====================
-      case 'Ligne_Score': 
-        const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
-        
-        // On ne traite que les profils principaux pour le MBTI, pas les sous-scores si un jour il y en a.
-        const codesAAfficher = Object.keys(opposites);
-        
-        Object.entries(resultats.scoresData)
-          .filter(([code, score]) => codesAAfficher.includes(code)) // Filtre pour ne garder que les 8 profils
-          .sort((a, b) => b[1] - a[1]) // Tri par score dÃ©croissant
-          .forEach(([code, score]) => {
-            const oppositeCode = opposites[code];
-            // Calcul du total pour la dichotomie (ex: E+I), avec une sÃ©curitÃ© si un score est manquant.
-            const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[oppositeCode] || 0);
+      case 'Ligne_Score':
+        if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
+          const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
+          const codesAAfficher = Object.keys(opposites);
+          
+          Object.entries(resultats.scoresData)
+            .filter(([code, score]) => codesAAfficher.includes(code))
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([code, score]) => {
+              const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[opposites[code]] || 0);
+              let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+              let nomProfil = resultats.mapCodeToName[code] || code;
+              
+              let ligneScore = (contenu || `- {{nom_profil}} : {{score}} / {{total_possible}} points`)
+                .replace(/{{nom_profil}}/g, nomProfil)
+                .replace(/{{score}}/g, scoreArrondi)
+                .replace(/{{total_possible}}/g, totalDichotomy);
+              corpsHtml += ligneScore + "<br>";
+            });
+        } else {
+            // --- On utilise TOUJOURS resultats.scoresData pour l'affichage ---
+            const scoresAAfficher = resultats.scoresData;
 
-            let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-            
-            // Remplace les placeholders dans le gabarit de la ligne.
-            let ligneScore = (contenu || "")
-              .replace(/{{nom_profil}}/g, resultats.mapCodeToName[code] || code)
-              .replace(/{{score}}/g, scoreArrondi)
-              .replace(/{{total_possible}}/g, totalDichotomy); // Nouveau placeholder pour le total
-            
-            corpsHtml += ligneScore + "<br>"; 
-        });
+            Object.entries(scoresAAfficher)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([code, score]) => {
+              const scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+              const nomProfil = resultats.mapCodeToName[code] || code;
+              const totalPossible = resultats.scoresMaxPossible ? resultats.scoresMaxPossible[code] : null;
+
+              let ligneScore = `- ${nomProfil} : ${scoreArrondi}`;
+              
+              // --- DEBUT MODIFICATION : On Ã©tend la liste des tests affichant un % ---
+              const testsAvecPourcentage = ['r&K_Environnement', 'r&K_Resilience', 'r&K_Adaptabilite', 'r&K_Creativite'];
+              let suffixe = " points"; // Suffixe par dÃ©faut
+              if (testsAvecPourcentage.includes(typeTest)) {
+                  suffixe = " %"; // Suffixe pour les tests concernÃ©s
+              }
+              // --- FIN MODIFICATION ---
+
+              if (totalPossible != null && totalPossible > 0) {
+                  ligneScore += ` / ${totalPossible}`;
+              }
+              ligneScore += suffixe; // On ajoute le suffixe dÃ©terminÃ©
+              
+              corpsHtml += ligneScore + "<br>";
+            });
+        }
         break;
-      // ===================== FIN MODIFICATION V20.9 =====================
     }
   }
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
@@ -844,140 +865,167 @@ function mapQuestionsById(bdd, nomFeuille) {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
 
 // =================================================================================
-// == FICHIER : Logique_Universel.js
-// == VERSION : 10.6 - La logique MBTI fonctionne avec les versions (ex: MBTI_V2).
-// ==           (PrÃ©cÃ©dent: 10.5 - Correction LIKERT_5)
+// == FICHIER : Logique_Universel.gs
+// == VERSION : 15.1 - Correction du bug de lecture des rÃ©ponses pour le rapport PDF r&K Env.
+// ==           (PrÃ©cÃ©dent: 15.0 - Le moteur r&K Environnement gÃ©nÃ¨re les donnÃ©es pour le rapport PDF)
 // =================================================================================
 
 // --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
 /**
- * Analyse une chaÃ®ne de seuil de score et vÃ©rifie si un score donnÃ© correspond.
- */
-function _parseSeuilScore_rK(seuilStr, codeProfilMajoritaire, scorePourcentage) {
-    if (!seuilStr || !codeProfilMajoritaire) return false;
-    const seuil = String(seuilStr).trim();
-
-    const profilSeuilMatch = seuil.toUpperCase().split(' ')[0];
-    if (profilSeuilMatch !== codeProfilMajoritaire.toUpperCase()) {
-        return false;
-    }
-
-    const matchSimple = seuil.match(/(>=|<=)\s*(\d+)/);
-    if (matchSimple) {
-        const operateur = matchSimple[1];
-        const valeurSeuil = parseInt(matchSimple[2], 10);
-        if (operateur === '>=') return scorePourcentage >= valeurSeuil;
-        if (operateur === '<=') return scorePourcentage <= valeurSeuil;
-    }
-
-    const matchPlage = seuil.match(/(\d+)-(\d+)/);
-    if (matchPlage) {
-        const min = parseInt(matchPlage[1], 10);
-        const max = parseInt(matchPlage[2], 10);
-        return scorePourcentage >= min && scorePourcentage <= max;
-    }
-
-    return false;
-}
-
-/**
- * Moteur de dÃ©termination de profil et de recommandation SPÃ‰CIFIQUE aux tests "r&K".
+ * Moteur de dÃ©termination de profil par seuils (UtilisÃ© uniquement par r&K_Environnement).
  */
 function _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue) {
     Logger.log(`[ESPION][r&K] DÃ©marrage du moteur de recommandation pour le test "${typeTest}".`);
     try {
         const totalPoints = Object.values(scoresData).reduce((sum, val) => sum + (Number(val) || 0), 0);
-        if (totalPoints === 0) {
-            Logger.log("[ESPION][r&K] Le total des points est Ã  zÃ©ro. Impossible de dÃ©terminer un profil.");
-            return { profilFinal: "IndÃ©terminÃ©", Recommandation: "" };
-        }
+        if (totalPoints === 0) { return { profilFinal: "IndÃ©terminÃ©", Recommandation: "" }; }
 
         const profilMajoritaireCode = Object.keys(scoresData).reduce((a, b) => (scoresData[a] || 0) > (scoresData[b] || 0) ? a : b);
         const scoreMajoritaire = scoresData[profilMajoritaireCode] || 0;
-        const pourcentage = (scoreMajoritaire / totalPoints) * 100;
-        Logger.log(`[ESPION][r&K] Profil dominant: "${profilMajoritaireCode}" avec un score de ${scoreMajoritaire}/${totalPoints} (${pourcentage.toFixed(1)}%).`);
+        Logger.log(`[ESPION][r&K] Profil dominant: "${profilMajoritaireCode}" avec un score de ${scoreMajoritaire.toFixed(1)}%.`);
 
         const systemIds = getSystemIds();
         const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
         const nomFeuilleProfils = `Profils_${typeTest}_${langue}`;
         const sheetProfils = bdd.getSheetByName(nomFeuilleProfils);
         if (!sheetProfils) {
-          Logger.log(`[ESPION][r&K] AVERTISSEMENT: Feuille de profils introuvable: "${nomFeuilleProfils}". Aucune recommandation ne sera chargÃ©e.`);
+          Logger.log(`[ESPION][r&K] AVERTISSEMENT: Feuille de profils introuvable: "${nomFeuilleProfils}".`);
           return { profilFinal: profilMajoritaireCode, Recommandation: "" };
         }
-        Logger.log(`[ESPION][r&K] Lecture de la feuille de profils: "${nomFeuilleProfils}".`);
         
         const data = sheetProfils.getDataRange().getValues();
         const headers = data.shift().map(h => String(h || '').trim());
+        const idx = { profil: headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil'), seuil: headers.indexOf('Seuil_Score'), destinataire: headers.indexOf('Destinataire'), axe: headers.indexOf('Axe'), reco: headers.indexOf('Recommandation') };
         
-        const idx = {
-            profil: headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil'),
-            seuil: headers.indexOf('Seuil_Score'),
-            destinataire: headers.indexOf('Destinataire'),
-            axe: headers.indexOf('Axe'),
-            reco: headers.indexOf('Recommandation')
-        };
-        
-        if (idx.profil === -1 || idx.seuil === -1 || idx.destinataire === -1 || idx.axe === -1 || idx.reco === -1) {
-            Logger.log(`[ESPION][r&K] ERREUR: Colonnes manquantes dans "${nomFeuilleProfils}". Requis: Code_Profil (ou Profil), Seuil_Score, Destinataire, Axe, Recommandation`);
-            return { profilFinal: profilMajoritaireCode, Recommandation: "" };
-        }
-
         for (const row of data) {
             const dest = String(row[idx.destinataire] || '').trim();
             const axe = String(row[idx.axe] || '').trim();
             const seuilStr = String(row[idx.seuil] || '').trim();
             
-            if (dest === 'RÃ©pondant' && axe === 'DÃ©velopper potentiel' && _parseSeuilScore_rK(seuilStr, profilMajoritaireCode, pourcentage)) {
+            if (dest === 'RÃ©pondant' && axe === 'DÃ©velopper potentiel' && _parseSeuilScore_rK(seuilStr, profilMajoritaireCode, scoreMajoritaire)) {
                 const profilFinalTrouve = String(row[idx.profil] || profilMajoritaireCode);
                 const recommandationTrouvee = String(row[idx.reco] || '');
-                Logger.log(`[ESPION][r&K] SUCCÃˆS: Ligne de recommandation trouvÃ©e. Profil: "${profilFinalTrouve}". Recommandation: "${recommandationTrouvee.substring(0, 50)}..."`);
-                return {
-                    profilFinal: profilFinalTrouve,
-                    Recommandation: recommandationTrouvee
-                };
+                return { profilFinal: profilFinalTrouve, Recommandation: recommandationTrouvee };
             }
         }
-        
-        Logger.log(`[ESPION][r&K] AVERTISSEMENT: Aucune recommandation correspondante trouvÃ©e pour le profil "${profilMajoritaireCode}" avec un score de ${pourcentage.toFixed(1)}%.`);
         return { profilFinal: profilMajoritaireCode, Recommandation: "" };
-
     } catch (e) {
         Logger.log("ERREUR CRITIQUE dans _determinerProfilFinalParSeuils_rK: " + e.message);
         return { profilFinal: "Erreur de calcul", Recommandation: "" };
     }
 }
 
-/**
- * Moteur de calcul DÃ‰DIÃ‰ pour le test r&K_Environnement.
- */
-function _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur) {
-    Logger.log('[ESPION][ENV] Moteur de calcul dÃ©diÃ© pour r&K_Environnement activÃ©.');
-    const scores = { K: 0, r: 0 };
-    let countK = 0, countR = 0;
-    for (const enTete in reponsesUtilisateur) {
-        const valNum = parseFloat(String(reponsesUtilisateur[enTete]).replace(',', '.'));
-        if (isNaN(valNum)) continue;
+function _parseSeuilScore_rK(seuilStr, codeProfilMajoritaire, scorePourcentage) {
+    if (!seuilStr || !codeProfilMajoritaire) return false;
+    const seuil = String(seuilStr).trim();
+    const profilSeuilMatch = seuil.toUpperCase().split(' ')[0];
+    if (profilSeuilMatch !== codeProfilMajoritaire.toUpperCase()) return false;
+    const matchSimple = seuil.match(/(>=|<=)\s*(\d+)/);
+    if (matchSimple) {
+        const operateur = matchSimple[1]; const valeurSeuil = parseInt(matchSimple[2], 10);
+        if (operateur === '>=') return scorePourcentage >= valeurSeuil;
+        if (operateur === '<=') return scorePourcentage <= valeurSeuil;
+    }
+    const matchPlage = seuil.match(/(\d+)-(\d+)/);
+    if (matchPlage) {
+        const min = parseInt(matchPlage[1], 10); const max = parseInt(matchPlage[2], 10);
+        return scorePourcentage >= min && scorePourcentage <= max;
+    }
+    return false;
+}
 
-        const m = String(enTete).match(/^ENV(\d{3})/);
-        if (m) {
-            const itemNum = parseInt(m[1], 10);
-            const a = (itemNum - 1) % 4; // 0, 1, 2, 3
-            if (a < 2) { // K
-                scores.K += valNum;
-                countK++;
-            } else { // r
-                scores.r += valNum;
-                countR++;
+/**
+ * Moteur de calcul DÃ‰DIÃ‰ pour le test r&K_Environnement (v5.1 - CorrigÃ©).
+ * Calcule les pourcentages ET les donnÃ©es dÃ©taillÃ©es par thÃ¨me pour le rapport PDF.
+ */
+function _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur, questionsMap) {
+    Logger.log('[ESPION][ENV] Moteur de calcul r&K (v5.1 - CorrigÃ©) activÃ©.');
+    
+    // --- 1. Calcul des points bruts (logique data-driven) ---
+    let totaux_points = {};
+    for (const enTete in reponsesUtilisateur) {
+        if (String(enTete).startsWith('ENV')) {
+            const idQuestion = enTete.split(':')[0].trim();
+            const questionConfig = questionsMap[idQuestion];
+            const reponseNum = parseInt(reponsesUtilisateur[enTete], 10);
+            const scoringModel = questionConfig ? questionConfig.parametres.scoring_model : null;
+            if (!isNaN(reponseNum) && scoringModel) {
+                const echelle = scoringModel.echelle || 11;
+                const profilDirect = scoringModel.direct;
+                const profilInverse = scoringModel.inverse;
+                if (profilDirect) { totaux_points[profilDirect] = (totaux_points[profilDirect] || 0) + reponseNum; }
+                if (profilInverse) { totaux_points[profilInverse] = (totaux_points[profilInverse] || 0) + (echelle - reponseNum); }
             }
         }
     }
-    if (countK > 0) scores.K /= countK;
-    if (countR > 0) scores.r /= countR;
+    const total_K_points = totaux_points['K'] || 0;
+    const total_r_points = totaux_points['r'] || 0;
+    const grand_total_points = total_K_points + total_r_points;
+
+    // --- 2. Calcul des pourcentages globaux ---
+    let pourcentage_K = 0, pourcentage_r = 0;
+    if (grand_total_points > 0) {
+        pourcentage_K = (total_K_points / grand_total_points) * 100;
+        pourcentage_r = (total_r_points / grand_total_points) * 100;
+    }
+
+    // --- 3. Calcul dÃ©taillÃ© par thÃ¨me pour le rapport PDF ---
+    const THEMES = ["Concurrence & Pression du marchÃ©", "Clients & Demande", "Technologies & Innovation", "RÃ©glementation & Cadre juridique", "Ressources humaines & CompÃ©tences", "Financement & AccÃ¨s aux capitaux", "Fournisseurs & Logistique", "Ressources & Infrastructures matÃ©rielles", "Image & RÃ©putation sectorielle", "Partenariats & RÃ©seaux", "Territoire & Environnement gÃ©ographique", "Tendances sociÃ©tales & culturelles", "Contexte Ã©conomique global", "Risques & SÃ©curitÃ©", "OpportunitÃ©s de croissance & MarchÃ©s"];
+    const interpK = x => x >= 7 ? "Environnement plutÃ´t stable et prÃ©visible" : x <= 3 ? "Environnement plutÃ´t instable / changeant" : "StabilitÃ© modÃ©rÃ©e avec quelques variations";
+    const interpr = x => x >= 7 ? "Changements rapides / forte dynamique" : x <= 3 ? "Changements lents / faible dynamique" : "Vitesse de changement modÃ©rÃ©e";
     
-    Logger.log(`[ESPION][ENV] Scores bruts (moyennes): K=${scores.K.toFixed(2)}, r=${scores.r.toFixed(2)}`);
-    return { scoresData: scores };
+    let flat = {};
+    let sumK_themes = 0, sumr_themes = 0, countK_themes = 0, countr_themes = 0;
+
+    for (let t = 0; t < 15; t++) {
+        let k_vals = [], r_vals = [];
+        for (let i = 1; i <= 4; i++) {
+            const qNum = t * 4 + i;
+            const id = 'ENV' + String(qNum).padStart(3, '0');
+            const questionConfig = questionsMap[id];
+            
+            // --- DEBUT DE LA CORRECTION ---
+            // Recherche de la rÃ©ponse de l'utilisateur de maniÃ¨re robuste, sans dÃ©pendre de "titre_court".
+            const reponse = reponsesUtilisateur[Object.keys(reponsesUtilisateur).find(k => k.startsWith(id))];
+            // --- FIN DE LA CORRECTION ---
+            
+            if (reponse != null && !isNaN(reponse) && questionConfig) {
+                if (questionConfig.parametres.dimension === 'StabilitÃ©') k_vals.push(Number(reponse));
+                else if (questionConfig.parametres.dimension === 'Vitesse') r_vals.push(Number(reponse));
+            }
+        }
+
+        const avgK = k_vals.length > 0 ? k_vals.reduce((a, b) => a + b, 0) / k_vals.length : null;
+        const avgr = r_vals.length > 0 ? r_vals.reduce((a, b) => a + b, 0) / r_vals.length : null;
+
+        if(avgK != null) { sumK_themes += avgK; countK_themes++; }
+        if(avgr != null) { sumr_themes += avgr; countr_themes++; }
+
+        const n = t + 1;
+        flat[`Nom_Theme_${n}`] = THEMES[t];
+        flat[`Score_Stabilite_Theme_${n}`] = avgK != null ? avgK.toFixed(1) : "";
+        flat[`Interpretation_Stabilite_Theme_${n}`] = avgK != null ? interpK(avgK) : "";
+        flat[`Score_Vitesse_Theme_${n}`] = avgr != null ? avgr.toFixed(1) : "";
+        flat[`Interpretation_Vitesse_Theme_${n}`] = avgr != null ? interpr(avgr) : "";
+        flat[`Recommandations_Theme_${n}`] = ""; // Placeholder pour le futur
+    }
+
+    const scoreK_global = countK_themes > 0 ? (sumK_themes / countK_themes) : 0;
+    const scorer_global = countr_themes > 0 ? (sumr_themes / countr_themes) : 0;
+
+    flat['Score_Stabilite'] = scoreK_global.toFixed(1);
+    flat['Interpretation_Stabilite'] = interpK(scoreK_global);
+    flat['Score_Vitesse'] = scorer_global.toFixed(1);
+    flat['Interpretation_Vitesse'] = interpr(scorer_global);
+
+    Logger.log(`[ESPION][ENV] DonnÃ©es PDF gÃ©nÃ©rÃ©es. Score K global: ${scoreK_global.toFixed(1)}, Score r global: ${scorer_global.toFixed(1)}`);
+
+    return { 
+        scoresData: { K: pourcentage_K, r: pourcentage_r }, // Pour l'email
+        ...flat // Pour le PDF
+    };
 }
+
 
 function _normStr(s) {
   return String(s == null ? '' : s)
@@ -993,56 +1041,68 @@ function _normLang(s) {
   if (!x) return '';
   if (/^fr|fran|french/.test(x)) return 'FR';
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
-  // ... (autres langues si besoin)
   return x.toUpperCase();
 }
 
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
-  Logger.log(`[ESPION] DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}".`);
+  Logger.log(`DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}". Langue Origine: ${langueOrigine}, Langue Cible: ${langueCible}`);
   let resultats = { scoresData: {}, sousTotauxParMode: {} };
   
-  const langCibN = _normLang(langueCible);
+  const langCibleNorm = _normLang(langueCible);
+  const langOrigineNorm = _normLang(langueOrigine);
   
   if (config.Type_Test === 'r&K_Environnement') {
-    resultats = _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur);
+    const questionsMap = _chargerQuestions(config.Type_Test, langOrigineNorm);
+    resultats = _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur, questionsMap);
   } else {
-    const langOriN = _normLang(langueOrigine);
-    const questionsMapCible = _chargerQuestions(config.Type_Test, langCibN || langueCible);
-    if (!questionsMapCible) {
-      Logger.log('[ESPION] AVERTISSEMENT: Impossible de charger les questions pour ' + (config && config.Type_Test) + '. Le calcul est interrompu.');
+    const questionsMapOrigine = _chargerQuestions(config.Type_Test, langOrigineNorm);
+    if (!questionsMapOrigine) {
+      Logger.log(`ERREUR FATALE: Impossible de charger les questions de la langue d'origine ${langOrigineNorm}.`);
       return resultats;
     }
-    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats);
+    _executerCalcul(reponsesUtilisateur, questionsMapOrigine, resultats, config.nbQuestions);
   }
   
-  Logger.log('[ESPION] Scores bruts calculÃ©s: ' + JSON.stringify(resultats.scoresData));
-
+  const testsPourcentage_rK = ['r&K_Resilience', 'r&K_Adaptabilite', 'r&K_Creativite'];
+  if (testsPourcentage_rK.includes(config.Type_Test)) {
+      const total_r = resultats.scoresData['r'] || 0;
+      const total_K = resultats.scoresData['K'] || 0;
+      const grand_total = total_r + total_K;
+      let pourcentage_r = 0, pourcentage_K = 0;
+      if (grand_total > 0) {
+          pourcentage_r = (total_r / grand_total) * 100;
+          pourcentage_K = (total_K / grand_total) * 100;
+      }
+      resultats.scoresData = { r: pourcentage_r, K: pourcentage_K };
+      Logger.log(`[ESPION r&K %] Conversion en pourcentage : r=${pourcentage_r.toFixed(1)}%, K=${pourcentage_K.toFixed(1)}%`);
+  }
+  
   if (Object.keys(resultats.scoresData).length > 0) {
-    const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibN || langueCible);
+    const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibleNorm);
     resultats = { ...resultats, ...profilEtReco }; 
-    
-    const profilsMap = _chargerProfils(config.Type_Test, langCibN || langueCible);
+    const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
     const infosProfilComplet = profilsMap[resultats.profilFinal];
-    if (infosProfilComplet) {
-      resultats = { ...resultats, ...infosProfilComplet };
-    }
-    
+    if (infosProfilComplet) { resultats = { ...resultats, ...infosProfilComplet }; }
     resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
   }
 
-  Logger.log("[ESPION] Calculs terminÃ©s. Objet de rÃ©sultats final (partiel): " + 
-             `profilFinal="${resultats.profilFinal}", ` +
-             `Recommandation="${(resultats.Recommandation || '').substring(0,50)}..."`);
+  Logger.log(`Calculs terminÃ©s. Profil Final: "${resultats.profilFinal}"`);
   return resultats;
 }
 
-function _executerCalcul(reponses, questionsMap, resultats) {
+function _executerCalcul(reponses, questionsMap, resultats, nbQuestionsLimite) {
+  let questionsTraitees = 0;
+  const limite = nbQuestionsLimite || Object.keys(questionsMap).length;
   for (const enTeteComplet in reponses) {
+    if (questionsTraitees >= limite) break;
     if (!enTeteComplet.includes(':')) continue;
+    
     const idQuestion = enTeteComplet.split(':')[0].trim();
     const questionConfig = questionsMap[idQuestion];
-    if (questionConfig) {
+    
+    if (questionConfig && reponses[enTeteComplet]) {
       _aiguillerCalcul(questionConfig.parametres.mode, reponses[enTeteComplet], questionConfig.parametres, resultats);
+      questionsTraitees++;
     }
   }
 }
@@ -1054,7 +1114,6 @@ function _aiguillerCalcul(mode, reponse, parametres, resultats) {
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     case 'LIKERT_5':     _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     default:
-      if (__DBG) Logger.log('Mode de traitement inconnu: "%s" â†’ rÃ©ponse ignorÃ©e', mode);
       break;
   }
 }
@@ -1071,20 +1130,11 @@ function _traiterQCU_CAT(reponseUtilisateur, parametres, resultats) {
 }
 
 function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
-  // === DÃ‰BUT DE LA MODIFICATION V10.5 ===
-  // On cherche le profil Ã  impacter.
-  // D'abord Ã  la racine des paramÃ¨tres (pour ECHELLE_NOTE standard)...
   let profil = parametres.profil; 
-  
-  // ...sinon, on le cherche dans la premiÃ¨re option (pour la compatibilitÃ© avec LIKERT_5)
   if (!profil && parametres.options && parametres.options[0] && parametres.options[0].profil) {
     profil = parametres.options[0].profil;
   }
-  
-  // Si on ne trouve toujours pas de profil, on arrÃªte.
   if (!profil) return;
-  // === FIN DE LA MODIFICATION V10.5 ===
-
   const valeurNumerique = parseFloat(String(reponseUtilisateur).replace(',', '.'));
   if (!isNaN(valeurNumerique)) {
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
@@ -1094,13 +1144,11 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
 function _determinerProfilFinal(scoresData, typeTest, langue) {
   if (!scoresData || Object.keys(scoresData).length === 0) return { profilFinal: "" };
   
-  if (String(typeTest || '').toLowerCase().startsWith('r&k_')) {
+  if (typeTest === 'r&K_Environnement') {
     return _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue);
   }
   
-  // ==================== DÃ‰BUT MODIFICATION V10.6 ====================
   if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
-  // ===================== FIN MODIFICATION V10.6 =====================
     let profil = "";
     profil += (scoresData.E || 0) > (scoresData.I || 0) ? 'E' : 'I';
     profil += (scoresData.S || 0) > (scoresData.N || 0) ? 'S' : 'N';
