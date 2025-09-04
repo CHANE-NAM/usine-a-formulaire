@@ -1,7 +1,7 @@
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 21.3 - Le suffixe des scores (%) est étendu à tous les tests r&K.
-// ==           (Précédent: 21.2 - Suffixe conditionnel au type de test)
+// == VERSION : 22.1 - Affichage des scores en nombres entiers pour les tests MBTI, Couleurs et ANCRES.
+// ==           (Précédent: 22.0 - Généralisation de l'affichage du score total possible.)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
@@ -232,6 +232,12 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   let sujet = `Résultats de votre test ${typeTest}`;
   let corpsHtml = "";
   const piecesJointesIds = new Set();
+  
+  // ======================= DÉBUT BLOC MODIFIÉ =======================
+  // Liste des tests pour lesquels le score doit être un entier.
+  const testsAvecScoreEntier = ['ANCRES', 'COULEURS', 'MBTI'];
+  // ======================= FIN BLOC MODIFIÉ =======================
+
   for (const brique of briquesDeContenu) {
     const elementType = (brique[idx.element] || '').toString().trim();
     const contenu = brique[idx.contenu];
@@ -241,53 +247,33 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       
       case 'Ligne_Score':
-        if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
-          const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
-          const codesAAfficher = Object.keys(opposites);
+        const scoresAAfficher = resultats.scoresData;
+        
+        Object.entries(scoresAAfficher)
+        .sort((a, b) => b[1] - a[1]) // Tri par score décroissant
+        .forEach(([code, score]) => {
           
-          Object.entries(resultats.scoresData)
-            .filter(([code, score]) => codesAAfficher.includes(code))
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([code, score]) => {
-              const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[opposites[code]] || 0);
-              let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-              let nomProfil = resultats.mapCodeToName[code] || code;
-              
-              let ligneScore = (contenu || `- {{nom_profil}} : {{score}} / {{total_possible}} points`)
-                .replace(/{{nom_profil}}/g, nomProfil)
-                .replace(/{{score}}/g, scoreArrondi)
-                .replace(/{{total_possible}}/g, totalDichotomy);
-              corpsHtml += ligneScore + "<br>";
-            });
-        } else {
-            // --- On utilise TOUJOURS resultats.scoresData pour l'affichage ---
-            const scoresAAfficher = resultats.scoresData;
+          // ======================= DÉBUT BLOC MODIFIÉ =======================
+          let scoreArrondi;
+          // Vérifie si le test actuel est l'un de ceux qui nécessitent un score entier
+          if (testsAvecScoreEntier.some(test => typeTest.toUpperCase().includes(test))) {
+              scoreArrondi = (typeof score === 'number') ? Math.round(score) : score;
+          } else {
+              // Comportement par défaut pour les autres tests (ex: pourcentages)
+              scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+          }
+          // ======================= FIN BLOC MODIFIÉ =======================
 
-            Object.entries(scoresAAfficher)
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([code, score]) => {
-              const scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-              const nomProfil = resultats.mapCodeToName[code] || code;
-              const totalPossible = resultats.scoresMaxPossible ? resultats.scoresMaxPossible[code] : null;
+          const nomProfil = resultats.mapCodeToName[code] || code;
+          const totalPossible = resultats.scoresMaxPossible ? (resultats.scoresMaxPossible[code] || 'N/A') : 'N/A';
 
-              let ligneScore = `- ${nomProfil} : ${scoreArrondi}`;
-              
-              // --- DEBUT MODIFICATION : On étend la liste des tests affichant un % ---
-              const testsAvecPourcentage = ['r&K_Environnement', 'r&K_Resilience', 'r&K_Adaptabilite', 'r&K_Creativite'];
-              let suffixe = " points"; // Suffixe par défaut
-              if (testsAvecPourcentage.includes(typeTest)) {
-                  suffixe = " %"; // Suffixe pour les tests concernés
-              }
-              // --- FIN MODIFICATION ---
+          let ligneScore = (contenu || `- {{nom_profil}} : {{score}} points`)
+            .replace(/{{nom_profil}}/g, nomProfil)
+            .replace(/{{score}}/g, scoreArrondi)
+            .replace(/{{total_possible}}/g, totalPossible);
 
-              if (totalPossible != null && totalPossible > 0) {
-                  ligneScore += ` / ${totalPossible}`;
-              }
-              ligneScore += suffixe; // On ajoute le suffixe déterminé
-              
-              corpsHtml += ligneScore + "<br>";
-            });
-        }
+          corpsHtml += ligneScore + "<br>";
+        });
         break;
     }
   }

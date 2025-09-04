@@ -1,7 +1,7 @@
 // =================================================================================
 // == FICHIER : Logique_Universel.gs
-// == VERSION : 15.1 - Correction du bug de lecture des réponses pour le rapport PDF r&K Env.
-// ==           (Précédent: 15.0 - Le moteur r&K Environnement génère les données pour le rapport PDF)
+// == VERSION : 16.0 - Généralisation du calcul du score total possible.
+// ==           (Précédent: 15.1 - Correction du bug de lecture des réponses pour le rapport PDF r&K Env.)
 // =================================================================================
 
 // --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
@@ -178,6 +178,65 @@ function _normLang(s) {
   return x.toUpperCase();
 }
 
+
+// ======================= DÉBUT BLOC AJOUTÉ =======================
+/**
+ * Calcule les scores maximums possibles pour chaque profil d'un test.
+ * @param {string} typeTest - Le type de test (ex: 'ANCRES').
+ * @param {string} langue - Le code langue (ex: 'FR').
+ * @returns {object} Un objet associant chaque code de profil à son score maximum.
+ */
+function _calculerScoresMaxPossibles(typeTest, langue) {
+  const questionsMap = _chargerQuestions(typeTest, langue);
+  if (!questionsMap) {
+    Logger.log(`AVERTISSEMENT: Impossible de charger les questions pour ${typeTest}_${langue} pour calculer les scores max.`);
+    return {};
+  }
+
+  const maxScores = {};
+
+  for (const id in questionsMap) {
+    const question = questionsMap[id];
+    const params = question.parametres;
+    const mode = (params.mode || '').toUpperCase();
+
+    if (mode === 'ECHELLE_NOTE' || mode === 'LIKERT_5') {
+      const profil = params.profil;
+      const maxValue = params.echelle_max || params.max || 0;
+      if (profil && typeof maxValue === 'number') {
+        maxScores[profil] = (maxScores[profil] || 0) + maxValue;
+      }
+    } else if (mode === 'QCU_CAT' || mode === 'QRM_CAT') {
+      if (params.options && Array.isArray(params.options)) {
+        // Pour une question, on identifie la contribution maximale à chaque profil.
+        let maxContributionParProfil = {};
+        
+        params.options.forEach(opt => {
+          if (opt.profil) {
+            const valeur = (typeof opt.valeur === 'number') ? opt.valeur : 1;
+            // Pour un QCU, un profil ne peut recevoir que la plus haute valeur de cette question.
+            // Pour un QRM, un profil peut recevoir la somme des valeurs (si plusieurs options cochables pour un même profil).
+            if (mode === 'QCU_CAT') {
+               maxContributionParProfil[opt.profil] = Math.max(maxContributionParProfil[opt.profil] || 0, valeur);
+            } else { // QRM_CAT
+               maxContributionParProfil[opt.profil] = (maxContributionParProfil[opt.profil] || 0) + valeur;
+            }
+          }
+        });
+
+        // On ajoute ces contributions maximales aux totaux.
+        for (const profil in maxContributionParProfil) {
+          maxScores[profil] = (maxScores[profil] || 0) + maxContributionParProfil[profil];
+        }
+      }
+    }
+  }
+  Logger.log(`Scores max possibles calculés pour ${typeTest}: ${JSON.stringify(maxScores)}`);
+  return maxScores;
+}
+// ======================= FIN BLOC AJOUTÉ =======================
+
+
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
   Logger.log(`Démarrage du calcul des résultats pour le Type_Test: "${config.Type_Test}". Langue Origine: ${langueOrigine}, Langue Cible: ${langueCible}`);
   let resultats = { scoresData: {}, sousTotauxParMode: {} };
@@ -210,6 +269,13 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
       resultats.scoresData = { r: pourcentage_r, K: pourcentage_K };
       Logger.log(`[ESPION r&K %] Conversion en pourcentage : r=${pourcentage_r.toFixed(1)}%, K=${pourcentage_K.toFixed(1)}%`);
   }
+  
+  // ======================= DÉBUT BLOC MODIFIÉ =======================
+  // On attache les scores maximums possibles à l'objet de résultats.
+  if (config.Type_Test !== 'r&K_Environnement') {
+      resultats.scoresMaxPossible = _calculerScoresMaxPossibles(config.Type_Test, langOrigineNorm);
+  }
+  // ======================= FIN BLOC MODIFIÉ =======================
   
   if (Object.keys(resultats.scoresData).length > 0) {
     const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibleNorm);
