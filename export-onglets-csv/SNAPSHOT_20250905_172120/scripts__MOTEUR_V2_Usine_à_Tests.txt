@@ -179,7 +179,13 @@ function lancerDeploiementComplet(rowIndex) {
     ]
   },
   "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8"
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/forms",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/script.container.ui"
+  ]
 }
 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV2.js ---
@@ -280,10 +286,11 @@ function getSystemIds() {
 function getConfigurationFromRow(sheetLike, rowIndex) {
   const sheet = _resolveConfigSheet(sheetLike);
 
-  // 1) Normaliser la valeur reÃ§ue
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\InterfaceV2.js ---
+  // 1) Normaliser la valeur reÃ§ue (nombre, string, etc.)
+  let idx = rowIndex;
+  if (idx !== 0 && !idx) idx = ''; // null/undefined -> ''
 
-��extraire un entier (ex: "9", " 9 ", "Ligne 9" -> 9)
+  // Essayer dâ€™extraire un entier (ex: "9", " 9 ", "Ligne 9" -> 9)
   if (typeof idx !== 'number') {
     const m = String(idx).match(/\d+/);
     idx = m ? Number(m[0]) : NaN;
@@ -494,6 +501,9 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
     }
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\InterfaceV2.js ---
+
 // =================================================================================
 // FICHIER : Interface V2.js
 // RÃ”LE : CrÃ©ation du menu utilisateur et fonctions appelÃ©es par ce menu.
@@ -1424,4 +1434,12 @@ function creerItemFormulaire(form, type, titre, optionsString, description, para
 function getLangueFullName(code) {
   const map = { FR: 'FranÃ§ais', EN: 'English', ES: 'EspaÃ±ol', DE: 'Deutsch' };
   return map[String(code || '').toUpperCase()] || code;
+}
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js ---
+
+function forcerAutorisation() {
+  // Cette simple ligne est suffisante pour demander les autorisations Drive.
+  DriveApp.getRootFolder(); 
+  SpreadsheetApp.getUi().alert('Autorisation accordÃ©e ! Vous pouvez maintenant retourner Ã  votre feuille de calcul et relancer le dÃ©ploiement.');
 }
