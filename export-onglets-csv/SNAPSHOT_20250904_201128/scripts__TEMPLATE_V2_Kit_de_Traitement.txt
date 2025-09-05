@@ -94,8 +94,8 @@ try {
 
 // =================================================================================
 // == FICHIER : TraitementReponses.gs
-// == VERSION : 21.1 - La logique Ligne_Score construit la chaÃ®ne elle-mÃªme pour plus de robustesse.
-// ==           (PrÃ©cÃ©dent: 21.0 - Logique de Ligne_Score rendue gÃ©nÃ©rique.)
+// == VERSION : 22.1 - Affichage des scores en nombres entiers pour les tests MBTI, Couleurs et ANCRES.
+// ==           (PrÃ©cÃ©dent: 22.0 - GÃ©nÃ©ralisation de l'affichage du score total possible.)
 // =================================================================================
 
 // ====== DEBUG / ESPIONS ======
@@ -326,6 +326,12 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   let sujet = `RÃ©sultats de votre test ${typeTest}`;
   let corpsHtml = "";
   const piecesJointesIds = new Set();
+  
+  // ======================= DÃ‰BUT BLOC MODIFIÃ‰ =======================
+  // Liste des tests pour lesquels le score doit Ãªtre un entier.
+  const testsAvecScoreEntier = ['ANCRES', 'COULEURS', 'MBTI'];
+  // ======================= FIN BLOC MODIFIÃ‰ =======================
+
   for (const brique of briquesDeContenu) {
     const elementType = (brique[idx.element] || '').toString().trim();
     const contenu = brique[idx.contenu];
@@ -334,49 +340,35 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       
-      // ==================== DÃ‰BUT MODIFICATION V21.1 ====================
       case 'Ligne_Score':
-        // CAS 1 : Logique spÃ©cifique pour les tests de type MBTI
-        if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
-          const opposites = { E: 'I', I: 'E', S: 'N', N: 'S', T: 'F', F: 'T', J: 'P', P: 'J' };
-          const codesAAfficher = Object.keys(opposites);
+        const scoresAAfficher = resultats.scoresData;
+        
+        Object.entries(scoresAAfficher)
+        .sort((a, b) => b[1] - a[1]) // Tri par score dÃ©croissant
+        .forEach(([code, score]) => {
           
-          Object.entries(resultats.scoresData)
-            .filter(([code, score]) => codesAAfficher.includes(code))
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([code, score]) => {
-              const totalDichotomy = (resultats.scoresData[code] || 0) + (resultats.scoresData[opposites[code]] || 0);
-              let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-              let nomProfil = resultats.mapCodeToName[code] || code;
-              
-              // On utilise le modÃ¨le de la BDD pour la flexibilitÃ©
-              let ligneScore = (contenu || `- {{nom_profil}} : {{score}} / {{total_possible}} points`)
-                .replace(/{{nom_profil}}/g, nomProfil)
-                .replace(/{{score}}/g, scoreArrondi)
-                .replace(/{{total_possible}}/g, totalDichotomy);
-              corpsHtml += ligneScore + "<br>";
-            });
-        } else {
-          // CAS 2 : Logique gÃ©nÃ©rique pour tous les autres tests (ANCRES, Couleurs, etc.)
-          Object.entries(resultats.scoresData)
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([code, score]) => {
-              const scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-              const nomProfil = resultats.mapCodeToName[code] || code;
-              const totalPossible = resultats.scoresMaxPossible ? resultats.scoresMaxPossible[code] : null;
+          // ======================= DÃ‰BUT BLOC MODIFIÃ‰ =======================
+          let scoreArrondi;
+          // VÃ©rifie si le test actuel est l'un de ceux qui nÃ©cessitent un score entier
+          if (testsAvecScoreEntier.some(test => typeTest.toUpperCase().includes(test))) {
+              scoreArrondi = (typeof score === 'number') ? Math.round(score) : score;
+          } else {
+              // Comportement par dÃ©faut pour les autres tests (ex: pourcentages)
+              scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+          }
+          // ======================= FIN BLOC MODIFIÃ‰ =======================
 
-              // On construit la chaÃ®ne manuellement pour Ãªtre 100% sÃ»r du rÃ©sultat
-              let ligneScore = `- ${nomProfil} : ${scoreArrondi}`;
-              if (totalPossible != null && totalPossible > 0) {
-                ligneScore += ` / ${totalPossible}`;
-              }
-              ligneScore += " points";
-              
-              corpsHtml += ligneScore + "<br>";
-            });
-        }
+          const nomProfil = resultats.mapCodeToName[code] || code;
+          const totalPossible = resultats.scoresMaxPossible ? (resultats.scoresMaxPossible[code] || 'N/A') : 'N/A';
+
+          let ligneScore = (contenu || `- {{nom_profil}} : {{score}} points`)
+            .replace(/{{nom_profil}}/g, nomProfil)
+            .replace(/{{score}}/g, scoreArrondi)
+            .replace(/{{total_possible}}/g, totalPossible);
+
+          corpsHtml += ligneScore + "<br>";
+        });
         break;
-      // ===================== FIN MODIFICATION V21.1 =====================
     }
   }
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
@@ -860,139 +852,168 @@ function mapQuestionsById(bdd, nomFeuille) {
 
 // =================================================================================
 // == FICHIER : Logique_Universel.gs
-// == VERSION : 11.1 - CORRIGÃ‰ : Le calcul du score max prend en compte TOUS les profils d'une question QCU.
-// ==           (PrÃ©cÃ©dent: 11.0 - Ajout du calcul du score maximum possible.)
+// == VERSION : 16.0 - GÃ©nÃ©ralisation du calcul du score total possible.
+// ==           (PrÃ©cÃ©dent: 15.1 - Correction du bug de lecture des rÃ©ponses pour le rapport PDF r&K Env.)
 // =================================================================================
 
 // --- MOTEUR DE RECOMMANDATION STANDARD "r&K" ---
 /**
- * Analyse une chaÃ®ne de seuil de score et vÃ©rifie si un score donnÃ© correspond.
- */
-function _parseSeuilScore_rK(seuilStr, codeProfilMajoritaire, scorePourcentage) {
-    if (!seuilStr || !codeProfilMajoritaire) return false;
-    const seuil = String(seuilStr).trim();
-
-    const profilSeuilMatch = seuil.toUpperCase().split(' ')[0];
-    if (profilSeuilMatch !== codeProfilMajoritaire.toUpperCase()) {
-        return false;
-    }
-
-    const matchSimple = seuil.match(/(>=|<=)\s*(\d+)/);
-    if (matchSimple) {
-        const operateur = matchSimple[1];
-        const valeurSeuil = parseInt(matchSimple[2], 10);
-        if (operateur === '>=') return scorePourcentage >= valeurSeuil;
-        if (operateur === '<=') return scorePourcentage <= valeurSeuil;
-    }
-
-    const matchPlage = seuil.match(/(\d+)-(\d+)/);
-    if (matchPlage) {
-        const min = parseInt(matchPlage[1], 10);
-        const max = parseInt(matchPlage[2], 10);
-        return scorePourcentage >= min && scorePourcentage <= max;
-    }
-
-    return false;
-}
-
-/**
- * Moteur de dÃ©termination de profil et de recommandation SPÃ‰CIFIQUE aux tests "r&K".
+ * Moteur de dÃ©termination de profil par seuils (UtilisÃ© uniquement par r&K_Environnement).
  */
 function _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue) {
     Logger.log(`[ESPION][r&K] DÃ©marrage du moteur de recommandation pour le test "${typeTest}".`);
     try {
         const totalPoints = Object.values(scoresData).reduce((sum, val) => sum + (Number(val) || 0), 0);
-        if (totalPoints === 0) {
-            Logger.log("[ESPION][r&K] Le total des points est Ã  zÃ©ro. Impossible de dÃ©terminer un profil.");
-            return { profilFinal: "IndÃ©terminÃ©", Recommandation: "" };
-        }
+        if (totalPoints === 0) { return { profilFinal: "IndÃ©terminÃ©", Recommandation: "" }; }
 
         const profilMajoritaireCode = Object.keys(scoresData).reduce((a, b) => (scoresData[a] || 0) > (scoresData[b] || 0) ? a : b);
         const scoreMajoritaire = scoresData[profilMajoritaireCode] || 0;
-        const pourcentage = (scoreMajoritaire / totalPoints) * 100;
-        Logger.log(`[ESPION][r&K] Profil dominant: "${profilMajoritaireCode}" avec un score de ${scoreMajoritaire}/${totalPoints} (${pourcentage.toFixed(1)}%).`);
+        Logger.log(`[ESPION][r&K] Profil dominant: "${profilMajoritaireCode}" avec un score de ${scoreMajoritaire.toFixed(1)}%.`);
 
         const systemIds = getSystemIds();
         const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
         const nomFeuilleProfils = `Profils_${typeTest}_${langue}`;
         const sheetProfils = bdd.getSheetByName(nomFeuilleProfils);
         if (!sheetProfils) {
-          Logger.log(`[ESPION][r&K] AVERTISSEMENT: Feuille de profils introuvable: "${nomFeuilleProfils}". Aucune recommandation ne sera chargÃ©e.`);
+          Logger.log(`[ESPION][r&K] AVERTISSEMENT: Feuille de profils introuvable: "${nomFeuilleProfils}".`);
           return { profilFinal: profilMajoritaireCode, Recommandation: "" };
         }
-        Logger.log(`[ESPION][r&K] Lecture de la feuille de profils: "${nomFeuilleProfils}".`);
         
         const data = sheetProfils.getDataRange().getValues();
         const headers = data.shift().map(h => String(h || '').trim());
+        const idx = { profil: headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil'), seuil: headers.indexOf('Seuil_Score'), destinataire: headers.indexOf('Destinataire'), axe: headers.indexOf('Axe'), reco: headers.indexOf('Recommandation') };
         
-        const idx = {
-            profil: headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil'),
-            seuil: headers.indexOf('Seuil_Score'),
-            destinataire: headers.indexOf('Destinataire'),
-            axe: headers.indexOf('Axe'),
-            reco: headers.indexOf('Recommandation')
-        };
-        
-        if (idx.profil === -1 || idx.seuil === -1 || idx.destinataire === -1 || idx.axe === -1 || idx.reco === -1) {
-            Logger.log(`[ESPION][r&K] ERREUR: Colonnes manquantes dans "${nomFeuilleProfils}". Requis: Code_Profil (ou Profil), Seuil_Score, Destinataire, Axe, Recommandation`);
-            return { profilFinal: profilMajoritaireCode, Recommandation: "" };
-        }
-
         for (const row of data) {
             const dest = String(row[idx.destinataire] || '').trim();
             const axe = String(row[idx.axe] || '').trim();
             const seuilStr = String(row[idx.seuil] || '').trim();
             
-            if (dest === 'RÃ©pondant' && axe === 'DÃ©velopper potentiel' && _parseSeuilScore_rK(seuilStr, profilMajoritaireCode, pourcentage)) {
+            if (dest === 'RÃ©pondant' && axe === 'DÃ©velopper potentiel' && _parseSeuilScore_rK(seuilStr, profilMajoritaireCode, scoreMajoritaire)) {
                 const profilFinalTrouve = String(row[idx.profil] || profilMajoritaireCode);
                 const recommandationTrouvee = String(row[idx.reco] || '');
-                Logger.log(`[ESPION][r&K] SUCCÃˆS: Ligne de recommandation trouvÃ©e. Profil: "${profilFinalTrouve}". Recommandation: "${recommandationTrouvee.substring(0, 50)}..."`);
-                return {
-                    profilFinal: profilFinalTrouve,
-                    Recommandation: recommandationTrouvee
-                };
+                return { profilFinal: profilFinalTrouve, Recommandation: recommandationTrouvee };
             }
         }
-        
-        Logger.log(`[ESPION][r&K] AVERTISSEMENT: Aucune recommandation correspondante trouvÃ©e pour le profil "${profilMajoritaireCode}" avec un score de ${pourcentage.toFixed(1)}%.`);
         return { profilFinal: profilMajoritaireCode, Recommandation: "" };
-
     } catch (e) {
         Logger.log("ERREUR CRITIQUE dans _determinerProfilFinalParSeuils_rK: " + e.message);
         return { profilFinal: "Erreur de calcul", Recommandation: "" };
     }
 }
 
-/**
- * Moteur de calcul DÃ‰DIÃ‰ pour le test r&K_Environnement.
- */
-function _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur) {
-    Logger.log('[ESPION][ENV] Moteur de calcul dÃ©diÃ© pour r&K_Environnement activÃ©.');
-    const scores = { K: 0, r: 0 };
-    let countK = 0, countR = 0;
-    for (const enTete in reponsesUtilisateur) {
-        const valNum = parseFloat(String(reponsesUtilisateur[enTete]).replace(',', '.'));
-        if (isNaN(valNum)) continue;
+function _parseSeuilScore_rK(seuilStr, codeProfilMajoritaire, scorePourcentage) {
+    if (!seuilStr || !codeProfilMajoritaire) return false;
+    const seuil = String(seuilStr).trim();
+    const profilSeuilMatch = seuil.toUpperCase().split(' ')[0];
+    if (profilSeuilMatch !== codeProfilMajoritaire.toUpperCase()) return false;
+    const matchSimple = seuil.match(/(>=|<=)\s*(\d+)/);
+    if (matchSimple) {
+        const operateur = matchSimple[1]; const valeurSeuil = parseInt(matchSimple[2], 10);
+        if (operateur === '>=') return scorePourcentage >= valeurSeuil;
+        if (operateur === '<=') return scorePourcentage <= valeurSeuil;
+    }
+    const matchPlage = seuil.match(/(\d+)-(\d+)/);
+    if (matchPlage) {
+        const min = parseInt(matchPlage[1], 10); const max = parseInt(matchPlage[2], 10);
+        return scorePourcentage >= min && scorePourcentage <= max;
+    }
+    return false;
+}
 
-        const m = String(enTete).match(/^ENV(\d{3})/);
-        if (m) {
-            const itemNum = parseInt(m[1], 10);
-            const a = (itemNum - 1) % 4; // 0, 1, 2, 3
-            if (a < 2) { // K
-                scores.K += valNum;
-                countK++;
-            } else { // r
-                scores.r += valNum;
-                countR++;
+/**
+ * Moteur de calcul DÃ‰DIÃ‰ pour l
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+
+pour le rapport PDF.
+ */
+function _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur, questionsMap) {
+    Logger.log('[ESPION][ENV] Moteur de calcul r&K (v5.1 - CorrigÃ©) activÃ©.');
+    
+    // --- 1. Calcul des points bruts (logique data-driven) ---
+    let totaux_points = {};
+    for (const enTete in reponsesUtilisateur) {
+        if (String(enTete).startsWith('ENV')) {
+            const idQuestion = enTete.split(':')[0].trim();
+            const questionConfig = questionsMap[idQuestion];
+            const reponseNum = parseInt(reponsesUtilisateur[enTete], 10);
+            const scoringModel = questionConfig ? questionConfig.parametres.scoring_model : null;
+            if (!isNaN(reponseNum) && scoringModel) {
+                const echelle = scoringModel.echelle || 11;
+                const profilDirect = scoringModel.direct;
+                const profilInverse = scoringModel.inverse;
+                if (profilDirect) { totaux_points[profilDirect] = (totaux_points[profilDirect] || 0) + reponseNum; }
+                if (profilInverse) { totaux_points[profilInverse] = (totaux_points[profilInverse] || 0) + (echelle - reponseNum); }
             }
         }
     }
-    if (countK > 0) scores.K /= countK;
-    if (countR > 0) scores.r /= countR;
+    const total_K_points = totaux_points['K'] || 0;
+    const total_r_points = totaux_points['r'] || 0;
+    const grand_total_points = total_K_points + total_r_points;
+
+    // --- 2. Calcul des pourcentages globaux ---
+    let pourcentage_K = 0, pourcentage_r = 0;
+    if (grand_total_points > 0) {
+        pourcentage_K = (total_K_points / grand_total_points) * 100;
+        pourcentage_r = (total_r_points / grand_total_points) * 100;
+    }
+
+    // --- 3. Calcul dÃ©taillÃ© par thÃ¨me pour le rapport PDF ---
+    const THEMES = ["Concurrence & Pression du marchÃ©", "Clients & Demande", "Technologies & Innovation", "RÃ©glementation & Cadre juridique", "Ressources humaines & CompÃ©tences", "Financement & AccÃ¨s aux capitaux", "Fournisseurs & Logistique", "Ressources & Infrastructures matÃ©rielles", "Image & RÃ©putation sectorielle", "Partenariats & RÃ©seaux", "Territoire & Environnement gÃ©ographique", "Tendances sociÃ©tales & culturelles", "Contexte Ã©conomique global", "Risques & SÃ©curitÃ©", "OpportunitÃ©s de croissance & MarchÃ©s"];
+    const interpK = x => x >= 7 ? "Environnement plutÃ´t stable et prÃ©visible" : x <= 3 ? "Environnement plutÃ´t instable / changeant" : "StabilitÃ© modÃ©rÃ©e avec quelques variations";
+    const interpr = x => x >= 7 ? "Changements rapides / forte dynamique" : x <= 3 ? "Changements lents / faible dynamique" : "Vitesse de changement modÃ©rÃ©e";
     
-    Logger.log(`[ESPION][ENV] Scores bruts (moyennes): K=${scores.K.toFixed(2)}, r=${scores.r.toFixed(2)}`);
-    return { scoresData: scores };
+    let flat = {};
+    let sumK_themes = 0, sumr_themes = 0, countK_themes = 0, countr_themes = 0;
+
+    for (let t = 0; t < 15; t++) {
+        let k_vals = [], r_vals = [];
+        for (let i = 1; i <= 4; i++) {
+            const qNum = t * 4 + i;
+            const id = 'ENV' + String(qNum).padStart(3, '0');
+            const questionConfig = questionsMap[id];
+            
+            // --- DEBUT DE LA CORRECTION ---
+            // Recherche de la rÃ©ponse de l'utilisateur de maniÃ¨re robuste, sans dÃ©pendre de "titre_court".
+            const reponse = reponsesUtilisateur[Object.keys(reponsesUtilisateur).find(k => k.startsWith(id))];
+            // --- FIN DE LA CORRECTION ---
+            
+            if (reponse != null && !isNaN(reponse) && questionConfig) {
+                if (questionConfig.parametres.dimension === 'StabilitÃ©') k_vals.push(Number(reponse));
+                else if (questionConfig.parametres.dimension === 'Vitesse') r_vals.push(Number(reponse));
+            }
+        }
+
+        const avgK = k_vals.length > 0 ? k_vals.reduce((a, b) => a + b, 0) / k_vals.length : null;
+        const avgr = r_vals.length > 0 ? r_vals.reduce((a, b) => a + b, 0) / r_vals.length : null;
+
+        if(avgK != null) { sumK_themes += avgK; countK_themes++; }
+        if(avgr != null) { sumr_themes += avgr; countr_themes++; }
+
+        const n = t + 1;
+        flat[`Nom_Theme_${n}`] = THEMES[t];
+        flat[`Score_Stabilite_Theme_${n}`] = avgK != null ? avgK.toFixed(1) : "";
+        flat[`Interpretation_Stabilite_Theme_${n}`] = avgK != null ? interpK(avgK) : "";
+        flat[`Score_Vitesse_Theme_${n}`] = avgr != null ? avgr.toFixed(1) : "";
+        flat[`Interpretation_Vitesse_Theme_${n}`] = avgr != null ? interpr(avgr) : "";
+        flat[`Recommandations_Theme_${n}`] = ""; // Placeholder pour le futur
+    }
+
+    const scoreK_global = countK_themes > 0 ? (sumK_themes / countK_themes) : 0;
+    const scorer_global = countr_themes > 0 ? (sumr_themes / countr_themes) : 0;
+
+    flat['Score_Stabilite'] = scoreK_global.toFixed(1);
+    flat['Interpretation_Stabilite'] = interpK(scoreK_global);
+    flat['Score_Vitesse'] = scorer_global.toFixed(1);
+    flat['Interpretation_Vitesse'] = interpr(scorer_global);
+
+    Logger.log(`[ESPION][ENV] DonnÃ©es PDF gÃ©nÃ©rÃ©es. Score K global: ${scoreK_global.toFixed(1)}, Score r global: ${scorer_global.toFixed(1)}`);
+
+    return { 
+        scoresData: { K: pourcentage_K, r: pourcentage_r }, // Pour l'email
+        ...flat // Pour le PDF
+    };
 }
+
 
 function _normStr(s) {
   return String(s == null ? '' : s)
@@ -1008,114 +1029,132 @@ function _normLang(s) {
   if (!x) return '';
   if (/^fr|fran|french/.test(x)) return 'FR';
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
-  // ... (autres langues si besoin)
   return x.toUpperCase();
 }
 
+
+// ======================= DÃ‰BUT BLOC AJOUTÃ‰ =======================
 /**
- * Calcule les rÃ©sultats d'un test, y compris les scores de l'utilisateur et les scores maximums possibles.
- * @param {object} reponsesUtilisateur - Les rÃ©ponses du formulaire.
- * @param {string} langueCible - Le code de la langue (ex: 'FR').
- * @param {object} config - L'objet de configuration du test.
- * @param {string} langueOrigine - La langue originale de la rÃ©ponse.
- * @returns {object} Un objet contenant les scores, le profil final et les scores maximums possibles.
+ * Calcule les scores maximums possibles pour chaque profil d'un test.
+ * @param {string} typeTest - Le type de test (ex: 'ANCRES').
+ * @param {string} langue - Le code langue (ex: 'FR').
+ * @returns {object} Un objet associant chaque code de profil Ã  son score maximum.
  */
-function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
-  Logger.log(`[ESPION] DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}".`);
-  let resultats = { scoresData: {}, sousTotauxParMode: {} };
-  
-  const langCibN = _normLang(langueCible);
-  
-  if (config.Type_Test === 'r&K_Environnement') {
-    resultats = _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur);
-  } else {
-    const questionsMapCible = _chargerQuestions(config.Type_Test, langCibN || langueCible);
-    if (!questionsMapCible) {
-      Logger.log('[ESPION] AVERTISSEMENT: Impossible de charger les questions pour ' + (config && config.Type_Test) + '. Le calcul est interrompu.');
-      return resultats;
-    }
-    
-    // --- Calcul des scores de l'utilisateur (basÃ© sur ses rÃ©ponses) ---
-    _executerCalcul(reponsesUtilisateur, questionsMapCible, resultats, config.nbQuestions);
-  
-    // --- Calcul du score maximum thÃ©orique possible ---
-    const scoresMax = {};
-    const nbQuestionsUtiliser = config.nbQuestions || Object.keys(questionsMapCible).length;
-    let questionsPrisesEnCompte = 0;
+function _calculerScoresMaxPossibles(typeTest, langue) {
+  const questionsMap = _chargerQuestions(typeTest, langue);
+  if (!questionsMap) {
+    Logger.log(`AVERTISSEMENT: Impossible de charger les questions pour ${typeTest}_${langue} pour calculer les scores max.`);
+    return {};
+  }
 
-    for (const id in questionsMapCible) {
-      if (questionsPrisesEnCompte >= nbQuestionsUtiliser) break;
-      
-      const q = questionsMapCible[id];
-      const params = q.parametres;
-      if (!params || !params.mode) continue;
+  const maxScores = {};
 
-      const mode = String(params.mode).toUpperCase();
+  for (const id in questionsMap) {
+    const question = questionsMap[id];
+    const params = question.parametres;
+    const mode = (params.mode || '').toUpperCase();
 
-      // ==================== DÃ‰BUT DE LA CORRECTION v11.1 ====================
-      if ((mode === 'QCU_CAT' || mode === 'QRM_CAT') && params.options && params.options.length > 0) {
-          // 1. Trouver le score le plus Ã©levÃ© possible DANS CETTE QUESTION
-          const maxScoreInQuestion = Math.max(...params.options.map(opt => (typeof opt.valeur === 'number' ? opt.valeur : 0)));
-
-          if (maxScoreInQuestion > 0) {
-              // 2. Identifier tous les profils uniques qui peuvent marquer des points dans cette question
-              const profilesInQuestion = [...new Set(params.options.map(opt => opt.profil).filter(Boolean))];
-              
-              // 3. Ajouter le score maximum Ã  CHACUN de ces profils.
-              //    Car un utilisateur pourrait thÃ©oriquement choisir l'option qui donne le max.
-              profilesInQuestion.forEach(profil => {
-                  scoresMax[profil] = (scoresMax[profil] || 0) + maxScoreInQuestion;
-              });
+    if (mode === 'ECHELLE_NOTE' || mode === 'LIKERT_5') {
+      const profil = params.profil;
+      const maxValue = params.echelle_max || params.max || 0;
+      if (profil && typeof maxValue === 'number') {
+        maxScores[profil] = (maxScores[profil] || 0) + maxValue;
+      }
+    } else if (mode === 'QCU_CAT' || mode === 'QRM_CAT') {
+      if (params.options && Array.isArray(params.options)) {
+        // Pour une question, on identifie la contribution maximale Ã  chaque profil.
+        let maxContributionParProfil = {};
+        
+        params.options.forEach(opt => {
+          if (opt.profil) {
+            const valeur = (typeof opt.valeur === 'number') ? opt.valeur : 1;
+            // Pour un QCU, un profil ne peut recevoir que la plus haute valeur de cette question.
+            // Pour un QRM, un profil peut recevoir la somme des valeurs (si plusieurs options cochables pour un mÃªme profil).
+            if (mode === 'QCU_CAT') {
+               maxContributionParProfil[opt.profil] = Math.max(maxContributionParProfil[opt.profil] || 0, valeur);
+            } else { // QRM_CAT
+               maxContributionParProfil[opt.profil] = (maxContributionParProfil[opt.profil] || 0) + valeur;
+            }
           }
-      } 
-      // ===================== FIN DE LA CORRECTION v11.1 =====================
-      
-      else if (mode === 'ECHELLE_NOTE' || mode === 'LIKERT_5') {
-        const profil = params.profil || (params.options && params.options[0] ? params.options[0].profil : null);
-        const maxVal = params.echelle_max || params.max || 0;
-        if (profil && maxVal > 0) {
-          scoresMax[profil] = (scoresMax[profil] || 0) + maxVal;
+        });
+
+        // On ajoute ces contributions maximales aux totaux.
+        for (const profil in maxContributionParProfil) {
+          maxScores[profil] = (maxScores[profil] || 0) + maxContributionParProfil[profil];
         }
       }
-      
-      questionsPrisesEnCompte++;
     }
-    
-    resultats.scoresMaxPossible = scoresMax;
-    Logger.log('[ESPION] Scores maximums possibles (CORRIGÃ‰) : ' + JSON.stringify(scoresMax));
+  }
+  Logger.log(`Scores max possibles calculÃ©s pour ${typeTest}: ${JSON.stringify(maxScores)}`);
+  return maxScores;
+}
+// ======================= FIN BLOC AJOUTÃ‰ =======================
+
+
+function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
+  Logger.log(`DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}". Langue Origine: ${langueOrigine}, Langue Cible: ${langueCible}`);
+  let resultats = { scoresData: {}, sousTotauxParMode: {} };
+  
+  const langCibleNorm = _normLang(langueCible);
+  const langOrigineNorm = _normLang(langueOrigine);
+  
+  if (config.Type_Test === 'r&K_Environnement') {
+    const questionsMap = _chargerQuestions(config.Type_Test, langOrigineNorm);
+    resultats = _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur, questionsMap);
+  } else {
+    const questionsMapOrigine = _chargerQuestions(config.Type_Test, langOrigineNorm);
+    if (!questionsMapOrigine) {
+      Logger.log(`ERREUR FATALE: Impossible de charger les questions de la langue d'origine ${langOrigineNorm}.`);
+      return resultats;
+    }
+    _executerCalcul(reponsesUtilisateur, questionsMapOrigine, resultats, config.nbQuestions);
   }
   
-  Logger.log('[ESPION] Scores bruts calculÃ©s: ' + JSON.stringify(resultats.scoresData));
+  const testsPourcentage_rK = ['r&K_Resilience', 'r&K_Adaptabilite', 'r&K_Creativite'];
+  if (testsPourcentage_rK.includes(config.Type_Test)) {
+      const total_r = resultats.scoresData['r'] || 0;
+      const total_K = resultats.scoresData['K'] || 0;
+      const grand_total = total_r + total_K;
+      let pourcentage_r = 0, pourcentage_K = 0;
+      if (grand_total > 0) {
+          pourcentage_r = (total_r / grand_total) * 100;
+          pourcentage_K = (total_K / grand_total) * 100;
+      }
+      resultats.scoresData = { r: pourcentage_r, K: pourcentage_K };
+      Logger.log(`[ESPION r&K %] Conversion en pourcentage : r=${pourcentage_r.toFixed(1)}%, K=${pourcentage_K.toFixed(1)}%`);
+  }
+  
+  // ======================= DÃ‰BUT BLOC MODIFIÃ‰ =======================
+  // On attache les scores maximums possibles Ã  l'objet de rÃ©sultats.
+  if (config.Type_Test !== 'r&K_Environnement') {
+      resultats.scoresMaxPossible = _calculerScoresMaxPossibles(config.Type_Test, langOrigineNorm);
+  }
+  // ======================= FIN BLOC MODIFIÃ‰ =======================
+  
   if (Object.keys(resultats.scoresData).length > 0) {
-    const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibN || langueCible);
+    const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibleNorm);
     resultats = { ...resultats, ...profilEtReco }; 
-    
-    const profilsMap = _chargerProfils(config.Type_Test, langCibN || langueCible);
+    const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
     const infosProfilComplet = profilsMap[resultats.profilFinal];
-    if (infosProfilComplet) {
-      resultats = { ...resultats, ...infosProfilComplet };
-    }
-    
+    if (infosProfilComplet) { resultats = { ...resultats, ...infosProfilComplet }; }
     resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
   }
 
-  Logger.log("[ESPION] Calculs terminÃ©s. Objet de rÃ©sultats final (partiel): " + 
-               `profilFinal="${resultats.profilFinal}", ` +
-               `Recommandation="${(resultats.Recommandation || '').substring(0,50)}..."`);
+  Logger.log(`Calculs terminÃ©s. Profil Final: "${resultats.profilFinal}"`);
   return resultats;
 }
 
 function _executerCalcul(reponses, questionsMap, resultats, nbQuestionsLimite) {
   let questionsTraitees = 0;
   const limite = nbQuestionsLimite || Object.keys(questionsMap).length;
-
   for (const enTeteComplet in reponses) {
     if (questionsTraitees >= limite) break;
     if (!enTeteComplet.includes(':')) continue;
     
     const idQuestion = enTeteComplet.split(':')[0].trim();
     const questionConfig = questionsMap[idQuestion];
-    if (questionConfig) {
+    
+    if (questionConfig && reponses[enTeteComplet]) {
       _aiguillerCalcul(questionConfig.parametres.mode, reponses[enTeteComplet], questionConfig.parametres, resultats);
       questionsTraitees++;
     }
@@ -1129,7 +1168,6 @@ function _aiguillerCalcul(mode, reponse, parametres, resultats) {
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     case 'LIKERT_5':     _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
     default:
-      // Ancien __DBG
       break;
   }
 }
@@ -1146,20 +1184,11 @@ function _traiterQCU_CAT(reponseUtilisateur, parametres, resultats) {
 }
 
 function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
-  // === DÃ‰BUT DE LA MODIFICATION V10.5 ===
-  // On cherche le profil Ã  impacter.
-  // D'abord Ã  la racine des paramÃ¨tres (pour ECHELLE_NOTE standard)...
   let profil = parametres.profil; 
-  
-  // ...sinon, on le cherche dans la premiÃ¨re option (pour la compatibilitÃ© avec LIKERT_5)
   if (!profil && parametres.options && parametres.options[0] && parametres.options[0].profil) {
     profil = parametres.options[0].profil;
   }
-  
-  // Si on ne trouve toujours pas de profil, on arrÃªte.
   if (!profil) return;
-  // === FIN DE LA MODIFICATION V10.5 ===
-
   const valeurNumerique = parseFloat(String(reponseUtilisateur).replace(',', '.'));
   if (!isNaN(valeurNumerique)) {
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
@@ -1169,13 +1198,11 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
 function _determinerProfilFinal(scoresData, typeTest, langue) {
   if (!scoresData || Object.keys(scoresData).length === 0) return { profilFinal: "" };
   
-  if (String(typeTest || '').toLowerCase().startsWith('r&k_')) {
+  if (typeTest === 'r&K_Environnement') {
     return _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue);
   }
   
-  // ==================== DÃ‰BUT MODIFICATION V10.6 ====================
   if (String(typeTest || '').toUpperCase().startsWith('MBTI')) {
-  // ===================== FIN MODIFICATION V10.6 =====================
     let profil = "";
     profil += (scoresData.E || 0) > (scoresData.I || 0) ? 'E' : 'I';
     profil += (scoresData.S || 0) > (scoresData.N || 0) ? 'S' : 'N';
@@ -1255,10 +1282,6 @@ function _chargerQuestions(typeTest, langue) {
     return null;
   }
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
-
 // =================================================================================
 // == FICHIER : Menu.gs
 // == VERSION : 2.6  (onInstall + onOpen unique, titre harmonisÃ©)
