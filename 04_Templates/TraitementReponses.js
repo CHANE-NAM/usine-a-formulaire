@@ -7,16 +7,13 @@
  */
 
 // ====== DEBUG / ESPIONS ======
-var __DBG = true;
-// ← mets false pour couper les logs
+var __DBG = true; // ← mets false pour couper les logs
 
 function DBG() {
   if (!__DBG) return;
   const parts = [].slice.call(arguments).map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x)));
   Logger.log('[DBG] ' + parts.join(' '));
 }
-
-// ... (le reste des fonctions _spyDumpRow_, _spyFindNomEmail_, etc. reste identique)
 
 function _spyDumpRow_(sheet, rowIndex) {
   try {
@@ -153,7 +150,6 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   
   Logger.log("--- DÉBUT DÉBOGAGE FILTRE E-MAIL ---");
   Logger.log(`Paramètres de filtrage : typeTest="${typeTest}", langueCible="${langueCible}", codeNiveauEmail="${codeNiveauEmail}", profilFinal="${profilFinal}"`);
-
   const systemIds = getSystemIds();
   const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
   const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
@@ -163,7 +159,6 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   const compoRows = normalizeAndDedupeCompositionEmailsRows_(compoData, idx);
   
   Logger.log(`Analyse de ${compoRows.length} lignes de sys_Composition_Emails...`);
-  
   let briquesDeContenu = compoRows.filter((row, rowIndex) => {
     const typeLigne = (row[idx.typeTest] || '').toString().trim();
     const langLigne = (row[idx.langue] || '').toString().trim();
@@ -185,9 +180,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     
     return decision;
   });
-
   Logger.log(`--- FIN DÉBOGAGE --- Total de briques trouvées : ${briquesDeContenu.length}`);
-  
   if (briquesDeContenu.length === 0) {
     Logger.log("ERREUR ❌: Aucune brique de contenu n'a été trouvée. L'e-mail sera vide. Vérifiez les conditions de filtrage ci-dessus.");
   }
@@ -222,6 +215,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
             let scoreArrondi;
             if (testsAvecScoreEntier.some(test => typeTest.toUpperCase().includes(test))) {
                 scoreArrondi = (typeof score === 'number') ? Math.round(score) : score;
+      
             } else {
                 scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
             }
@@ -317,18 +311,127 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
 }
 // ==================== FIN DE LA MODIFICATION (VERSION DEBOGAGE) ====================
 
+/**
+ * Récupère les données initiales d'une ligne pour pré-remplir la sidebar de retraitement.
+ * Appelé depuis RetraitementUI.html.
+ * @param {number} rowIndex Le numéro de la ligne à retraiter.
+ * @returns {object} Un objet avec les informations nécessaires pour l'interface.
+ */
 function getDonneesPourRetraitement(rowIndex) {
-  // ... (contenu de la fonction identique)
+  try {
+    const config = getTestConfiguration();
+    const reponse = _creerObjetReponse(rowIndex);
+    const langueOrigine = getOriginalLanguage(reponse);
+
+    // Utilise la fonction robuste pour trouver le nom et l'e-mail
+    const id = _spyFindNomEmail_(reponse);
+
+    return {
+      nomRepondant: id.nom,
+      emailRepondant: id.email,
+      langueOrigine: langueOrigine,
+      // Pré-coche les cases en fonction de la configuration
+      repondantActif: config.Repondant_Email_Actif === 'Oui',
+      formateurActif: config.Formateur_Email_Actif === 'Oui',
+      patronActif: config.Patron_Email_Mode === 'Oui',
+      // Pré-remplit les champs e-mail depuis la configuration
+      formateurEmail: config.Formateur_Email || '',
+      patronEmail: config.Patron_Email || '',
+      emailAlias: config.Email_Alias || ''
+    };
+  } catch (e) {
+    Logger.log("ERREUR getDonneesPourRetraitement: " + e.message);
+    throw new Error("Impossible de charger les données: " + e.message);
+  }
 }
+
+/**
+ * Lance le retraitement complet depuis l'interface utilisateur (sidebar).
+ * Appelé par le bouton "Lancer le Retraitement".
+ * @param {object} options Les options sélectionnées dans la sidebar.
+ * @returns {string} Un message de succès.
+ */
 function lancerRetraitementDepuisUI(options) {
-  // ... (contenu de la fonction identique)
+  try {
+    const destinatairesSurcharge = options.destinataires || {};
+    // On force l'override pour n'envoyer qu'aux destinataires cochés
+    destinatairesSurcharge.overrideRecipients = true; 
+
+    traiterLigne(options.rowIndex, {
+      isRetraitement: true,
+      dryRun: false, // C'est un envoi réel
+      ignoreDeveloppeurEmail: true, // On n'inclut pas le dev, sauf si c'est une adresse de test
+      langue: options.langue,
+      niveau: options.niveau,
+      alias: options.alias,
+      destinataires: destinatairesSurcharge
+    });
+
+    Logger.log(`Retraitement manuel lancé pour la ligne ${options.rowIndex} avec succès.`);
+    return `Retraitement pour la ligne ${options.rowIndex} terminé avec succès !`;
+  } catch (e) {
+    Logger.log(`ERREUR lors du retraitement depuis UI pour la ligne ${options.rowIndex}: ${e.toString()}`);
+    throw new Error(`Échec du retraitement : ${e.message}`);
+  }
 }
+
+/**
+ * Simule un traitement complet (calculs + assemblage e-mail) sans aucun envoi.
+ * Les logs affichent le contenu de l'e-mail qui aurait été envoyé.
+ * @param {number} rowIndex Le numéro de la ligne.
+ * @param {object} options Options de langue, niveau et destinataires pour le test.
+ */
 function retraitementTestSansEnvoi(rowIndex, options) {
-  // ... (contenu de la fonction identique)
+  try {
+    traiterLigne(rowIndex, {
+      isRetraitement: true,
+      dryRun: true, // Active le mode simulation
+      ignoreDeveloppeurEmail: true,
+      langue: options.langue,
+      niveau: options.niveau,
+      destinataires: options.destinataires,
+      overrideRecipients: true
+    });
+  } catch(e) {
+    Logger.log(`ERREUR lors du dry-run pour la ligne ${rowIndex}: ${e.toString()}`);
+    throw new Error(e.message);
+  }
 }
+
+/**
+ * Outil de diagnostic qui vérifie la configuration de la source des réponses.
+ */
 function diagnostic_SourceReponses() {
-  // ... (contenu de la fonction identique)
+  try {
+    const cfg = getTestConfiguration();
+    Logger.log('--- DIAGNOSTIC SOURCE RÉPONSES ---');
+    const sheet = _getReponsesSheet_(cfg, {});
+    Logger.log(`✅ Succès : La feuille de réponses a été trouvée et validée.`);
+    Logger.log(`   -> Classeur: "${sheet.getParent().getName()}" (ID: ${sheet.getParent().getId()})`);
+    Logger.log(`   -> Onglet: "${sheet.getName()}"`);
+  } catch (e) {
+    Logger.log('❌ ERREUR lors du diagnostic de la source des réponses :');
+    Logger.log(e.message);
+  }
 }
+
+/**
+ * Outil de diagnostic pour la composition des e-mails (version 20.1+).
+ */
 function diagnostic_CompoEmails_v20_1() {
-  // ... (contenu de la fonction identique)
+  try {
+    const cfg = getTestConfiguration();
+    const typeTest = cfg.Type_Test;
+    const niveau = (String(cfg.ID_Gabarit_Email_Repondant||'').replace('RESULTATS_','').trim() || 'N1');
+    Logger.log(`--- DIAGNOSTIC COMPOSITION E-MAILS (type=${typeTest}, niveau=${niveau}) ---`);
+    assemblerEtEnvoyerEmailUniversel(
+      cfg,
+      { Votre_adresse_e_mail: 'test@example.com', Votre_nom_et_prenom: 'Testeur' },
+      { profilFinal: 'PROFIL_TEST', scoresData: { A:10, B:20 }, mapCodeToName: { A:'Profil A', B:'Profil B' } },
+      'FR',
+      { dryRun: true }
+    );
+  } catch(e){
+    Logger.log('ERREUR diagnostic compo: ' + e.message);
+  }
 }
