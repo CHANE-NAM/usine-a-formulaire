@@ -1,7 +1,7 @@
 /**
  * =================================================================================
  * == FICHIER : Logique_Universel.gs
- * == VERSION : 18.1 - Refactorisation : externalisation de la logique r&K Résilience.
+ * == VERSION : 18.2 - Nettoyage après ajout du moteur Créativité.
  * == RÔLE    : Aiguilleur principal et conteneur des logiques de calcul standards.
  * =================================================================================
  */
@@ -15,29 +15,24 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
 
   // --- Aiguillage vers les moteurs de calcul spécifiques et complexes ---
   if (config.Type_Test === 'r&K_Resilience') {
-    // Appel de la logique depuis le fichier Moteur_rK_Resilience.js
     return calculerResultats_rK_Resilience(reponsesUtilisateur, langueCible, config, langueOrigine);
   }
   
   if (config.Type_Test === 'r&K_Environnement') {
-    // Appel de la logique depuis le fichier Moteur_r&K_Environnement.js
     return calculerResultats_rK_Environnement(reponsesUtilisateur, langueCible, config);
+  }
+
+  if (config.Type_Test === 'r&K_Creativite') {
+    return calculerResultats_rK_Creativite(reponsesUtilisateur, langueCible, config, langueOrigine);
   }
 
   // --- Appels prospectifs pour les futurs moteurs de calcul ---
   if (config.Type_Test === 'r&K_Adaptabilite') {
     Logger.log(`Aiguillage vers Moteur_rK_Adaptabilite (à créer). Calcul standard appliqué en attendant.`);
-    // Quand le fichier Moteur_rK_Adaptabilite.js existera, il faudra décommenter la ligne ci-dessous :
     // return calculerResultats_rK_Adaptabilite(reponsesUtilisateur, langueCible, config, langueOrigine);
   }
 
-  if (config.Type_Test === 'r&K_Creativite') {
-    Logger.log(`Aiguillage vers Moteur_rK_Creativite (à créer). Calcul standard appliqué en attendant.`);
-    // Quand le fichier Moteur_rK_Creativite.js existera, il faudra décommenter la ligne ci-dessous :
-    // return calculerResultats_rK_Creativite(reponsesUtilisateur, langueCible, config, langueOrigine);
-  }
-
-  // --- Calcul standard pour les autres tests (MBTI, Couleurs, ANCRES, et r&K simples) ---
+  // --- Calcul standard pour les autres tests (MBTI, Couleurs, ANCRES, et r&K Adaptabilité) ---
   let resultats = { scoresData: {}, sousTotauxParMode: {} };
   const langCibleNorm = _normLang(langueCible);
   const langOrigineNorm = _normLang(langueOrigine);
@@ -50,9 +45,8 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   
   _executerCalcul(reponsesUtilisateur, questionsMapOrigine, resultats, config.nbQuestions);
   
-  // Pour les tests r&K simples (Adaptabilité, Créativité), on calcule un pourcentage en attendant leur moteur dédié.
-  const testsPourcentage_rK = ['r&K_Adaptabilite', 'r&K_Creativite'];
-  if (testsPourcentage_rK.includes(config.Type_Test)) {
+  // Pour le test r&K Adaptabilité, on calcule un pourcentage en attendant son moteur dédié.
+  if (config.Type_Test === 'r&K_Adaptabilite') {
     const total_r = resultats.scoresData['r'] || 0;
     const total_K = resultats.scoresData['K'] || 0;
     const grand_total = total_r + total_K;
@@ -134,23 +128,6 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
   if (!isNaN(valeurNumerique)) {
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
   }
-}
-
-
-// =================================================================================
-// SECTION - MOTEUR DE CALCUL SPÉCIFIQUE (ENVIRONNEMENT)
-// =================================================================================
-
-function _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur, questionsMap) {
-  // ... (Contenu de la fonction _calculerResultats_rK_Environnement_dedie)
-}
-
-function _determinerProfilFinalParSeuils_rK(scoresData, typeTest, langue) {
-  // ... (Contenu de la fonction _determinerProfilFinalParSeuils_rK)
-}
-
-function _parseSeuilScore_rK(seuilStr, codeProfilMajoritaire, scorePourcentage) {
-  // ... (Contenu de la fonction _parseSeuilScore_rK)
 }
 
 

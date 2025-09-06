@@ -52,7 +52,8 @@ function getInitialData() {
   }
 
   const optionsData = optionsSheet.getDataRange().getValues();
-  const headers = optionsData.shift();
+  // const headers = optionsData.shift();
+  const headers = optionsData.shift().map(h => String(h || '').trim());
   const optionsMap = {};
   headers.forEach((header, i) => {
     const options = optionsData.map(row => row[i]).filter(String);
