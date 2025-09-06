@@ -150,11 +150,19 @@ $Ids = @(
   "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests
 )
 
-$nodeArgs = @("--out", $SnapDir) + ($Ids | ForEach-Object { @("--id", $_) })
+# On passe les chemins en arguments -> pas de dépendance aux variables d’environnement
+$nodeArgs = @(
+  "--out", $SnapDir,
+  "--creds", "C:\secrets\rk_oauth\credentials.json",
+  "--token", "C:\secrets\rk_oauth\token.json"
+) + ($Ids | ForEach-Object { @("--id", $_) })
+
 Push-Location -LiteralPath $ExportDir
 try {
   node ".\index.js" @nodeArgs
-} finally {
+  if ($LASTEXITCODE -ne 0) { throw "Échec export CSV (node exit code = $LASTEXITCODE)." }
+}
+finally {
   Pop-Location
 }
 

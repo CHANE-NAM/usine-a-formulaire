@@ -23,7 +23,7 @@ __pycache__/
 ~$*
 *.gform
 # Exports & token
-export-onglets-csv/token.json
+token.json
 export-onglets-csv/**/*.csv
 export-onglets-csv/**/*.zip
 export-onglets-csv/scripts_*.txt

@@ -1,8 +1,4 @@
-// export-onglets-csv/index.js
-// Usages :
-//   node index.js --out "<snapshotDir>" --id "ID1" --id "ID2"
-//   node index.js --out "<snapshotDir>" --url "https://docs.google.com/spreadsheets/d/ID/edit" [...]
-//   node index.js --out "<snapshotDir>" --gsheet "C:\\chemin\\classeur.gsheet" [...]
+// export-onglets-csv/index.js (version patchée: support --creds/--token + env vars + erreurs claires)
 
 const fs = require('fs');
 const path = require('path');
@@ -12,9 +8,6 @@ const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets.readonly',
   'https://www.googleapis.com/auth/drive.readonly',
 ];
-
-const CREDENTIALS = path.join(__dirname, 'credentials.json');
-const TOKEN_PATH  = path.join(__dirname, 'token.json');
 
 /* ---------------------- Utils ---------------------- */
 function arrToCsv(rows) {
@@ -40,18 +33,35 @@ function ensureFileExists(p, hint) {
 /* -------------------- Arguments -------------------- */
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { out: null, gsheet: [], url: [], id: [] };
+  const opts = { out: null, gsheet: [], url: [], id: [], creds: null, token: null };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === '--out')    { opts.out = args[++i]; continue; }
+    if (a === '--out')    { opts.out   = args[++i]; continue; }
     if (a === '--gsheet') { opts.gsheet.push(args[++i]); continue; }
     if (a === '--url')    { opts.url.push(args[++i]); continue; }
     if (a === '--id')     { opts.id.push(args[++i]); continue; }
+    if (a === '--creds')  { opts.creds = args[++i]; continue; }
+    if (a === '--token')  { opts.token = args[++i]; continue; }
   }
   if (!opts.out) throw new Error('Argument requis : --out "<dossierSnapshot>"');
   if (!(opts.gsheet.length || opts.url.length || opts.id.length)) {
     throw new Error('Fournir au moins un classeur via --id "<ID>" OU --url "<lien>" OU --gsheet "<fichier.gsheet>".');
   }
+
+  // Fallback sur variables d’environnement si --creds/--token absents
+  if (!opts.creds && process.env.GOOGLE_CREDENTIALS_PATH) {
+    opts.creds = process.env.GOOGLE_CREDENTIALS_PATH;
+  }
+  if (!opts.token && process.env.GOOGLE_TOKEN_PATH) {
+    opts.token = process.env.GOOGLE_TOKEN_PATH;
+  }
+
+  // Dernier fallback: fichiers aux côtés de index.js (historique)
+  const defaultCreds = path.join(__dirname, 'credentials.json');
+  const defaultToken = path.join(__dirname, 'token.json');
+  if (!opts.creds && fs.existsSync(defaultCreds)) opts.creds = defaultCreds;
+  if (!opts.token) opts.token = defaultToken; // pourra être créé
+
   return opts;
 }
 
@@ -67,7 +77,7 @@ function spreadsheetIdFromAny(input) {
     throw new Error(`URL non reconnue : ${input}`);
   }
 
-  // 3) .gsheet local (attention : peut être "virtuel" sur Google Drive)
+  // 3) .gsheet local (attention : peut être "virtuel")
   const stat = fs.lstatSync(input);
   if (stat.isDirectory()) {
     throw new Error(`Chemin détecté comme dossier, pas .gsheet : ${input}. Utilise plutôt --url ou --id.`);
@@ -82,9 +92,9 @@ function spreadsheetIdFromAny(input) {
 }
 
 /* ------------------- Auth Google ------------------- */
-async function authorize() {
-  ensureFileExists(CREDENTIALS, 'credentials.json introuvable');
-  const credentials = JSON.parse(fs.readFileSync(CREDENTIALS, 'utf8'));
+async function authorize(credsPath, tokenPath) {
+  ensureFileExists(credsPath, 'credentials.json introuvable');
+  const credentials = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
   const { client_secret, client_id, redirect_uris } = credentials.installed || credentials.web || {};
   if (!client_id || !client_secret) {
     throw new Error('credentials.json invalide (client_id/client_secret manquants).');
@@ -93,8 +103,8 @@ async function authorize() {
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect);
 
   // Jeton déjà présent ?
-  if (fs.existsSync(TOKEN_PATH)) {
-    oAuth2Client.setCredentials(JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8')));
+  if (fs.existsSync(tokenPath)) {
+    oAuth2Client.setCredentials(JSON.parse(fs.readFileSync(tokenPath, 'utf8')));
     return oAuth2Client;
   }
 
@@ -118,12 +128,22 @@ async function authorize() {
   const code = await new Promise(res => rl.question('Code d’autorisation : ', ans => { rl.close(); res(ans.trim()); }));
   if (!code) throw new Error('Aucun code saisi. Relancez et collez le code fourni par Google.');
 
-  // Échange code ↔ token
-  const { tokens } = await oAuth2Client.getToken(code);
-  oAuth2Client.setCredentials(tokens);
-  fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2));
-  console.log('Token enregistré -> token.json');
-  return oAuth2Client;
+  try {
+    const { tokens } = await oAuth2Client.getToken(code);
+    oAuth2Client.setCredentials(tokens);
+    fs.writeFileSync(tokenPath, JSON.stringify(tokens, null, 2));
+    console.log('Token enregistré -> token.json');
+    return oAuth2Client;
+  } catch (e) {
+    // Rendre l'erreur plus parlante
+    const msg = (e && e.response && e.response.data && e.response.data.error) || e.message || String(e);
+    if (/invalid_grant/i.test(msg)) {
+      console.error('ERREUR : invalid_grant (code expiré ou déjà utilisé). Relancez et collez un code tout frais.');
+      process.exit(1);
+    }
+    console.error('ERREUR OAuth :', msg);
+    process.exit(1);
+  }
 }
 
 /* ---------------- Export d’un classeur -------------- */
@@ -161,13 +181,18 @@ async function exportSpreadsheet(auth, spreadsheetId, outDir) {
       ...opts.id.map(spreadsheetIdFromAny),
     ];
 
-    const auth = await authorize();
+    // Résolution finale des chemins creds/token
+    const credsPath = opts.creds || path.join(__dirname, 'credentials.json');
+    const tokenPath = opts.token || path.join(__dirname, 'token.json');
+
+    const auth = await authorize(credsPath, tokenPath);
     for (const id of ids) {
       await exportSpreadsheet(auth, id, outDir);
     }
     console.log(`\nCSV déposés dans : ${outDir}`);
   } catch (e) {
-    console.error('ERREUR :', e.message);
+    const msg = e?.message || String(e);
+    console.error('ERREUR :', msg);
     process.exit(1);
   }
 })();
