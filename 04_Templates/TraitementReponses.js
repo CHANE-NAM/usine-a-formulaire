@@ -1,7 +1,7 @@
 /**
  * =================================================================================
  * == FICHIER : TraitementReponses.gs
- * == VERSION : 24.0 - FINAL (avec insertion d'image dans PDF)
+ * == VERSION : 24.1 - FINAL (avec insertion d'image dans PDF)
  * =================================================================================
  */
 
@@ -176,14 +176,17 @@ function normalizeAndDedupeCompositionEmailsRows_(rows, idx) {
 }
 
 function _enrichirDonneesPourEmail_(reponse, resultats) {
-  const nomPrenom = (reponse.Votre_nom_et_prenom || reponse.Nom_et_prenom || "Participant");
-  const email = (reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || "");
-  const base = {
-    Nom_et_prenom: nomPrenom,
-    Email_du_repondant: email,
-    Date_du_jour: new Date().toLocaleDateString('fr-FR')
-  };
-  return { ...base, ...resultats };
+  const nomPrenom = (reponse.Votre_nom_et_prenom || reponse.Nom_et_prenom || "Participant");
+  const email = (reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || "");
+  const base = {
+    // MODIFICATION : On ajoute les deux clés pour être compatible avec tous les modèles.
+    Nom_et_prenom: nomPrenom,
+    Votre_nom_et_prenom: nomPrenom, 
+    
+    Email_du_repondant: email,
+    Date_du_jour: new Date().toLocaleDateString('fr-FR')
+  };
+  return { ...base, ...resultats };
 }
 
 function onFormSubmit(e) {

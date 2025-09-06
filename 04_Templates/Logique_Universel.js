@@ -1,7 +1,7 @@
 /**
  * =================================================================================
  * == FICHIER : Logique_Universel.gs
- * == VERSION : 18.0 - Refactorisation : externalisation de la logique r&K Résilience.
+ * == VERSION : 18.1 - Refactorisation : externalisation de la logique r&K Résilience.
  * == RÔLE    : Aiguilleur principal et conteneur des logiques de calcul standards.
  * =================================================================================
  */
@@ -20,9 +20,8 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   }
   
   if (config.Type_Test === 'r&K_Environnement') {
-    // Appel de la logique pour le test Environnement
-    const questionsMap = _chargerQuestions(config.Type_Test, _normLang(langueOrigine));
-    return _calculerResultats_rK_Environnement_dedie(reponsesUtilisateur, questionsMap);
+    // Appel de la logique depuis le fichier Moteur_r&K_Environnement.js
+    return calculerResultats_rK_Environnement(reponsesUtilisateur, langueCible, config);
   }
 
   // --- Appels prospectifs pour les futurs moteurs de calcul ---
