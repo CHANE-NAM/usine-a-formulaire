@@ -1,4 +1,5 @@
 /**
+ * T_PDF.gs
  * Génère un fichier PDF à partir d'un modèle Google Doc en remplaçant des variables.
  * @param {string} templateId L'ID du fichier Google Doc servant de modèle.
  * @param {Object} variables Un objet où les clés sont les noms des variables à remplacer (sans les accolades).

@@ -1,11 +1,11 @@
-﻿# Snapshot: SNAPSHOT_20250906_073533
+﻿# Snapshot: SNAPSHOT_20250907_075422
 
-- Genere le: 2025-09-06T07:36:36Z
-- CSV: 52 fichiers
+- Genere le: 2025-09-07T07:55:35Z
+- CSV: 53 fichiers
 - Projets GAS concatenes: 4
 
 ## Google Sheets
-- BDD_V2_Tests_Profils_1m2MGB (onglets: 42, lignes: 1914) - id_hint: BDD_V2_Tests_Profils_1m2MGB
+- BDD_V2_Tests_Profils_1m2MGB (onglets: 43, lignes: 1920) - id_hint: BDD_V2_Tests_Profils_1m2MGB
   - Copie_de_Questions_MBTI_EN: 75 lignes, 6 colonnes - BDD_V2_Tests_Profils_1m2MGB\Copie_de_Questions_MBTI_EN.csv
     - colonnes: ID, TypeQuestion, TitreQuestion, Options, Logique, description/libÃ©lÃ©s
   - ex_sys_PiecesJointes: 76 lignes, 6 colonnes - BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
@@ -21,13 +21,13 @@
     - colonnes: Nom du Placeholder {{...}}, Origine de la DonnÃ©e, Mode de Calcul / Logique d'Obtention
   - Profils_ANCRES_EN: 8 lignes, 11 colonnes - BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
     - colonnes: Code_Profil, Nom_Complet, Titre_Profil, Description_Profil, Detail_1, Detail_2, Detail_3, Detail_4, Detail_5, Detail_6, Detail_7
-- CONFIG_V2_Usine_Tests_1kLBqI (onglets: 8, lignes: 117) - id_hint: CONFIG_V2_Usine_Tests_1kLBqI
+- CONFIG_V2_Usine_Tests_1kLBqI (onglets: 8, lignes: 118) - id_hint: CONFIG_V2_Usine_Tests_1kLBqI
   - Formulaires: 0 lignes, 3 colonnes - CONFIG_V2_Usine_Tests_1kLBqI\Formulaires.csv
     - colonnes: Titre du Test, Lien vers le Formulaire, Date de CrÃ©ation
   - nomenclature: 60 lignes, 1 colonnes - CONFIG_V2_Usine_Tests_1kLBqI\nomenclature.csv
     - colonnes: ParamÃ¨tres GÃ©nÃ©raux
-  - Param_tres_G_n_raux: 12 lignes, 38 colonnes - CONFIG_V2_Usine_Tests_1kLBqI\Param_tres_G_n_raux.csv
-    - colonnes: ID_Gabarit_Email_Repondant, Id_Unique, Titre_Formulaire_Utilisateur, Sous-Titre_Formulaire, Nom_Fichier_Complet, Statut, Lien_Formulaire_Public, lien_form_entier, Racc Public, Type_Test, Blocs_Meta_A_Inclure, ID_Dossier_Cible
+  - Param_tres_G_n_raux: 13 lignes, 38 colonnes - CONFIG_V2_Usine_Tests_1kLBqI\Param_tres_G_n_raux.csv
+    - colonnes: ID_Gabarit_Email_Repondant, Id_Unique, Titre_Formulaire_Utilisateur, Sous-Titre_Formulaire, Nom_Fichier_Complet, Statut, Lien_Formulaire_Public, AccÃ¨s Direct Formulaire, lien_form_entier, Racc Public, Type_Test, Blocs_Meta_A_Inclure
   - R_ponses_au_formulaire_1: 6 lignes, 42 colonnes - CONFIG_V2_Usine_Tests_1kLBqI\R_ponses_au_formulaire_1.csv
     - colonnes: Horodateur, Titre du Test (pour l'utilisateur), Type de Test, Nombre de questions minimum, Nombre de questions Ã  utiliser, Envoyer un email au rÃ©pondant ?, Quand envoyer l'email ?, Quel niveau de contenu ?, Envoyer un email au patron ?, Quand envoyer l'email ?, Quel niveau de contenu ?, Envoyer un email au formateur ?
   - ref_Modes_Traitement: 12 lignes, 5 colonnes - CONFIG_V2_Usine_Tests_1kLBqI\ref_Modes_Traitement.csv
@@ -41,17 +41,17 @@
 - MOTEUR_V2_ancien_Usine_Tests_1hrcds (onglets: , lignes: 1) - id_hint: MOTEUR_V2_ancien_Usine_Tests_1hrcds
   - Feuille_1: 1 lignes, 1 colonnes - MOTEUR_V2_ancien_Usine_Tests_1hrcds\Feuille_1.csv
     - colonnes: a
-- TEMPLATE_V2_Kit_de_Traitement_1XwyTt (onglets: , lignes: 2) - id_hint: TEMPLATE_V2_Kit_de_Traitement_1XwyTt
-  - Feuille_1: 2 lignes, 1 colonnes - TEMPLATE_V2_Kit_de_Traitement_1XwyTt\Feuille_1.csv
+- TEMPLATE_V2_Kit_de_Traitement_1XwyTt (onglets: , lignes: 3) - id_hint: TEMPLATE_V2_Kit_de_Traitement_1XwyTt
+  - Feuille_1: 3 lignes, 1 colonnes - TEMPLATE_V2_Kit_de_Traitement_1XwyTt\Feuille_1.csv
     - colonnes: q
 
 ## Projets GAS (fonctions detectees)
-- scripts__MOTEUR_V2_Usine_à_Tests.txt - 702 lignes
-  - fonctions: lancerMigrationV1versV2, convertirQuestionsEnJSON, readFilesRecursively, testCreationFormulaire, normalizeAndDedupeCompositionEmails_, onOpen, orchestrateurDeploiementComplet_UI, lancerDeploiementComplet, getSystemIds, getConfigurationFromRow, _identifierLangues, _construireQuestionsFormulaire, _ajouterQuestionsDepuisFeuille, nbQuestionsAUtiliser, creerItemFormulaire, resolvedType, choices, getLangueFullName, forcerAutorisation
-- scripts__CONFIG_V2_Usine_à_Tests.txt - 588 lignes
-  - fonctions: onOpen, showConfigurationSidebar, getInitialData, getQuestionCountForTestType, processNewTestConfiguration, showEditSidebar_UI, showEditSidebar, getTestDataForEdit, updateTestData, showDuplicateUI, duplicateTestConfiguration, showPrintableSheetUI, generatePrintableSheet, getSystemIds, readFilesRecursively, convertirLiensExistantsEnCourts, addValidationMenu_, normalizeHeader_, getHeaderRow_, findSheetByVariants_
-- scripts__BDD_V2_Tests_Profils.txt - 172 lignes
-  - fonctions: onOpen, listFilesFromFolder, shouldRecurse, getFilesRecursive, readFilesRecursively
-- scripts__TEMPLATE_V2_Kit_de_Traitement.txt - 2662 lignes
-  - fonctions: readFilesRecursively, DBG, _spyDumpRow_, _spyFindNomEmail_, _nettoyerEnTete, _sheetLooksLikeResponses_, ok, _pickSheetByNameOrHeuristic_, _getReponsesSheet_, sys, tryOpenById, pick, _creerObjetReponse, config, genererPdfDepuisModele, normalizeAndDedupeCompositionEmailsRows_, _enrichirDonneesPourEmail_, nomPrenom, email, onFormSubmit
+- scripts__MOTEUR_V2_Usine_à_Tests.txt - 586 lignes
+  - fonctions: lancerMigrationV1versV2, convertirQuestionsEnJSON, testCreationFormulaire, normalizeAndDedupeCompositionEmails_, onOpen, orchestrateurDeploiementComplet_UI, lancerDeploiementComplet, getSystemIds, getConfigurationFromRow, _identifierLangues, _construireQuestionsFormulaire, _ajouterQuestionsDepuisFeuille, nbQuestionsAUtiliser, creerItemFormulaire, resolvedType, choices, getLangueFullName, forcerAutorisation
+- scripts__CONFIG_V2_Usine_à_Tests.txt - 530 lignes
+  - fonctions: onOpen, showConfigurationSidebar, getInitialData, getQuestionCountForTestType, processNewTestConfiguration, showEditSidebar_UI, showEditSidebar, getTestDataForEdit, updateTestData, showDuplicateUI, duplicateTestConfiguration, showPrintableSheetUI, generatePrintableSheet, getSystemIds, convertirLiensExistantsEnCourts, addValidationMenu_, normalizeHeader_, getHeaderRow_, findSheetByVariants_, assertHeaders_
+- scripts__BDD_V2_Tests_Profils.txt - 113 lignes
+  - fonctions: onOpen, listFilesFromFolder, shouldRecurse, getFilesRecursive
+- scripts__TEMPLATE_V2_Kit_de_Traitement.txt - 2890 lignes
+  - fonctions: calculerResultats, _executerCalcul, _aiguillerCalcul, _traiterQCU_CAT, valeur, _traiterECHELLE_NOTE, _determinerProfilFinal, _chargerProfils, _creerMapCodeVersNom, _chargerQuestions, headers, _calculerScoresMaxPossibles, mode, _normStr, _normLang, onOpen, onInstall, retraiterReponse_UI, ouvrirSidebarPourLigne, activerTraitementAutomatique
 

@@ -1,8 +1,8 @@
 ﻿{
-    "snapshot":  "SNAPSHOT_20250906_073533",
-    "generated_at":  "2025-09-06T07:36:36Z",
+    "snapshot":  "SNAPSHOT_20250907_075422",
+    "generated_at":  "2025-09-07T07:55:35Z",
     "repo_root":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm",
-    "csv_total":  52,
+    "csv_total":  53,
     "projects_total":  4,
     "sheets":  [
                    {
@@ -352,6 +352,37 @@
                                         "bytes":  4458
                                     },
                                     {
+                                        "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_r_K_Creativite2_FR.csv",
+                                        "name":  "Profils_r_K_Creativite2_FR",
+                                        "rows":  5,
+                                        "cols":  21,
+                                        "headers":  [
+                                                        "Code_Profil",
+                                                        "Seuil_Score",
+                                                        "Message_Clef",
+                                                        "Recommandation_Generale",
+                                                        "Action_1",
+                                                        "Action_2",
+                                                        "Action_3",
+                                                        "Reco_Rep_Potentiel",
+                                                        "Reco_Rep_Stress",
+                                                        "Reco_Rep_Difficulte",
+                                                        "Reco_Manager_Potentiel",
+                                                        "Reco_Manager_Stress",
+                                                        "Reco_Manager_Difficulte",
+                                                        "Reco_Entourage_Potentiel",
+                                                        "Reco_Entourage_Stress",
+                                                        "Reco_Entourage_Difficulte",
+                                                        "Reco_Axe_Echec",
+                                                        "Reco_Axe_Changement",
+                                                        "Reco_Axe_Ressources",
+                                                        "Reco_Axe_Crise",
+                                                        "Reco_Axe_Objectifs"
+                                                    ],
+                                        "sha256":  "DCF81D521AE34F1B8638E3735F62EDE969731C355173397B475228297D9DC3E0",
+                                        "bytes":  6775
+                                    },
+                                    {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Profils_r_K_Environnement_FR.csv",
                                         "name":  "Profils_r_K_Environnement_FR",
                                         "rows":  72,
@@ -605,7 +636,7 @@
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_r_K_Creativite_FR.csv",
                                         "name":  "Questions_r_K_Creativite_FR",
                                         "rows":  22,
-                                        "cols":  7,
+                                        "cols":  8,
                                         "headers":  [
                                                         "ID",
                                                         "TypeQuestion",
@@ -613,10 +644,11 @@
                                                         "Options",
                                                         "Logique",
                                                         "Description",
-                                                        "ParamÃ¨tres (JSON)"
+                                                        "ParamÃ¨tres (JSON)",
+                                                        "Axe"
                                                     ],
-                                        "sha256":  "6A03F4C121B17C36CFA10E3A43FB302146365B73B60449B7EDA6C08DE14D3672",
-                                        "bytes":  8626
+                                        "sha256":  "11399655C2BB6D27C39E4DB88813780B19ED86A890AF89617E8B582957E6B324",
+                                        "bytes":  8710
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\Questions_r_K_Environnement_FR.csv",
@@ -689,7 +721,7 @@
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\sys_Composition_Emails.csv",
                                         "name":  "sys_Composition_Emails",
-                                        "rows":  768,
+                                        "rows":  769,
                                         "cols":  7,
                                         "headers":  [
                                                         "Type_Test",
@@ -700,8 +732,8 @@
                                                         "Ordre",
                                                         "Contenu / ID_Document"
                                                     ],
-                                        "sha256":  "E1C11EFA9E05F2E3CFF5B535462D2D891AE3464FB6EDDD6C746CE9DF0638D22A",
-                                        "bytes":  77907
+                                        "sha256":  "77C8CC9A5BEFD36EA0EB9B5C5C292FC28EAF2B5BB2E42D726FF4A0D71D1B66BA",
+                                        "bytes":  77975
                                     },
                                     {
                                         "file":  "BDD_V2_Tests_Profils_1m2MGB\\sys_Formatage_Scores.csv",
@@ -748,8 +780,8 @@
                                         "bytes":  628
                                     }
                                 ],
-                       "total_rows":  1914,
-                       "tab_count":  42
+                       "total_rows":  1920,
+                       "tab_count":  43
                    },
                    {
                        "folder":  "CONFIG_V2_Usine_Tests_1kLBqI",
@@ -780,7 +812,7 @@
                                     {
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\Param_tres_G_n_raux.csv",
                                         "name":  "Param_tres_G_n_raux",
-                                        "rows":  12,
+                                        "rows":  13,
                                         "cols":  38,
                                         "headers":  [
                                                         "ID_Gabarit_Email_Repondant",
@@ -790,6 +822,7 @@
                                                         "Nom_Fichier_Complet",
                                                         "Statut",
                                                         "Lien_Formulaire_Public",
+                                                        "AccÃ¨s Direct Formulaire",
                                                         "lien_form_entier",
                                                         "Racc Public",
                                                         "Type_Test",
@@ -815,15 +848,14 @@
                                                         "Developpeur_Email",
                                                         "ID_Formulaire_Cible",
                                                         "nom formmulaire",
-                                                        "AccÃ¨s Direct Formulaire",
                                                         "ouvrir le formulaire Ã  cotÃ© puis copier le lien URL raccourci",
                                                         "ID_Sheet_Cible",
                                                         "Developpeur_Contenu",
                                                         "JSON_Questions",
                                                         "Moteur_Calcul"
                                                     ],
-                                        "sha256":  "24BC353866890688FFFD04C85493030CD960DD5DCCC556DFF41DE0CF298BD840",
-                                        "bytes":  7345
+                                        "sha256":  "A4F7BD287BC42D2DE8740B49B00B7EA02C2A14F88C99C7D79F76A781DF6853ED",
+                                        "bytes":  8275
                                     },
                                     {
                                         "file":  "CONFIG_V2_Usine_Tests_1kLBqI\\R_ponses_au_formulaire_1.csv",
@@ -943,7 +975,7 @@
                                         "bytes":  592
                                     }
                                 ],
-                       "total_rows":  117,
+                       "total_rows":  118,
                        "tab_count":  8
                    },
                    {
@@ -967,25 +999,24 @@
                        "tabs":  {
                                     "file":  "TEMPLATE_V2_Kit_de_Traitement_1XwyTt\\Feuille_1.csv",
                                     "name":  "Feuille_1",
-                                    "rows":  2,
+                                    "rows":  3,
                                     "cols":  1,
                                     "headers":  "q",
-                                    "sha256":  "A55FC3DD919719DC9A8C5B1C3B63F0969D9424A5AAA51B77814BE81C150FD832",
-                                    "bytes":  58
+                                    "sha256":  "310ACF78F981C070B52A4BD95BD8262B230B1A30CF9076AFCE63BC4B9A536C66",
+                                    "bytes":  59
                                 },
-                       "total_rows":  2,
+                       "total_rows":  3,
                        "tab_count":  null
                    }
                ],
     "gas_projects":  [
                          {
                              "file":  "scripts__MOTEUR_V2_Usine_à_Tests.txt",
-                             "lines":  702,
-                             "sha256":  "9BDC9FB74659DD952666F6312DB4C16AEC75F3FBF80F1EACC89476112A149A52",
+                             "lines":  586,
+                             "sha256":  "8D2972743F52E587F1337C6218A8262BE5D901A843698E07F5DCEC1F074D7F1E",
                              "functions":  [
                                                "lancerMigrationV1versV2",
                                                "convertirQuestionsEnJSON",
-                                               "readFilesRecursively",
                                                "testCreationFormulaire",
                                                "normalizeAndDedupeCompositionEmails_",
                                                "onOpen",
@@ -1006,8 +1037,8 @@
                          },
                          {
                              "file":  "scripts__CONFIG_V2_Usine_à_Tests.txt",
-                             "lines":  588,
-                             "sha256":  "262CD9E93F6617A6A2F371E263C9260A3130C1D1A060DA82C8A83B160FCF62C0",
+                             "lines":  530,
+                             "sha256":  "760E776C0E94B8E4F471CD444FC1CC790CCACFECE5E0FA3AA16B10E48ED61CF2",
                              "functions":  [
                                                "onOpen",
                                                "showConfigurationSidebar",
@@ -1023,7 +1054,6 @@
                                                "showPrintableSheetUI",
                                                "generatePrintableSheet",
                                                "getSystemIds",
-                                               "readFilesRecursively",
                                                "convertirLiensExistantsEnCourts",
                                                "addValidationMenu_",
                                                "normalizeHeader_",
@@ -1037,22 +1067,49 @@
                          },
                          {
                              "file":  "scripts__BDD_V2_Tests_Profils.txt",
-                             "lines":  172,
-                             "sha256":  "B9D2E330766A7D34E1699A6AC7E8A932267659079F73F7D32E8D93CCDF4C7612",
+                             "lines":  113,
+                             "sha256":  "D82538B8F5BF0748AF00CB785EF338CCD3B58508F7C79610EBD27F235C0E53EF",
                              "functions":  [
                                                "onOpen",
                                                "listFilesFromFolder",
                                                "shouldRecurse",
-                                               "getFilesRecursive",
-                                               "readFilesRecursively"
+                                               "getFilesRecursive"
                                            ]
                          },
                          {
                              "file":  "scripts__TEMPLATE_V2_Kit_de_Traitement.txt",
-                             "lines":  2662,
-                             "sha256":  "FBB1779691D5224BBC5F1E2C7106ED2C7713158106A65F50287E1971CCF3DF39",
+                             "lines":  2890,
+                             "sha256":  "2D6AEB510AF2C2C113901BA8C0600DCFC86FEA5CBD910F529D3DDF27B7AC5D15",
                              "functions":  [
-                                               "readFilesRecursively",
+                                               "calculerResultats",
+                                               "_executerCalcul",
+                                               "_aiguillerCalcul",
+                                               "_traiterQCU_CAT",
+                                               "valeur",
+                                               "_traiterECHELLE_NOTE",
+                                               "_determinerProfilFinal",
+                                               "_chargerProfils",
+                                               "_creerMapCodeVersNom",
+                                               "_chargerQuestions",
+                                               "headers",
+                                               "_calculerScoresMaxPossibles",
+                                               "mode",
+                                               "_normStr",
+                                               "_normLang",
+                                               "onOpen",
+                                               "onInstall",
+                                               "retraiterReponse_UI",
+                                               "ouvrirSidebarPourLigne",
+                                               "activerTraitementAutomatique",
+                                               "_getRowFromSelectionOrAsk_",
+                                               "ui_DryRunDerniereLigne",
+                                               "langue",
+                                               "niveau",
+                                               "ui_DryRunLigneSelection",
+                                               "cfg",
+                                               "ui_EnvoiReelLigneSelection",
+                                               "ui_ConfigResponsesSheet",
+                                               "val",
                                                "DBG",
                                                "_spyDumpRow_",
                                                "_spyFindNomEmail_",
@@ -1069,39 +1126,11 @@
                                                "genererPdfDepuisModele",
                                                "normalizeAndDedupeCompositionEmailsRows_",
                                                "_enrichirDonneesPourEmail_",
-                                               "nomPrenom",
-                                               "email",
                                                "onFormSubmit",
                                                "_envoyerEmailDeConfirmation",
                                                "traiterLigne",
                                                "assemblerEtEnvoyerEmailUniversel",
-                                               "typeTest",
-                                               "codeNiveauEmail",
-                                               "profilFinal",
-                                               "typeLigne",
-                                               "langLigne",
-                                               "levelValue",
-                                               "profilLigne",
-                                               "typeMatch",
-                                               "langMatch",
-                                               "profileMatch",
-                                               "elementType",
-                                               "scoreArrondi",
-                                               "ligneScore",
-                                               "nomRapport",
-                                               "getDonneesPourRetraitement",
-                                               "lancerRetraitementDepuisUI",
-                                               "retraitementTestSansEnvoi",
-                                               "diagnostic_SourceReponses",
-                                               "diagnostic_CompoEmails_v20_1",
-                                               "niveau",
-                                               "getTestConfiguration",
-                                               "_tryReadKeyValueOrHorizontalConfig",
-                                               "getSystemIds",
-                                               "getOriginalLanguage",
-                                               "getGabaritEmail",
-                                               "formatScoresDetails",
-                                               "scoresText"
+                                               "typeTest"
                                            ]
                          }
                      ]

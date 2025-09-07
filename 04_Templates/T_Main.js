@@ -1,5 +1,6 @@
 /**
- * @fileoverview Orchestrateur principal pour le traitement des réponses.
+ *T_Main.gs
+  *  @fileoverview Orchestrateur principal pour le traitement des réponses.
  * Contient les points d'entrée (onFormSubmit), la logique centrale (traiterLigne)
  * et les fonctions liées à l'interface utilisateur (menus de retraitement).
  * @version 1.0

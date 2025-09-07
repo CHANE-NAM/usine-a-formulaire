@@ -9,7 +9,12 @@ $ErrorActionPreference = "Stop"
 $EnableSpy = $true
 if ($EnableSpy) {
   try {
-    $thisPath = $MyInvocation.MyCommand.Path
+    # $PSScriptRoot peut être vide si lancé "à la main" => on calcule une base sûre
+    $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
+                  elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
+                  else { (Get-Location).Path }
+
+    $thisPath = Join-Path $ScriptRoot (Split-Path -Leaf $MyInvocation.MyCommand.Path)
     Write-Host ("[SPY] Analyse du fichier: {0}" -f $thisPath)
     $balCurly = 0; $balParen = 0; $lineNum = 0
     Get-Content -LiteralPath $thisPath | ForEach-Object {
@@ -31,11 +36,28 @@ if ($EnableSpy) {
 }
 
 # -----------------------------
-# 1) Import des helpers (manifest/brief/diff) si présents
+# 1) Import des helpers (manifest/brief/diff) si présents — robustifié
 # -----------------------------
-$HelpersPath = Join-Path $PSScriptRoot 'snapshot_helpers.ps1'
+# Normalement, ce script vit dans Tools\ ; le helper aussi.
+# Mais si on lance ce script "à la main", $PSScriptRoot peut être vide.
+$ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
+              elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
+              else { (Get-Location).Path }
+
+# On tente plusieurs emplacements probables pour snapshot_helpers.ps1
+$HelpersCandidates = @(
+  (Join-Path $ScriptRoot 'snapshot_helpers.ps1'),                 # Tools\snapshot_helpers.ps1 si lancé depuis Tools\
+  (Join-Path $ScriptRoot 'Tools\snapshot_helpers.ps1'),           # si lancé depuis la racine du repo
+  (Join-Path ((Resolve-Path (Join-Path $ScriptRoot '..')).Path) 'Tools\snapshot_helpers.ps1') # secours
+) | Select-Object -Unique
+
+$HelpersPath = $null
+foreach ($cand in $HelpersCandidates) {
+  if (Test-Path -LiteralPath $cand) { $HelpersPath = $cand; break }
+}
+
 $HelpersLoaded = $false
-if (Test-Path -LiteralPath $HelpersPath) {
+if ($HelpersPath) {
   try {
     . $HelpersPath
     $HelpersLoaded = $true
@@ -50,9 +72,10 @@ if (Test-Path -LiteralPath $HelpersPath) {
 # -----------------------------
 # 2) Dossiers
 # -----------------------------
-$Repo      = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+# $ScriptRoot pointe vers Tools\ ; la racine repo est ..\ depuis Tools\
+$Repo      = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
 $ExportDir = Join-Path $Repo "export-onglets-csv"
-$LogsDir   = Join-Path $PSScriptRoot "logs"
+$LogsDir   = Join-Path $ScriptRoot "logs"
 New-Item -ItemType Directory -Force -Path $LogsDir,$ExportDir | Out-Null
 
 # -----------------------------
@@ -72,7 +95,11 @@ Write-Host ("Snapshot : {0}" -f $SnapDir)
 # -----------------------------
 Write-Host ""
 Write-Host "[1/4] CLASP pull (via backup_gas.ps1) ..."
-& (Join-Path $PSScriptRoot "backup_gas.ps1")
+try {
+  & (Join-Path $ScriptRoot "backup_gas.ps1")
+} catch {
+  Write-Warning ("[CLASP] Échec backup_gas.ps1 : {0}" -f $_.Exception.Message)
+}
 
 # -----------------------------
 # 5) Concat des scripts
@@ -91,7 +118,7 @@ if (Test-Path -LiteralPath $bdd1) {
   $bddDir = $null
 }
 
-# Liste des projets : paires [0]=name ; [1]=dir (évite @{...})
+# Liste des projets : paires [0]=name ; [1]=dir
 $Projets = @()
 $Projets += ,@("[MOTEUR]V2 Usine à Tests",        (Join-Path $Repo "01_Moteur"))
 $Projets += ,@("[CONFIG]V2 Usine à Tests",        (Join-Path $Repo "02_configuration"))
@@ -157,16 +184,21 @@ $nodeArgs = @(
   "--token", "C:\secrets\rk_oauth\token.json"
 ) + ($Ids | ForEach-Object { @("--id", $_) })
 
-Push-Location -LiteralPath $ExportDir
-try {
-  node ".\index.js" @nodeArgs
-  if ($LASTEXITCODE -ne 0) { throw "Échec export CSV (node exit code = $LASTEXITCODE)." }
-}
-finally {
-  Pop-Location
+$IndexJs = Join-Path $ExportDir 'index.js'
+if (-not (Test-Path -LiteralPath $IndexJs)) {
+  Write-Warning "[CSV] export-onglets-csv/index.js introuvable — étape CSV sautée."
+} else {
+  Push-Location -LiteralPath $ExportDir
+  try {
+    node ".\index.js" @nodeArgs
+    if ($LASTEXITCODE -ne 0) { throw "Échec export CSV (node exit code = $LASTEXITCODE)." }
+  } catch {
+    Write-Warning ("[CSV] Échec export CSV : {0}" -f $_.Exception.Message)
+  } finally {
+    Pop-Location
+  }
 }
 
-# -----------------------------
 # -----------------------------
 # 7) Manifest / Brief / Diff (si helpers chargés)
 # -----------------------------
@@ -175,23 +207,22 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
     $manifest = Write-Manifest -SnapshotDir $SnapDir -RepoRoot $Repo
     $briefMd  = Write-BriefMd  -SnapshotDir $SnapDir -Manifest $manifest
 
-    # cherche le snapshot précédent pour diff
+    # cherche le snapshot précédent *qui possède un manifest.json*
     $prev = Get-ChildItem -LiteralPath $ExportDir -Directory |
-            Where-Object { $_.FullName -ne $SnapDir } |
+            Where-Object { $_.FullName -ne $SnapDir -and (Test-Path (Join-Path $_.FullName 'manifest.json')) } |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
     if ($prev) {
       $prevManifest = Join-Path $prev.FullName 'manifest.json'
-      if (Test-Path -LiteralPath $prevManifest) {
-        $diffArgs = @{
-          PrevManifestPath = $prevManifest
-          CurrManifestPath = (Join-Path $SnapDir 'manifest.json')
-          OutPath          = (Join-Path $SnapDir 'diff.md')
-        }
-        Write-DiffMd @diffArgs | Out-Null
-      } else {
-        Write-Host "[DIFF] Aucun manifest précédent trouvé."
+      $diffArgs = @{
+        PrevManifestPath = $prevManifest
+        CurrManifestPath = (Join-Path $SnapDir 'manifest.json')
+        OutPath          = (Join-Path $SnapDir 'diff.md')
       }
+      Write-DiffMd @diffArgs | Out-Null
+      Write-Host ("[DIFF] {0}" -f $diffArgs.OutPath)
+    } else {
+      Write-Host "[DIFF] Aucun manifest précédent existant — génération de diff sautée."
     }
   } catch {
     Write-Warning ("[META] Échec génération manifest/brief/diff : {0}" -f $_.Exception.Message)
@@ -215,7 +246,7 @@ Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 # -----------------------------
 # 9) RÉTENTION DES SNAPSHOTS (garder les N derniers)
 # -----------------------------
-# Ajuste la valeur ci-dessous selon ton besoin (ex. 5 selon ta checklist "Rétention auto=5")
+# Ajuste la valeur ci-dessous selon ton besoin (ex. 5 ou 8…)
 $RetentionCount = 8
 
 try {

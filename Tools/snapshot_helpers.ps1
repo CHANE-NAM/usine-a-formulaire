@@ -1,258 +1,335 @@
-﻿# Tools/snapshot_helpers.ps1
-# PowerShell 5.1 compatible - ASCII only (no backticks in strings)
+﻿# Tools\snapshot_helpers.ps1
+# Helpers pour manifest/brief/diff — version "safe"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Set-StrictMode -Version Latest
 
-function Get-RelativePath {
-  param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$Path)
-  $rootFull = (Resolve-Path -LiteralPath $Root).Path.TrimEnd('\','/')
-  $pathFull = (Resolve-Path -LiteralPath $Path).Path
-  if ($pathFull.StartsWith($rootFull,[System.StringComparison]::OrdinalIgnoreCase)) {
-    return $pathFull.Substring($rootFull.Length).TrimStart('\','/')
-  }
-  return $pathFull
+function _Utf8NoBom([string]$Path, [string]$Content) {
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
 }
 
-function Split-CsvHeader {
-  param([string]$Line)
-  if ($null -eq $Line) { return @() }
-  $fields = New-Object System.Collections.Generic.List[string]
-  $cur = New-Object System.Text.StringBuilder
-  $inQuotes = $false
-  for ($i=0; $i -lt $Line.Length; $i++) {
-    $ch = $Line[$i]
-    if ($ch -eq '"') {
-      if ($inQuotes -and ($i+1 -lt $Line.Length) -and $Line[$i+1] -eq '"') {
-        [void]$cur.Append('"'); $i++
-      } else {
-        $inQuotes = -not $inQuotes
-      }
-    } elseif ($ch -eq ',' -and -not $inQuotes) {
-      $fields.Add($cur.ToString().Trim()); $cur.Clear() | Out-Null
-    } else {
-      [void]$cur.Append($ch)
+function _TryGitInfo([string]$RepoRoot) {
+  $info = [ordered]@{ present = $false; branch = $null; commit = $null; describe = $null }
+  try {
+    $git = Get-Command git -ErrorAction Stop | Select-Object -First 1
+    if ($git) {
+      Push-Location $RepoRoot
+      try {
+        $branch  = (git rev-parse --abbrev-ref HEAD 2>$null)
+        $commit  = (git rev-parse --short=8 HEAD 2>$null)
+        $describe= (git describe --always --dirty 2>$null)
+        if ($commit) {
+          $info.present = $true
+          $info.branch  = $branch
+          $info.commit  = $commit
+          $info.describe= $describe
+        }
+      } finally { Pop-Location }
+    }
+  } catch { }
+  return $info
+}
+
+function _RelPath([string]$Base, [string]$Path) {
+  try {
+    $b = (Resolve-Path -LiteralPath $Base).Path
+    $p = (Resolve-Path -LiteralPath $Path).Path
+    $uriB = New-Object System.Uri("$b\")
+    $uriP = New-Object System.Uri($p)
+    return [System.Uri]::UnescapeDataString($uriB.MakeRelativeUri($uriP).ToString()) -replace '/', '\'
+  } catch { return $Path }
+}
+
+function _HashSha1([string]$Path) {
+  try {
+    # Get-FileHash est dispo sur PowerShell 5+, SHA1 reste suffisant pour “diff”
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA1 -ErrorAction Stop).Hash.ToLowerInvariant()
+  } catch { return $null }
+}
+
+function _ListSnapshotFiles([string]$SnapshotDir, [string]$RepoRoot) {
+  $items = @()
+  Get-ChildItem -LiteralPath $SnapshotDir -Recurse -File -Force | ForEach-Object {
+    $rel = _RelPath $SnapshotDir $_.FullName
+    $items += [ordered]@{
+      relPath        = $rel
+      size           = $_.Length
+      lastWriteTime  = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+      sha1           = _HashSha1 $_.FullName
+      kind           = (
+        if ($_.Name -like "scripts_*.txt") { "concat" }
+        elseif ($_.Extension -eq ".csv")   { "csv" }
+        elseif ($_.Extension -eq ".zip")   { "zip" }
+        elseif ($_.Extension -eq ".json")  { "json" }
+        elseif ($_.Extension -eq ".md")    { "markdown" }
+        else { "other" }
+      )
     }
   }
-  $fields.Add($cur.ToString().Trim())
-  return $fields | ForEach-Object {
-    if ($_ -match '^".*"$') { $_.Substring(1, $_.Length-2).Replace('""','"') } else { $_ }
-  }
-}
-
-function Get-CsvInfo {
-  param([Parameter(Mandatory)][string]$File,[Parameter(Mandatory)][string]$SnapshotDir)
-  $rel = Get-RelativePath -Root $SnapshotDir -Path $File
-  $bn  = [System.IO.Path]::GetFileNameWithoutExtension($File)
-
-  $header = $null
-  try { $header = Get-Content -LiteralPath $File -TotalCount 1 -ErrorAction Stop } catch { $header = $null }
-  $cols = Split-CsvHeader -Line $header
-  $lines = (Get-Content -LiteralPath $File -ErrorAction SilentlyContinue | Measure-Object -Line).Lines
-  if ($lines -gt 0) { $lines-- } else { $lines = 0 }
-  $hash = (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash
-
-  [pscustomobject]@{
-    file     = $rel
-    name     = $bn
-    rows     = $lines
-    cols     = $cols.Count
-    headers  = $cols
-    sha256   = $hash
-    bytes    = (Get-Item -LiteralPath $File).Length
-  }
-}
-
-function Extract-FunctionsFromConcat {
-  param([Parameter(Mandatory)][string]$File)
-  $txt = Get-Content -LiteralPath $File -Raw -ErrorAction SilentlyContinue
-  if ($null -eq $txt) { return @() }
-  $names = New-Object System.Collections.Generic.List[string]
-  $rx = @(
-    '^[\t ]*(?:export\s+)?function\s+([A-Za-z_]\w*)\s*\(',
-    '^[\t ]*(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*\(',
-    '^[\t ]*class\s+([A-Za-z_]\w*)\b',
-    '^[\t ]*(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*async\s*\(',
-    '^[\t ]*([A-Za-z_]\w*)\s*:\s*function\s*\('
-  ) -join '|'
-  $matches = [regex]::Matches($txt, $rx, 'Multiline,IgnoreCase')
-  foreach ($m in $matches) {
-    foreach ($g in $m.Groups) {
-      if ($g.Index -gt 0 -and $g.Value -and $g.Value -ne $m.Value) {
-        if (-not $names.Contains($g.Value)) { [void]$names.Add($g.Value) }
-      }
-    }
-  }
-  return $names | Select-Object -Unique
+  return ,$items
 }
 
 function Write-Manifest {
+  <#
+    .SYNOPSIS
+      Génère manifest.json dans un dossier snapshot.
+    .PARAMETER SnapshotDir
+      Dossier du snapshot (SNAPSHOT_YYYYMMDD_HHMMSS).
+    .PARAMETER RepoRoot
+      Racine du repo (utilisée pour infos git + contexte).
+    .OUTPUTS
+      Chemin du manifest.json écrit.
+  #>
   param(
-    [Parameter(Mandatory)][string]$SnapshotDir,
-    [string]$RepoRoot = $null
+    [Parameter(Mandatory=$true)] [string]$SnapshotDir,
+    [Parameter(Mandatory=$true)] [string]$RepoRoot
   )
-  $snapName = Split-Path -Path $SnapshotDir -Leaf
-  $nowIso = (Get-Date).ToString('s') + 'Z'
+  if (-not (Test-Path -LiteralPath $SnapshotDir)) { throw "SnapshotDir introuvable: $SnapshotDir" }
+  if (-not (Test-Path -LiteralPath $RepoRoot))    { throw "RepoRoot introuvable: $RepoRoot" }
 
-  $csvFiles = Get-ChildItem -LiteralPath $SnapshotDir -Recurse -File -Filter *.csv -ErrorAction SilentlyContinue
-  $csvInfos = @()
-  foreach ($f in $csvFiles) { $csvInfos += Get-CsvInfo -File $f.FullName -SnapshotDir $SnapshotDir }
+  $createdAt = Get-Date
+  $name      = Split-Path -Leaf $SnapshotDir
 
-  $bySheet = @{}
-  foreach ($c in $csvInfos) {
-    $firstSeg = ($c.file -split '[\\/]')[0]
-    if (-not $firstSeg) { $firstSeg = '.' }
-    if (-not $bySheet.ContainsKey($firstSeg)) { $bySheet[$firstSeg] = New-Object System.Collections.Generic.List[object] }
-    $bySheet[$firstSeg].Add($c)
-  }
+  $gitInfo = _TryGitInfo $RepoRoot
+  $files   = _ListSnapshotFiles $SnapshotDir $RepoRoot
 
-  $sheets = @()
-  foreach ($k in $bySheet.Keys | Sort-Object) {
-    $idHint = $null
-    if ($k -match '([A-Za-z0-9_-]{6,})$') { $idHint = $Matches[1] }
-    $tabs = $bySheet[$k] | Sort-Object file
-    $totalRows = ($tabs | Measure-Object rows -Sum).Sum
-    $sheets += [pscustomobject]@{
-      folder     = $k
-      id_hint    = $idHint
-      tabs       = $tabs
-      total_rows = $totalRows
-      tab_count  = $tabs.Count
+  # Détection de sous-dossiers CSV issus de l'export (optionnel)
+  $csvRoots = Get-ChildItem -LiteralPath $SnapshotDir -Directory -ErrorAction SilentlyContinue |
+              Where-Object { Test-Path (Join-Path $_.FullName '*.csv') } |
+              ForEach-Object { $_.Name }
+
+  $manifest = [ordered]@{
+    schemaVersion = 1
+    snapshot      = [ordered]@{
+      name       = $name
+      dir        = $SnapshotDir
+      createdAt  = $createdAt.ToString("yyyy-MM-dd HH:mm:ss")
+    }
+    repo          = [ordered]@{
+      root    = $RepoRoot
+      git     = $gitInfo
+    }
+    content       = [ordered]@{
+      csvRoots  = $csvRoots
+      files     = $files
+      counters  = [ordered]@{
+        totalFiles = $files.Count
+        totalSize  = ($files | Measure-Object -Property size -Sum).Sum
+        nbCsv      = ($files | ? { $_.kind -eq 'csv' }).Count
+        nbConcat   = ($files | ? { $_.kind -eq 'concat' }).Count
+        nbZip      = ($files | ? { $_.kind -eq 'zip' }).Count
+      }
     }
   }
 
-  $concatFiles = Get-ChildItem -LiteralPath $SnapshotDir -File -Filter 'scripts_*.txt' -ErrorAction SilentlyContinue
-  $projects = @()
-  foreach ($cf in $concatFiles) {
-    $rel = Get-RelativePath -Root $SnapshotDir -Path $cf.FullName
-    $lines = (Get-Content -LiteralPath $cf.FullName | Measure-Object -Line).Lines
-    $hash  = (Get-FileHash -LiteralPath $cf.FullName -Algorithm SHA256).Hash
-    $funcs = (Extract-FunctionsFromConcat -File $cf.FullName) | Select-Object -First 50
-    $projects += [pscustomobject]@{
-      file      = $rel
-      lines     = $lines
-      sha256    = $hash
-      functions = $funcs
-    }
-  }
-
-  $manifest = [pscustomobject]@{
-    snapshot       = $snapName
-    generated_at   = $nowIso
-    repo_root      = $RepoRoot
-    csv_total      = $csvInfos.Count
-    projects_total = $projects.Count
-    sheets         = $sheets
-    gas_projects   = $projects
-  }
-
-  $outPath = Join-Path $SnapshotDir 'manifest.json'
-  $json = $manifest | ConvertTo-Json -Depth 20
-  $json | Set-Content -LiteralPath $outPath -Encoding UTF8
-  Write-Host ("[MANIFEST] {0}" -f $outPath)
-  return $manifest
-}
-
-function Write-BriefMd {
-  param(
-    [Parameter(Mandatory)][string]$SnapshotDir,
-    [Parameter(Mandatory)][object]$Manifest
-  )
-  $sb = New-Object System.Text.StringBuilder
-  [void]$sb.AppendLine(('# Snapshot: {0}' -f $Manifest.snapshot))
-  [void]$sb.AppendLine('')
-  [void]$sb.AppendLine(('- Genere le: {0}' -f $Manifest.generated_at))
-  [void]$sb.AppendLine(('- CSV: {0} fichiers' -f $Manifest.csv_total))
-  [void]$sb.AppendLine(('- Projets GAS concatenes: {0}' -f $Manifest.projects_total))
-  [void]$sb.AppendLine('')
-  [void]$sb.AppendLine('## Google Sheets')
-
-  foreach ($s in $Manifest.sheets) {
-    $extra = if ($s.id_hint) { (' - id_hint: {0}' -f $s.id_hint) } else { '' }
-    [void]$sb.AppendLine(('- {0} (onglets: {1}, lignes: {2}){3}' -f $s.folder, $s.tab_count, $s.total_rows, $extra))
-    foreach ($t in $s.tabs | Select-Object -First 8) {
-      $heads = ($t.headers | Select-Object -First 12) -join ', '
-      [void]$sb.AppendLine(('  - {0}: {1} lignes, {2} colonnes - {3}' -f $t.name, $t.rows, $t.cols, $t.file))
-      if ($heads) { [void]$sb.AppendLine(('    - colonnes: {0}' -f $heads)) }
-    }
-  }
-
-  [void]$sb.AppendLine('')
-  [void]$sb.AppendLine('## Projets GAS (fonctions detectees)')
-  foreach ($p in $Manifest.gas_projects) {
-    [void]$sb.AppendLine(('- {0} - {1} lignes' -f $p.file, $p.lines))
-    $funcs = ($p.functions | Select-Object -First 20) -join ', '
-    if ($funcs) { [void]$sb.AppendLine(('  - fonctions: {0}' -f $funcs)) }
-  }
-
-  $out = Join-Path $SnapshotDir 'brief.md'
-  $sb.ToString() | Set-Content -LiteralPath $out -Encoding UTF8
-  Write-Host ("[BRIEF] {0}" -f $out)
+  $json = $manifest | ConvertTo-Json -Depth 8
+  $out  = Join-Path $SnapshotDir 'manifest.json'
+  _Utf8NoBom $out $json
+  Write-Host "[MANIFEST] $out"
   return $out
 }
 
-function Write-DiffMd {
+function _FormatSize([long]$bytes) {
+  if ($bytes -ge 1GB) { "{0:N2} GB" -f ($bytes/1GB) }
+  elseif ($bytes -ge 1MB) { "{0:N2} MB" -f ($bytes/1MB) }
+  elseif ($bytes -ge 1KB) { "{0:N2} KB" -f ($bytes/1KB) }
+  else { "$bytes B" }
+}
+
+function Write-BriefMd {
+  <#
+    .SYNOPSIS
+      Génère un brief.md lisible à partir du manifest.
+    .PARAMETER SnapshotDir
+      Dossier snapshot.
+    .PARAMETER Manifest
+      Objet manifest (déjà ConvertFrom-Json) OU chemin vers manifest.json.
+  #>
   param(
-    [Parameter(Mandatory)][string]$PrevManifestPath,
-    [Parameter(Mandatory)][string]$CurrManifestPath,
-    [Parameter(Mandatory)][string]$OutPath
+    [Parameter(Mandatory=$true)] [string]$SnapshotDir,
+    [Parameter(Mandatory=$true)] $Manifest
   )
+
+  if (-not (Test-Path -LiteralPath $SnapshotDir)) { throw "SnapshotDir introuvable: $SnapshotDir" }
+
+  $man = $Manifest
+  if ($Manifest -is [string]) {
+    if (-not (Test-Path -LiteralPath $Manifest)) { throw "Manifest introuvable: $Manifest" }
+    $man = Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json
+  }
+
+  # Lecture sûre des champs (manifest “souple”)
+  $snapName   = $man.snapshot.name
+  $snapDir    = $man.snapshot.dir
+  $createdAt  = $man.snapshot.createdAt
+  $repoRoot   = $man.repo.root
+  $gitInfo    = $man.repo.git
+  $files      = $man.content.files
+  $counters   = $man.content.counters
+
+  $totalSize  = if ($counters.totalSize) { [long]$counters.totalSize } else { ($files | Measure-Object -Property size -Sum).Sum }
+  $nbFiles    = if ($counters.totalFiles) { [int]$counters.totalFiles } else { ($files).Count }
+
+  $top10 = $files | Sort-Object size -Descending | Select-Object -First 10
+
+  $md = @()
+  $md += "# Snapshot: $snapName"
+  $md += ""
+  $md += "- **Créé le :** $createdAt"
+  $md += "- **Dossier :** `$snapDir`"
+  $md += "- **Repo root :** `$repoRoot`"
+  if ($gitInfo.present -eq $true) {
+    $md += "- **Git :** branch=`$($gitInfo.branch)`, commit=`$($gitInfo.commit)`, describe=`$($gitInfo.describe)`"
+  } else {
+    $md += "- **Git :** (non détecté)"
+  }
+  $md += ""
+  $md += "## Contenu"
+  $md += "- **Fichiers :** $nbFiles"
+  $md += "- **Taille totale :** $(_FormatSize $totalSize)"
+  $md += "- **CSV :** $($counters.nbCsv)  •  **Concat :** $($counters.nbConcat)  •  **ZIP :** $($counters.nbZip)"
+  $md += ""
+  $md += "## Top 10 fichiers par taille"
+  $md += ""
+  $md += "| Fichier | Taille | Type |"
+  $md += "|---|---:|:--|"
+  foreach ($f in $top10) {
+    $md += "| `$($f.relPath)` | $(_FormatSize([long]$f.size)) | $($f.kind) |"
+  }
+
+  $out = Join-Path $SnapshotDir 'brief.md'
+  _Utf8NoBom $out ($md -join [Environment]::NewLine)
+  Write-Host "[BRIEF] $out"
+  return $out
+}
+
+function _IndexByRelPath($files) {
+  $map = @{}
+  foreach ($f in $files) {
+    if ($null -ne $f.relPath) {
+      $map[$f.relPath.ToString()] = $f
+    }
+  }
+  return $map
+}
+
+function _FilesFromManifestFlexible($manifestObj) {
+  # Essaye de récupérer une liste homogène d’objets {relPath,size,sha1,kind}
+  if ($manifestObj -and $manifestObj.content -and $manifestObj.content.files) {
+    return @($manifestObj.content.files)
+  }
+  # Fallback ultra souple : recréer depuis le disque si on connaît snapshot.dir
+  if ($manifestObj -and $manifestObj.snapshot -and $manifestObj.snapshot.dir -and (Test-Path $manifestObj.snapshot.dir)) {
+    return _ListSnapshotFiles $manifestObj.snapshot.dir $manifestObj.repo.root
+  }
+  return @()
+}
+
+function Write-DiffMd {
+  <#
+    .SYNOPSIS
+      Compare deux manifests et génère un diff.md (ajouts/suppressions/modifs).
+    .PARAMETER PrevManifestPath
+      Chemin vers manifest.json précédent.
+    .PARAMETER CurrManifestPath
+      Chemin vers manifest.json courant.
+    .PARAMETER OutPath
+      Chemin du diff.md à écrire.
+  #>
+  param(
+    [Parameter(Mandatory=$true)] [string]$PrevManifestPath,
+    [Parameter(Mandatory=$true)] [string]$CurrManifestPath,
+    [Parameter(Mandatory=$true)] [string]$OutPath
+  )
+
+  if (-not (Test-Path -LiteralPath $CurrManifestPath)) { throw "CurrManifestPath introuvable: $CurrManifestPath" }
+  if (-not (Test-Path -LiteralPath $PrevManifestPath)) {
+    Write-Host "[DIFF] Manifest précédent absent -> diff non généré." -ForegroundColor Yellow
+    return $null
+  }
+
   $prev = Get-Content -LiteralPath $PrevManifestPath -Raw | ConvertFrom-Json
   $curr = Get-Content -LiteralPath $CurrManifestPath -Raw | ConvertFrom-Json
 
-  $sb = New-Object System.Text.StringBuilder
-  [void]$sb.AppendLine('# Diff')
-  [void]$sb.AppendLine(('- Ancien: {0}' -f $prev.snapshot))
-  [void]$sb.AppendLine(('- Nouveau: {0}' -f $curr.snapshot))
-  [void]$sb.AppendLine('')
+  $prevFiles = _FilesFromManifestFlexible $prev
+  $currFiles = _FilesFromManifestFlexible $curr
 
-  $pTabs = @{}
-  foreach ($s in $prev.sheets) { foreach ($t in $s.tabs) { $pTabs[$t.file] = $t } }
-  $cTabs = @{}
-  foreach ($s in $curr.sheets) { foreach ($t in $s.tabs) { $cTabs[$t.file] = $t } }
+  $iPrev = _IndexByRelPath $prevFiles
+  $iCurr = _IndexByRelPath $currFiles
 
-  $added  = @($cTabs.Keys | Where-Object { -not $pTabs.ContainsKey($_) })
-  $removed= @($pTabs.Keys | Where-Object { -not $cTabs.ContainsKey($_) })
-  $common = @($cTabs.Keys | Where-Object { $pTabs.ContainsKey($_) })
+  $added = New-Object System.Collections.Generic.List[object]
+  $removed = New-Object System.Collections.Generic.List[object]
+  $changed = New-Object System.Collections.Generic.List[object]
 
-  [void]$sb.AppendLine('## Onglets ajoutes')
-  if ($added.Count -eq 0) { [void]$sb.AppendLine('- (aucun)') }
-  foreach ($k in $added) { [void]$sb.AppendLine(('- {0}' -f $k)) }
-
-  [void]$sb.AppendLine('')
-  [void]$sb.AppendLine('## Onglets supprimes')
-  if ($removed.Count -eq 0) { [void]$sb.AppendLine('- (aucun)') }
-  foreach ($k in $removed) { [void]$sb.AppendLine(('- {0}' -f $k)) }
-
-  [void]$sb.AppendLine('')
-  [void]$sb.AppendLine('## Modifications')
-  $changes = 0
-  foreach ($k in $common) {
-    $a = $pTabs[$k]; $b = $cTabs[$k]
-    if ($a.sha256 -ne $b.sha256 -or $a.rows -ne $b.rows -or $a.cols -ne $b.cols) {
-      $delta = $b.rows - $a.rows
-      $sign = if ($delta -gt 0) {'+'} elseif ($delta -lt 0) {'-'} else {'0'}
-      [void]$sb.AppendLine(('- {0} : lignes {1} -> {2} ({3}{4}), colonnes {5} -> {6}' -f $k,$a.rows,$b.rows,$sign,$delta,$a.cols,$b.cols))
-      $changes++
+  foreach ($k in $iCurr.Keys) {
+    if (-not $iPrev.ContainsKey($k)) {
+      $added.Add($iCurr[$k])
+    } else {
+      $p = $iPrev[$k]
+      $c = $iCurr[$k]
+      $pHash = "$($p.sha1)"
+      $cHash = "$($c.sha1)"
+      $pSize = [long]$p.size
+      $cSize = [long]$c.size
+      if (($pHash -ne $cHash -and $pHash) -or ($pSize -ne $cSize)) {
+        $changed.Add([ordered]@{
+          relPath = $k
+          prev = [ordered]@{ size = $pSize; sha1 = $pHash }
+          curr = [ordered]@{ size = $cSize; sha1 = $cHash }
+        })
+      }
     }
   }
-  if ($changes -eq 0) { [void]$sb.AppendLine('- (aucun changement detecte sur les CSV communs)') }
-
-  [void]$sb.AppendLine('')
-  [void]$sb.AppendLine('## Scripts GAS concat')
-  $pIdx = @{}; foreach ($p in $prev.gas_projects){ $pIdx[$p.file]=$p }
-  $cIdx = @{}; foreach ($p in $curr.gas_projects){ $cIdx[$p.file]=$p }
-
-  $pOnly = @($pIdx.Keys | Where-Object { -not $cIdx.ContainsKey($_) })
-  $cOnly = @($cIdx.Keys | Where-Object { -not $pIdx.ContainsKey($_) })
-  $both  = @($cIdx.Keys | Where-Object { $pIdx.ContainsKey($_) })
-
-  if ($cOnly.Count -gt 0) { [void]$sb.AppendLine(('- Ajoutes: {0}' -f ($cOnly -join ', '))) }
-  if ($pOnly.Count -gt 0) { [void]$sb.AppendLine(('- Supprimes: {0}' -f ($pOnly -join ', '))) }
-  foreach ($k in $both) {
-    if ($pIdx[$k].sha256 -ne $cIdx[$k].sha256 -or $pIdx[$k].lines -ne $cIdx[$k].lines) {
-      [void]$sb.AppendLine(('- Modifie: {0} ({1} -> {2} lignes)' -f $k,$pIdx[$k].lines,$cIdx[$k].lines))
+  foreach ($k in $iPrev.Keys) {
+    if (-not $iCurr.ContainsKey($k)) {
+      $removed.Add($iPrev[$k])
     }
   }
 
-  $sb.ToString() | Set-Content -LiteralPath $OutPath -Encoding UTF8
-  Write-Host ("[DIFF] {0}" -f $OutPath)
+  $md = @()
+  $md += "# Diff entre snapshots"
+  $md += ""
+  $md += "- **Ancien :** `$PrevManifestPath`"
+  $md += "- **Nouveau :** `$CurrManifestPath`"
+  $md += ""
+  $md += "## Résumé"
+  $md += ""
+  $md += "- Ajoutés : **$($added.Count)**"
+  $md += "- Supprimés : **$($removed.Count)**"
+  $md += "- Modifiés : **$($changed.Count)**"
+  $md += ""
+
+  if ($added.Count -gt 0) {
+    $md += "## Ajouts"
+    $md += "| Fichier | Taille |"
+    $md += "|---|---:|"
+    foreach ($f in $added | Sort-Object size -Descending) {
+      $md += "| `$($f.relPath)` | $(_FormatSize([long]$f.size)) |"
+    }
+    $md += ""
+  }
+
+  if ($removed.Count -gt 0) {
+    $md += "## Suppressions"
+    $md += "| Fichier | Taille (ancienne) |"
+    $md += "|---|---:|"
+    foreach ($f in $removed | Sort-Object size -Descending) {
+      $md += "| `$($f.relPath)` | $(_FormatSize([long]$f.size)) |"
+    }
+    $md += ""
+  }
+
+  if ($changed.Count -gt 0) {
+    $md += "## Modifications"
+    $md += "| Fichier | Taille (anc.) | Taille (nouv.) | Hash (anc.) | Hash (nouv.) |"
+    $md += "|---|---:|---:|---|---|"
+    foreach ($c in $changed | Sort-Object { [math]::Abs([long]$_.curr.size - [long]$_.prev.size) } -Descending) {
+      $md += "| `$($c.relPath)` | $(_FormatSize([long]$c.prev.size)) | $(_FormatSize([long]$c.curr.size)) | $($c.prev.sha1) | $($c.curr.sha1) |"
+    }
+    $md += ""
+  }
+
+  _Utf8NoBom $OutPath ($md -join [Environment]::NewLine)
+  Write-Host "[DIFF] $OutPath"
   return $OutPath
 }
