@@ -1,15 +1,39 @@
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Resilience.js
- * == VERSION : 1.6 - FINAL : Ajout de Recommandation_Generale dans les résultats.
+ * == VERSION : 1.7 - Ajout d'un système de débogage et robustesse du chargement de données.
  * == RÔLE    : Moteur de calcul dédié pour le test r&K Résilience.
  * =================================================================================
  */
 
+// ======================= SECTION DE DÉBOGAGE (ESPIONS) =======================
+const DEBUG_MODE_RESILIENCE = true; // INTERRUPTEUR GÉNÉRAL : Mettre à false pour désactiver les espions de ce moteur.
+
+// --- Interrupteurs spécifiques ---
+const DEBUG_RES_FLOW = true;      // Espionne le flux général (entrée/sortie des fonctions).
+const DEBUG_RES_DATA = true;      // Espionne le chargement des données (Questions, Profils).
+const DEBUG_RES_SCORING = false;  // Espionne le calcul des scores question par question.
+const DEBUG_RES_AXES = true;      // Espionne les scores finaux calculés pour chaque axe.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de débogage pour ce moteur.
+ */
+function _log_res(flag, ...args) {
+  if (DEBUG_MODE_RESILIENCE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION Résilience] ${message}`);
+  }
+}
+// =================================================================================
+
+
 function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOrigine) {
+  _log_res(DEBUG_RES_FLOW, '-> Démarrage de calculerResultats_rK_Resilience.');
   try {
     const langOrigineNorm = _normLang(langueOrigine);
     const questionsMap = _chargerQuestions(config.Type_Test, langOrigineNorm);
+    _log_res(DEBUG_RES_DATA, `Chargement des questions terminé. ${Object.keys(questionsMap || {}).length} questions trouvées.`);
+
     let resultatsBruts = {
       scoresData: {},
       scoresNormalisesParAxe: { Echec: [], Changement: [], Ressources: [], Crise: [], Objectifs: [] }
@@ -41,6 +65,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
         }
         if (params.axe && resultatsBruts.scoresNormalisesParAxe[params.axe]) {
           resultatsBruts.scoresNormalisesParAxe[params.axe].push(scoreNormalise);
+          _log_res(DEBUG_RES_SCORING, `Question ${idQuestion}: réponse='${reponse}', scoreNormalisé=${scoreNormalise.toFixed(2)}, ajouté à l'axe '${params.axe}'.`);
         }
       }
     }
@@ -54,6 +79,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
 
     // 3. Détermination du niveau de résilience
     const profilsDataBrutes = _chargerDonneesProfilsBrutes(config.Type_Test, langueCible);
+     _log_res(DEBUG_RES_DATA, `Chargement des profils terminé. ${profilsDataBrutes.length} profils trouvés.`);
     const niveauResilience = _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsDataBrutes);
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === niveauResilience) || {};
     
@@ -67,6 +93,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
         interpretation: scoreMoyen > 7.5 ? "Point fort" : scoreMoyen >= 4 ? "Équilibré" : "Point de vigilance"
       };
     }
+    _log_res(DEBUG_RES_AXES, "Scores moyens par axe :", axesData);
     
     // 5. Assemblage final
     const finalData = {
@@ -77,11 +104,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
       Niveau_Resilience: niveauResilience,
       Titre_Profil: profilData.Titre_Profil || niveauResilience,
       Message_Clef: profilData.Message_Clef || "Message clé non configuré.",
-      
-      // ====================== CORRECTION AJOUTÉE ICI ======================
       Recommandation_Generale: profilData.Recommandation_Generale || "Recommandation non disponible.",
-      // ====================================================================
-
       Score_Echec: axesData.Echec.score, Interpretation_Echec: axesData.Echec.interpretation, Recommandations_Echec: profilData.Reco_Axe_Echec || "N/A",
       Score_Changement: axesData.Changement.score, Interpretation_Changement: axesData.Changement.interpretation, Recommandations_Changement: profilData.Reco_Axe_Changement || "N/A",
       Score_Ressources: axesData.Ressources.score, Interpretation_Ressources: axesData.Ressources.interpretation, Recommandations_Ressources: profilData.Reco_Axe_Ressources || "N/A",
@@ -103,6 +126,8 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
       profilFinal: niveauResilience,
       mapCodeToName: { r: "Résilience (r)", K: "Stabilité (K)" }
     };
+
+    _log_res(DEBUG_RES_FLOW, `<- Fin de calculerResultats_rK_Resilience. Niveau final: ${niveauResilience}.`);
     return finalData;
 
   } catch (e) {
@@ -112,6 +137,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
 }
 
 function _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsData) {
+  _log_res(DEBUG_RES_DATA, `Détermination du niveau : Score r=${pourcentage_r.toFixed(1)}%, Score K=${pourcentage_K.toFixed(1)}%`);
   for (const row of profilsData) {
     const codeProfil = row.Code_Profil;
     const seuilStr = row.Seuil_Score || '';
@@ -145,7 +171,8 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
       return [];
     }
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    // VERSION ROBUSTE : Nettoyage des en-têtes
+    const headers = data.shift().map(h => String(h || '').trim());
     const jsonData = data.map(row => {
       let obj = {};
       headers.forEach((header, index) => {

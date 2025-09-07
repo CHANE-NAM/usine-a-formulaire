@@ -1,17 +1,37 @@
 /**
  * =================================================================================
  * == FICHIER : Logique_Universel.gs
- * == VERSION : 18.2 - Nettoyage après ajout du moteur Créativité.
+ * == VERSION : 18.3 - Ajout d'un système de débogage avec interrupteurs
  * == RÔLE    : Aiguilleur principal et conteneur des logiques de calcul standards.
  * =================================================================================
  */
+
+// ======================= SECTION DE DÉBOGAGE (ESPIONS) =======================
+const DEBUG_MODE = true; // INTERRUPTEUR GÉNÉRAL : Mettre à false pour désactiver TOUS les espions.
+
+// --- Interrupteurs spécifiques ---
+const DEBUG_DATA_LOADING = true;  // (RECOMMANDÉ) Espionne le chargement des données de profil (notre bug actuel).
+const DEBUG_FLOW = false;         // Espionne le flux général (entrée/sortie des fonctions).
+const DEBUG_SCORING = false;      // Espionne le calcul des scores question par question.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de débogage.
+ */
+function _log(flag, ...args) {
+  if (DEBUG_MODE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION] ${message}`);
+  }
+}
+// =================================================================================
+
 
 /**
  * POINT D'ENTRÉE PRINCIPAL (REMANIÉ)
  * Aiguille vers le bon moteur de calcul en fonction du Type_Test.
  */
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
-  Logger.log(`Démarrage du calcul des résultats pour le Type_Test: "${config.Type_Test}".`);
+  _log(DEBUG_FLOW, `-> calculerResultats : Démarrage pour Type_Test="${config.Type_Test}".`);
 
   // --- Aiguillage vers les moteurs de calcul spécifiques et complexes ---
   if (config.Type_Test === 'r&K_Resilience') {
@@ -65,13 +85,20 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     resultats = { ...resultats, ...profilEtReco };
     const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
     const infosProfilComplet = profilsMap[resultats.profilFinal];
+
+    // --- ESPIONS POUR LE BUG DE CORRESPONDANCE ---
+    _log(DEBUG_DATA_LOADING, 'PROFIL RECHERCHÉ :', `"${resultats.profilFinal}"`);
+    _log(DEBUG_DATA_LOADING, 'PROFILS DISPONIBLES :', Object.keys(profilsMap));
+    _log(DEBUG_DATA_LOADING, 'DONNÉES TROUVÉES :', infosProfilComplet);
+    // --- FIN DES ESPIONS ---
+
     if (infosProfilComplet) {
       resultats = { ...resultats, ...infosProfilComplet };
     }
     resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
   }
 
-  Logger.log(`Calculs terminés. Profil Final: "${resultats.profilFinal}"`);
+  _log(DEBUG_FLOW, `<- calculerResultats : Terminé. Profil Final: "${resultats.profilFinal}".`);
   return resultats;
 }
 
@@ -98,6 +125,7 @@ function _executerCalcul(reponses, questionsMap, resultats, nbQuestionsLimite) {
 
 function _aiguillerCalcul(mode, reponse, parametres, resultats) {
   var m = String(mode || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  _log(DEBUG_SCORING, `Aiguillage : mode="${m}", reponse="${reponse}"`);
   switch (m) {
     case 'QCU_CAT':      _traiterQCU_CAT(reponse, parametres, resultats);    break;
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
@@ -115,6 +143,7 @@ function _traiterQCU_CAT(reponseUtilisateur, parametres, resultats) {
     const profil = optionTrouvee.profil;
     const valeur = (typeof optionTrouvee.valeur === 'number') ? optionTrouvee.valeur : 1;
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeur;
+    _log(DEBUG_SCORING, `_traiterQCU_CAT : Ajout de ${valeur} au profil ${profil}. Total: ${resultats.scoresData[profil]}`);
   }
 }
 
@@ -127,6 +156,7 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
   const valeurNumerique = parseFloat(String(reponseUtilisateur).replace(',', '.'));
   if (!isNaN(valeurNumerique)) {
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
+    _log(DEBUG_SCORING, `_traiterECHELLE_NOTE : Ajout de ${valeurNumerique} au profil ${profil}. Total: ${resultats.scoresData[profil]}`);
   }
 }
 
@@ -162,11 +192,23 @@ function _chargerProfils(typeTest, langue) {
     const nomFeuille = `Profils_${typeTest}_${langue}`;
     const sheet = bdd.getSheetByName(nomFeuille);
     if (!sheet) return {};
+
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    // LIGNE CORRIGÉE : On nettoie les en-têtes pour les rendre robustes.
+    const headers = data.shift().map(h => String(h || '').trim()); 
+    
     const profilsMap = {};
-    const codeColIndex = headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil');
-    if (codeColIndex === -1) return {};
+    let codeColIndex = headers.indexOf('Code_Profil');
+    if (codeColIndex === -1) {
+       // Tentative de fallback pour une ancienne nomenclature
+       const fallbackIndex = headers.indexOf('Profil');
+       if (fallbackIndex === -1) {
+         _log(DEBUG_DATA_LOADING, "ERREUR _chargerProfils : Colonne 'Code_Profil' ou 'Profil' introuvable.");
+         return {};
+       }
+       codeColIndex = fallbackIndex;
+    }
+
     data.forEach(row => {
       const codeProfil = row[codeColIndex];
       if (codeProfil) {
@@ -259,7 +301,6 @@ function _calculerScoresMaxPossibles(typeTest, langue) {
       }
     }
   }
-  Logger.log(`Scores max possibles calculés pour ${typeTest}: ${JSON.stringify(maxScores)}`);
   return maxScores;
 }
 

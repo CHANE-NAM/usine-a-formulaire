@@ -1,18 +1,16 @@
-﻿# Diff
-- Ancien: SNAPSHOT_20250906_092014
-- Nouveau: SNAPSHOT_20250906_151125
+﻿# Diff snapshot
 
-## Onglets ajoutes
-- (aucun)
+Ancien manifest : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20250907_075422\manifest.json
+Nouveau manifest : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20250906_151125\manifest.json
 
-## Onglets supprimes
-- (aucun)
+## Ajouts (4)
+* + BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv (1.1 KB)
+* + brief.md (0.4 KB)
+* + diff.md (0.5 KB)
+* + manifest.json (1.5 KB)
 
-## Modifications
-- CONFIG_V2_Usine_Tests_1kLBqI\Param_tres_G_n_raux.csv : lignes 12 -> 13 (+1), colonnes 38 -> 38
-- BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv : lignes 768 -> 768 (00), colonnes 7 -> 7
+## Suppressions (0)
+* (aucune)
 
-## Scripts GAS concat
-- Modifie: scripts__TEMPLATE_V2_Kit_de_Traitement.txt (2079 -> 2109 lignes)
-- Modifie: scripts__MOTEUR_V2_Usine_à_Tests.txt (586 -> 586 lignes)
-
+## Modifications (0)
+* (aucune)

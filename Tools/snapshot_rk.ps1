@@ -1,20 +1,40 @@
 ﻿# Tools\snapshot_rk.ps1
-# === Snapshot complet : GAS + CSV + ZIP (+ manifest/brief/diff) ===
+# === Snapshot complet : GAS + CSV + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
-# -----------------------------
-# 0) DIAGNOSTIC "ESPION" (peut être désactivé)
-# -----------------------------
+function Write-Section($text) {
+  Write-Host ""
+  Write-Host $text -ForegroundColor Cyan
+}
+
+# ------------------------------------------------------------------------------------
+# 0) DIAGNOSTIC "ESPION" (peut être désactivé) + base chemins + transcript de log
+# ------------------------------------------------------------------------------------
 $EnableSpy = $true
+
+# Base fiable pour les chemins (même en lancement manuel)
+$ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
+              elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
+              else { (Get-Location).Path }
+
+# Timestamp global (sert aussi au nom de snapshot et au fichier de log)
+$ts = Get-Date -Format "yyyyMMdd_HHmmss"
+
+# Transcript (log)
+try {
+  $LogsDir = Join-Path $ScriptRoot "logs"
+  New-Item -ItemType Directory -Force -Path $LogsDir | Out-Null
+  $TranscriptPath = Join-Path $LogsDir ("snapshot_{0}.log" -f $ts)
+  Start-Transcript -Path $TranscriptPath -Append | Out-Null
+} catch {
+  Write-Warning ("[LOG] Start-Transcript a échoué : {0}" -f $_.Exception.Message)
+}
+
 if ($EnableSpy) {
   try {
-    # $PSScriptRoot peut être vide si lancé "à la main" => on calcule une base sûre
-    $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
-                  elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
-                  else { (Get-Location).Path }
-
-    $thisPath = Join-Path $ScriptRoot (Split-Path -Leaf $MyInvocation.MyCommand.Path)
+    $thisPath = if ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { Join-Path $ScriptRoot "snapshot_rk.ps1" }
     Write-Host ("[SPY] Analyse du fichier: {0}" -f $thisPath)
     $balCurly = 0; $balParen = 0; $lineNum = 0
     Get-Content -LiteralPath $thisPath | ForEach-Object {
@@ -35,19 +55,13 @@ if ($EnableSpy) {
   }
 }
 
-# -----------------------------
-# 1) Import des helpers (manifest/brief/diff) si présents — robustifié
-# -----------------------------
-# Normalement, ce script vit dans Tools\ ; le helper aussi.
-# Mais si on lance ce script "à la main", $PSScriptRoot peut être vide.
-$ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
-              elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
-              else { (Get-Location).Path }
-
+# ------------------------------------------------------------------------------------
+# 1) Import des helpers (manifest/brief/diff) — robuste et sans récursion
+# ------------------------------------------------------------------------------------
 # On tente plusieurs emplacements probables pour snapshot_helpers.ps1
 $HelpersCandidates = @(
-  (Join-Path $ScriptRoot 'snapshot_helpers.ps1'),                 # Tools\snapshot_helpers.ps1 si lancé depuis Tools\
-  (Join-Path $ScriptRoot 'Tools\snapshot_helpers.ps1'),           # si lancé depuis la racine du repo
+  (Join-Path $ScriptRoot 'snapshot_helpers.ps1'),                               # si Tools\ est le cwd
+  (Join-Path $ScriptRoot 'Tools\snapshot_helpers.ps1'),                         # si lancé depuis la racine repo
   (Join-Path ((Resolve-Path (Join-Path $ScriptRoot '..')).Path) 'Tools\snapshot_helpers.ps1') # secours
 ) | Select-Object -Unique
 
@@ -66,22 +80,21 @@ if ($HelpersPath) {
     Write-Warning ("[META] Échec chargement helpers: {0}" -f $_.Exception.Message)
   }
 } else {
-  Write-Host "[META] Helpers absents (Tools/snapshot_helpers.ps1 non trouvé) — manifest/brief/diff seront sautés."
+  Write-Host "[META] Helpers absents (Tools\snapshot_helpers.ps1 non trouvé) — manifest/brief/diff seront sautés."
 }
 
-# -----------------------------
+# ------------------------------------------------------------------------------------
 # 2) Dossiers
-# -----------------------------
-# $ScriptRoot pointe vers Tools\ ; la racine repo est ..\ depuis Tools\
+# ------------------------------------------------------------------------------------
+# $ScriptRoot pointe sur Tools\ ; la racine repo est ..\ depuis Tools\
 $Repo      = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
 $ExportDir = Join-Path $Repo "export-onglets-csv"
-$LogsDir   = Join-Path $ScriptRoot "logs"
-New-Item -ItemType Directory -Force -Path $LogsDir,$ExportDir | Out-Null
+# $LogsDir déjà créé plus haut
+New-Item -ItemType Directory -Force -Path $ExportDir | Out-Null
 
-# -----------------------------
-# 3) Timestamp + snapshot
-# -----------------------------
-$ts            = Get-Date -Format "yyyyMMdd_HHmmss"
+# ------------------------------------------------------------------------------------
+# 3) Snapshot : nom et répertoire
+# ------------------------------------------------------------------------------------
 $SNAPSHOT_NAME = "SNAPSHOT_$ts"
 $SnapDir       = Join-Path $ExportDir $SNAPSHOT_NAME
 New-Item -ItemType Directory -Force -Path $SnapDir | Out-Null
@@ -90,53 +103,40 @@ Write-Host ("=== SNAPSHOT {0} ===" -f $SNAPSHOT_NAME)
 Write-Host ("Repo     : {0}" -f $Repo)
 Write-Host ("Snapshot : {0}" -f $SnapDir)
 
-# -----------------------------
-# 4) CLASP pull
-# -----------------------------
-Write-Host ""
-Write-Host "[1/4] CLASP pull (via backup_gas.ps1) ..."
+# ------------------------------------------------------------------------------------
+# 4) CLASP pull (synchronisation des projets GAS locaux)
+# ------------------------------------------------------------------------------------
+Write-Section "[1/4] CLASP pull (via backup_gas.ps1) ..."
 try {
   & (Join-Path $ScriptRoot "backup_gas.ps1")
 } catch {
   Write-Warning ("[CLASP] Échec backup_gas.ps1 : {0}" -f $_.Exception.Message)
 }
 
-# -----------------------------
-# 5) Concat des scripts
-# -----------------------------
-Write-Host ""
-Write-Host "[2/4] Concat des scripts par projet ..."
+# ------------------------------------------------------------------------------------
+# 5) Concat des scripts GAS par projet -> scripts__*.txt dans le snapshot
+# ------------------------------------------------------------------------------------
+Write-Section "[2/4] Concat des scripts par projet ..."
 
 # BDD : gère le nom avec/sans accents
 $bdd1 = Join-Path $Repo "03_BaseDeDonnées"
 $bdd2 = Join-Path $Repo "03_BaseDeDonnees"
-if (Test-Path -LiteralPath $bdd1) {
-  $bddDir = $bdd1
-} elseif (Test-Path -LiteralPath $bdd2) {
-  $bddDir = $bdd2
-} else {
-  $bddDir = $null
-}
+if     (Test-Path -LiteralPath $bdd1) { $bddDir = $bdd1 }
+elseif (Test-Path -LiteralPath $bdd2) { $bddDir = $bdd2 }
+else { $bddDir = $null }
 
 # Liste des projets : paires [0]=name ; [1]=dir
 $Projets = @()
 $Projets += ,@("[MOTEUR]V2 Usine à Tests",        (Join-Path $Repo "01_Moteur"))
 $Projets += ,@("[CONFIG]V2 Usine à Tests",        (Join-Path $Repo "02_configuration"))
-if ($bddDir) {
-  $Projets += ,@("[BDD]V2 Tests & Profils",      $bddDir)
-} else {
-  Write-Warning "Dossier BDD introuvable (03_BaseDeDonnées / 03_BaseDeDonnees)."
-}
+if ($bddDir) { $Projets += ,@("[BDD]V2 Tests & Profils", $bddDir) } else { Write-Warning "Dossier BDD introuvable (03_BaseDeDonnées / 03_BaseDeDonnees)." }
 $Projets += ,@("[TEMPLATE]V2 Kit de Traitement",  (Join-Path $Repo "04_Templates"))
 
 foreach ($p in $Projets) {
   $pname = $p[0]
   $pdir  = $p[1]
 
-  if (-not (Test-Path -LiteralPath $pdir)) {
-    Write-Warning ("Dossier introuvable: {0}" -f $pdir)
-    continue
-  }
+  if (-not (Test-Path -LiteralPath $pdir)) { Write-Warning ("Dossier introuvable: {0}" -f $pdir); continue }
 
   # Nom de fichier "safe" (ASCII: lettres/chiffres/underscore/tiret)
   $safeName = ($pname -replace '[^\w\-]+','_')
@@ -146,30 +146,23 @@ foreach ($p in $Projets) {
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
            Where-Object { ($_.Extension -in ".gs",".js",".ts") -or ($_.Name -eq "appsscript.json") }
 
-  if (-not $files) {
-    Write-Warning ("Aucun fichier GAS trouvé dans {0}" -f $pdir)
-    continue
-  }
+  if (-not $files) { Write-Warning ("Aucun fichier GAS trouvé dans {0}" -f $pdir); continue }
 
   # En-tête de projet (sans backticks)
   ("=== Projet: {0} ({1}) ==={2}" -f $pname, $pdir, [Environment]::NewLine) |
     Out-File -FilePath $outTxt -Encoding UTF8
 
   foreach ($f in $files) {
-    ("{0}--- FILE: {1} ---{0}" -f [Environment]::NewLine, $f.FullName) |
-      Out-File -FilePath $outTxt -Encoding UTF8 -Append
-    Get-Content -LiteralPath $f.FullName -Raw |
-      Out-File -FilePath $outTxt -Encoding UTF8 -Append
+    ("{0}--- FILE: {1} ---{0}" -f [Environment]::NewLine, $f.FullName) | Out-File -FilePath $outTxt -Encoding UTF8 -Append
+    Get-Content -LiteralPath $f.FullName -Raw | Out-File -FilePath $outTxt -Encoding UTF8 -Append
   }
-
   Write-Host ("[OK] Concat: {0}" -f $outTxt)
 }
 
-# -----------------------------
-# 6) Export CSV des 4 classeurs (par IDs)
-# -----------------------------
-Write-Host ""
-Write-Host "[3/4] Export des onglets -> CSV ..."
+# ------------------------------------------------------------------------------------
+# 6) Export CSV des 4 classeurs (par IDs) via export-onglets-csv\index.js
+# ------------------------------------------------------------------------------------
+Write-Section "[3/4] Export des onglets -> CSV ..."
 $Ids = @(
   "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8", # [BDD]V2 Tests & Profils
   "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ", # [CONFIG] Usine à Tests
@@ -177,7 +170,6 @@ $Ids = @(
   "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests
 )
 
-# On passe les chemins en arguments -> pas de dépendance aux variables d’environnement
 $nodeArgs = @(
   "--out", $SnapDir,
   "--creds", "C:\secrets\rk_oauth\credentials.json",
@@ -186,7 +178,7 @@ $nodeArgs = @(
 
 $IndexJs = Join-Path $ExportDir 'index.js'
 if (-not (Test-Path -LiteralPath $IndexJs)) {
-  Write-Warning "[CSV] export-onglets-csv/index.js introuvable — étape CSV sautée."
+  Write-Warning "[CSV] export-onglets-csv\index.js introuvable — étape CSV sautée."
 } else {
   Push-Location -LiteralPath $ExportDir
   try {
@@ -199,9 +191,9 @@ if (-not (Test-Path -LiteralPath $IndexJs)) {
   }
 }
 
-# -----------------------------
+# ------------------------------------------------------------------------------------
 # 7) Manifest / Brief / Diff (si helpers chargés)
-# -----------------------------
+# ------------------------------------------------------------------------------------
 if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinue)) {
   try {
     $manifest = Write-Manifest -SnapshotDir $SnapDir -RepoRoot $Repo
@@ -231,24 +223,33 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
   Write-Host "[META] Helpers indisponibles — étape manifest/brief/diff ignorée."
 }
 
-# -----------------------------
-# 8) ZIP
-# -----------------------------
-Write-Host ""
-Write-Host "[4/4] ZIP du snapshot ..."
-$zipPath = Join-Path $ExportDir ($SNAPSHOT_NAME + ".zip")
-if (Test-Path -LiteralPath $zipPath) {
-  Remove-Item -LiteralPath $zipPath -Force
+# ------------------------------------------------------------------------------------
+# 8) HOOK optionnel : génération de documents “AI / État / Utilisateurs”
+#     -> script indépendant Tools\gen_docs.ps1 (s’il existe, on l’appelle)
+# ------------------------------------------------------------------------------------
+try {
+  $GenDocs = Join-Path $ScriptRoot "gen_docs.ps1"
+  if (Test-Path -LiteralPath $GenDocs) {
+    Write-Section "[8/4] Génération des documents (hook gen_docs.ps1) ..."
+    & $GenDocs -RepoRoot $Repo -SnapshotDir $SnapDir -ExportDir $ExportDir -Timestamp $ts
+  }
+} catch {
+  Write-Warning ("[DOCS] gen_docs.ps1 a échoué : {0}" -f $_.Exception.Message)
 }
+
+# ------------------------------------------------------------------------------------
+# 9) ZIP du snapshot
+# ------------------------------------------------------------------------------------
+Write-Section "[4/4] ZIP du snapshot ..."
+$zipPath = Join-Path $ExportDir ($SNAPSHOT_NAME + ".zip")
+if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 Compress-Archive -Path $SnapDir -DestinationPath $zipPath -CompressionLevel Optimal
 Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 
-# -----------------------------
-# 9) RÉTENTION DES SNAPSHOTS (garder les N derniers)
-# -----------------------------
-# Ajuste la valeur ci-dessous selon ton besoin (ex. 5 ou 8…)
+# ------------------------------------------------------------------------------------
+# 10) RÉTENTION DES SNAPSHOTS (garder les N derniers)
+# ------------------------------------------------------------------------------------
 $RetentionCount = 8
-
 try {
   $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory |
               Where-Object { $_.Name -like 'SNAPSHOT_*' } |
@@ -259,9 +260,7 @@ try {
     foreach ($old in $toDelete) {
       try {
         $oldZip = Join-Path $ExportDir ($old.Name + '.zip')
-        if (Test-Path -LiteralPath $oldZip) {
-          Remove-Item -LiteralPath $oldZip -Force -ErrorAction SilentlyContinue
-        }
+        if (Test-Path -LiteralPath $oldZip) { Remove-Item -LiteralPath $oldZip -Force -ErrorAction SilentlyContinue }
         Remove-Item -LiteralPath $old.FullName -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host ("[RETENTION] Supprimé: {0}" -f $old.Name)
       } catch {
@@ -275,3 +274,6 @@ try {
 
 Write-Host ""
 Write-Host ("[DONE] Snapshot: {0}" -f $SnapDir)
+
+# Fin transcript
+try { Stop-Transcript | Out-Null } catch {}

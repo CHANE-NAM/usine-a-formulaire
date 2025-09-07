@@ -398,10 +398,8 @@ function lancerDeploiementComplet(rowIndex) {
 Â  Â  Â  if (metaSheet) {
 Â  Â  Â  Â  const metaData = metaSheet.getDataRange().getValues();
 Â  Â  Â  Â  const metaHeaders = metaData.shift();
-Â  
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js ---
-
- row) => { acc[row[idCol]] = row; return acc; }, {});
+Â  Â  Â  Â  const idCol = metaHeaders.indexOf('ID');
+Â  Â  Â  Â  const metaQuestionsMap = metaData.reduce((acc, row) => { acc[row[idCol]] = row; return acc; }, {});
 Â  Â  Â  Â  
 Â  Â  Â  Â  metaIds.forEach(id => {
 Â  Â  Â  Â  Â  if (metaQuestionsMap[id]) {
@@ -443,6 +441,9 @@ function lancerDeploiementComplet(rowIndex) {
 Â  }
 }
 
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js ---
 
 // =================================================================================
 // == FICHIER : UtilsV3.gs
