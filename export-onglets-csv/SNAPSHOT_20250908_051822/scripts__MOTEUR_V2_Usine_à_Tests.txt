@@ -541,8 +541,10 @@ function _construireQuestionsFormulaire(form, languesAInclure, nbQuestionsConfig
         const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
         const choices = [];
         languesAInclure.forEach(langue => {
-            const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
-            choices.push(itemLangue.createChoice(langue.nomComplet, page));
+            const page = form.addPa
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js ---
+
+page));
             
             _ajouterQuestionsDepuisFeuille(form, langue.feuille, nbQuestionsConfig);
             
@@ -659,9 +661,6 @@ function getLangueFullName(code) {
   const map = { FR: 'FranÃ§ais', EN: 'English', ES: 'EspaÃ±ol', DE: 'Deutsch' };
   return map[String(code || '').toUpperCase()] || code;
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js ---
-
 function forcerAutorisation() {
   // Cette simple ligne est suffisante pour demander les autorisations Drive.
   DriveApp.getRootFolder(); 
