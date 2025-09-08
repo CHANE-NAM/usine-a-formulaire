@@ -1,5 +1,12 @@
 ﻿# Tools\snapshot_rk.ps1
 # === Snapshot complet : GAS + CSV + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
+# --- AJOUTER TOUT EN HAUT ---
+[CmdletBinding()]
+param(
+  [switch]$NoDocs,     # ne pas appeler gen_docs.ps1
+  [switch]$NoCsv,      # sauter l’export CSV
+  [bool]$Spy = $true   # activer/désactiver le diagnostic "espion"
+)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
@@ -12,7 +19,7 @@ function Write-Section($text) {
 # ------------------------------------------------------------------------------------
 # 0) DIAGNOSTIC "ESPION" (peut être désactivé) + base chemins + transcript de log
 # ------------------------------------------------------------------------------------
-$EnableSpy = $true
+$EnableSpy = [bool]$Spy
 
 # Base fiable pour les chemins (même en lancement manuel)
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
@@ -154,34 +161,60 @@ foreach ($p in $Projets) {
 # ------------------------------------------------------------------------------------
 # 6) Export CSV des 4 classeurs (par IDs) via export-onglets-csv\index.js
 # ------------------------------------------------------------------------------------
-Write-Section "[3/4] Export des onglets -> CSV ..."
-$Ids = @(
-  "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8",
-  "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ",
-  "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU",
-  "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"
-)
+if (-not $NoCsv) {
+  Write-Section "[3/4] Export des onglets -> CSV ..."
 
-$nodeArgs = @(
-  "--out", $SnapDir,
-  "--creds", "C:\secrets\rk_oauth\credentials.json",
-  "--token", "C:\secrets\rk_oauth\token.json"
-) + ($Ids | ForEach-Object { @("--id", $_) })
+  # IDs des classeurs (modifiable ici)
+  $Ids = @(
+    "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8", # [BDD]V2 Tests & Profils
+    "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ", # [CONFIG] Usine à Tests
+    "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU", # [TEMPLATE]V2 Kit de Traitement
+    "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests
+  ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 
-$IndexJs = Join-Path $ExportDir 'index.js'
-if (-not (Test-Path -LiteralPath $IndexJs)) {
-  Write-Warning "[CSV] export-onglets-csv\index.js introuvable — étape CSV sautée."
-} else {
-  Push-Location -LiteralPath $ExportDir
-  try {
-    node ".\index.js" @nodeArgs
-    if ($LASTEXITCODE -ne 0) { throw "Échec export CSV (node exit code = $LASTEXITCODE)." }
-  } catch {
-    Write-Warning ("[CSV] Échec export CSV : {0}" -f $_.Exception.Message)
-  } finally {
-    Pop-Location
+  # Chemins (surchargables via variables d'environnement RK_CREDS / RK_TOKEN)
+  $credsPath = if ($env:RK_CREDS) { $env:RK_CREDS } else { "C:\secrets\rk_oauth\credentials.json" }
+  $tokenPath = if ($env:RK_TOKEN) { $env:RK_TOKEN } else { "C:\secrets\rk_oauth\token.json" }
+
+  # Préconditions
+  $IndexJs = Join-Path $ExportDir 'index.js'
+  $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+
+  $canRun = $true
+  if (-not (Test-Path -LiteralPath $IndexJs)) { Write-Warning "[CSV] export-onglets-csv\index.js introuvable — étape CSV sautée."; $canRun = $false }
+  if (-not $nodeCmd)                          { Write-Warning "[CSV] Node.js (commande 'node') introuvable — étape CSV sautée.";   $canRun = $false }
+  if (-not (Test-Path -LiteralPath $credsPath)){ Write-Warning ("[CSV] credentials.json introuvable : {0} — étape CSV sautée." -f $credsPath); $canRun = $false }
+  if (-not (Test-Path -LiteralPath $tokenPath)){ Write-Warning ("[CSV] token.json introuvable : {0} — étape CSV sautée." -f $tokenPath);       $canRun = $false }
+  if (-not $Ids -or $Ids.Count -eq 0)         { Write-Warning "[CSV] Aucun ID de classeur fourni — étape CSV sautée.";            $canRun = $false }
+
+  if ($canRun) {
+    # Construction des arguments Node
+    $nodeArgs = @(
+      "--out",   $SnapDir,
+      "--creds", $credsPath,
+      "--token", $tokenPath
+    ) + ($Ids | ForEach-Object { @("--id", $_) })
+
+    # Exécution
+    $csvBefore = (Get-ChildItem -LiteralPath $SnapDir -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue).Count
+    Push-Location -LiteralPath $ExportDir
+    try {
+      & $nodeCmd.Source ".\index.js" @nodeArgs
+      if ($LASTEXITCODE -ne 0) { throw "Échec export CSV (node exit code = $LASTEXITCODE)." }
+      $csvAfter = (Get-ChildItem -LiteralPath $SnapDir -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue).Count
+      $delta = $csvAfter - $csvBefore
+      Write-Host ("[CSV] Export terminé : {0} fichier(s) CSV ajouté(s) dans {1}" -f [math]::Max($delta,0), $SnapDir)
+    } catch {
+      Write-Warning ("[CSV] Échec export CSV : {0}" -f $_.Exception.Message)
+    } finally {
+      Pop-Location
+    }
   }
+} else {
+  Write-Host "[CSV] Étape export CSV ignorée (NoCsv)."
 }
+
+
 
 # ------------------------------------------------------------------------------------
 # 7) Manifest / Brief / Diff (si helpers chargés)
@@ -217,14 +250,20 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
 # ------------------------------------------------------------------------------------
 # 8) HOOK optionnel : génération de documents “AI / État / Utilisateurs”
 # ------------------------------------------------------------------------------------
-try {
-  $GenDocs = Join-Path $ScriptRoot "gen_docs.ps1"
-  if (Test-Path -LiteralPath $GenDocs) {
-    Write-Section "[opt] Génération des documents (hook gen_docs.ps1) ..."
-    & $GenDocs -RepoRoot $Repo -SnapshotDir $SnapDir -ExportDir $ExportDir -Timestamp $ts
+if (-not $NoDocs) {
+  try {
+    $GenDocs = Join-Path $ScriptRoot "gen_docs.ps1"
+    if (Test-Path -LiteralPath $GenDocs) {
+      Write-Section "[opt] Génération des documents (hook gen_docs.ps1) ..."
+      & $GenDocs -RepoRoot $Repo -SnapshotDir $SnapDir -ExportDir $ExportDir -Timestamp $ts
+    } else {
+      Write-Host "[DOCS] gen_docs.ps1 absent — étape ignorée."
+    }
+  } catch {
+    Write-Warning ("[DOCS] gen_docs.ps1 a échoué : {0}" -f $_.Exception.Message)
   }
-} catch {
-  Write-Warning ("[DOCS] gen_docs.ps1 a échoué : {0}" -f $_.Exception.Message)
+} else {
+  Write-Host "[DOCS] Génération de documents ignorée (NoDocs)."
 }
 
 # ------------------------------------------------------------------------------------
