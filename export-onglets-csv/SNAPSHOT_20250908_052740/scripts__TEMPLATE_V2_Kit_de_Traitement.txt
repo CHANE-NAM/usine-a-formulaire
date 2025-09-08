@@ -24,17 +24,37 @@
 /**
  * =================================================================================
  * == FICHIER : Logique_Universel.gs
- * == VERSION : 18.2 - Nettoyage aprÃ¨s ajout du moteur CrÃ©ativitÃ©.
+ * == VERSION : 18.3 - Ajout d'un systÃ¨me de dÃ©bogage avec interrupteurs
  * == RÃ”LE    : Aiguilleur principal et conteneur des logiques de calcul standards.
  * =================================================================================
  */
+
+// ======================= SECTION DE DÃ‰BOGAGE (ESPIONS) =======================
+const DEBUG_MODE = true; // INTERRUPTEUR GÃ‰NÃ‰RAL : Mettre Ã  false pour dÃ©sactiver TOUS les espions.
+
+// --- Interrupteurs spÃ©cifiques ---
+const DEBUG_DATA_LOADING = true;  // (RECOMMANDÃ‰) Espionne le chargement des donnÃ©es de profil (notre bug actuel).
+const DEBUG_FLOW = false;         // Espionne le flux gÃ©nÃ©ral (entrÃ©e/sortie des fonctions).
+const DEBUG_SCORING = false;      // Espionne le calcul des scores question par question.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de dÃ©bogage.
+ */
+function _log(flag, ...args) {
+  if (DEBUG_MODE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION] ${message}`);
+  }
+}
+// =================================================================================
+
 
 /**
  * POINT D'ENTRÃ‰E PRINCIPAL (REMANIÃ‰)
  * Aiguille vers le bon moteur de calcul en fonction du Type_Test.
  */
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
-  Logger.log(`DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}".`);
+  _log(DEBUG_FLOW, `-> calculerResultats : DÃ©marrage pour Type_Test="${config.Type_Test}".`);
 
   // --- Aiguillage vers les moteurs de calcul spÃ©cifiques et complexes ---
   if (config.Type_Test === 'r&K_Resilience') {
@@ -88,13 +108,20 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     resultats = { ...resultats, ...profilEtReco };
     const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
     const infosProfilComplet = profilsMap[resultats.profilFinal];
+
+    // --- ESPIONS POUR LE BUG DE CORRESPONDANCE ---
+    _log(DEBUG_DATA_LOADING, 'PROFIL RECHERCHÃ‰ :', `"${resultats.profilFinal}"`);
+    _log(DEBUG_DATA_LOADING, 'PROFILS DISPONIBLES :', Object.keys(profilsMap));
+    _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
+    // --- FIN DES ESPIONS ---
+
     if (infosProfilComplet) {
       resultats = { ...resultats, ...infosProfilComplet };
     }
     resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
   }
 
-  Logger.log(`Calculs terminÃ©s. Profil Final: "${resultats.profilFinal}"`);
+  _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
   return resultats;
 }
 
@@ -121,6 +148,7 @@ function _executerCalcul(reponses, questionsMap, resultats, nbQuestionsLimite) {
 
 function _aiguillerCalcul(mode, reponse, parametres, resultats) {
   var m = String(mode || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  _log(DEBUG_SCORING, `Aiguillage : mode="${m}", reponse="${reponse}"`);
   switch (m) {
     case 'QCU_CAT':      _traiterQCU_CAT(reponse, parametres, resultats);    break;
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
@@ -138,6 +166,7 @@ function _traiterQCU_CAT(reponseUtilisateur, parametres, resultats) {
     const profil = optionTrouvee.profil;
     const valeur = (typeof optionTrouvee.valeur === 'number') ? optionTrouvee.valeur : 1;
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeur;
+    _log(DEBUG_SCORING, `_traiterQCU_CAT : Ajout de ${valeur} au profil ${profil}. Total: ${resultats.scoresData[profil]}`);
   }
 }
 
@@ -150,6 +179,7 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
   const valeurNumerique = parseFloat(String(reponseUtilisateur).replace(',', '.'));
   if (!isNaN(valeurNumerique)) {
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
+    _log(DEBUG_SCORING, `_traiterECHELLE_NOTE : Ajout de ${valeurNumerique} au profil ${profil}. Total: ${resultats.scoresData[profil]}`);
   }
 }
 
@@ -185,11 +215,23 @@ function _chargerProfils(typeTest, langue) {
     const nomFeuille = `Profils_${typeTest}_${langue}`;
     const sheet = bdd.getSheetByName(nomFeuille);
     if (!sheet) return {};
+
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    // LIGNE CORRIGÃ‰E : On nettoie les en-tÃªtes pour les rendre robustes.
+    const headers = data.shift().map(h => String(h || '').trim()); 
+    
     const profilsMap = {};
-    const codeColIndex = headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil');
-    if (codeColIndex === -1) return {};
+    let codeColIndex = headers.indexOf('Code_Profil');
+    if (codeColIndex === -1) {
+       // Tentative de fallback pour une ancienne nomenclature
+       const fallbackIndex = headers.indexOf('Profil');
+       if (fallbackIndex === -1) {
+         _log(DEBUG_DATA_LOADING, "ERREUR _chargerProfils : Colonne 'Code_Profil' ou 'Profil' introuvable.");
+         return {};
+       }
+       codeColIndex = fallbackIndex;
+    }
+
     data.forEach(row => {
       const codeProfil = row[codeColIndex];
       if (codeProfil) {
@@ -282,7 +324,6 @@ function _calculerScoresMaxPossibles(typeTest, langue) {
       }
     }
   }
-  Logger.log(`Scores max possibles calculÃ©s pour ${typeTest}: ${JSON.stringify(maxScores)}`);
   return maxScores;
 }
 
@@ -2029,15 +2070,39 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Resilience.js
- * == VERSION : 1.6 - FINAL : Ajout de Recommandation_Generale dans les rÃ©sultats.
+ * == VERSION : 1.7 - Ajout d'un systÃ¨me de dÃ©bogage et robustesse du chargement de donnÃ©es.
  * == RÃ”LE    : Moteur de calcul dÃ©diÃ© pour le test r&K RÃ©silience.
  * =================================================================================
  */
 
+// ======================= SECTION DE DÃ‰BOGAGE (ESPIONS) =======================
+const DEBUG_MODE_RESILIENCE = true; // INTERRUPTEUR GÃ‰NÃ‰RAL : Mettre Ã  false pour dÃ©sactiver les espions de ce moteur.
+
+// --- Interrupteurs spÃ©cifiques ---
+const DEBUG_RES_FLOW = true;      // Espionne le flux gÃ©nÃ©ral (entrÃ©e/sortie des fonctions).
+const DEBUG_RES_DATA = true;      // Espionne le chargement des donnÃ©es (Questions, Profils).
+const DEBUG_RES_SCORING = false;  // Espionne le calcul des scores question par question.
+const DEBUG_RES_AXES = true;      // Espionne les scores finaux calculÃ©s pour chaque axe.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de dÃ©bogage pour ce moteur.
+ */
+function _log_res(flag, ...args) {
+  if (DEBUG_MODE_RESILIENCE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION RÃ©silience] ${message}`);
+  }
+}
+// =================================================================================
+
+
 function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOrigine) {
+  _log_res(DEBUG_RES_FLOW, '-> DÃ©marrage de calculerResultats_rK_Resilience.');
   try {
     const langOrigineNorm = _normLang(langueOrigine);
     const questionsMap = _chargerQuestions(config.Type_Test, langOrigineNorm);
+    _log_res(DEBUG_RES_DATA, `Chargement des questions terminÃ©. ${Object.keys(questionsMap || {}).length} questions trouvÃ©es.`);
+
     let resultatsBruts = {
       scoresData: {},
       scoresNormalisesParAxe: { Echec: [], Changement: [], Ressources: [], Crise: [], Objectifs: [] }
@@ -2069,6 +2134,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
         }
         if (params.axe && resultatsBruts.scoresNormalisesParAxe[params.axe]) {
           resultatsBruts.scoresNormalisesParAxe[params.axe].push(scoreNormalise);
+          _log_res(DEBUG_RES_SCORING, `Question ${idQuestion}: rÃ©ponse='${reponse}', scoreNormalisÃ©=${scoreNormalise.toFixed(2)}, ajoutÃ© Ã  l'axe '${params.axe}'.`);
         }
       }
     }
@@ -2082,6 +2148,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
 
     // 3. DÃ©termination du niveau de rÃ©silience
     const profilsDataBrutes = _chargerDonneesProfilsBrutes(config.Type_Test, langueCible);
+     _log_res(DEBUG_RES_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
     const niveauResilience = _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsDataBrutes);
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === niveauResilience) || {};
     
@@ -2095,6 +2162,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
         interpretation: scoreMoyen > 7.5 ? "Point fort" : scoreMoyen >= 4 ? "Ã‰quilibrÃ©" : "Point de vigilance"
       };
     }
+    _log_res(DEBUG_RES_AXES, "Scores moyens par axe :", axesData);
     
     // 5. Assemblage final
     const finalData = {
@@ -2105,11 +2173,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
       Niveau_Resilience: niveauResilience,
       Titre_Profil: profilData.Titre_Profil || niveauResilience,
       Message_Clef: profilData.Message_Clef || "Message clÃ© non configurÃ©.",
-      
-      // ====================== CORRECTION AJOUTÃ‰E ICI ======================
       Recommandation_Generale: profilData.Recommandation_Generale || "Recommandation non disponible.",
-      // ====================================================================
-
       Score_Echec: axesData.Echec.score, Interpretation_Echec: axesData.Echec.interpretation, Recommandations_Echec: profilData.Reco_Axe_Echec || "N/A",
       Score_Changement: axesData.Changement.score, Interpretation_Changement: axesData.Changement.interpretation, Recommandations_Changement: profilData.Reco_Axe_Changement || "N/A",
       Score_Ressources: axesData.Ressources.score, Interpretation_Ressources: axesData.Ressources.interpretation, Recommandations_Ressources: profilData.Reco_Axe_Ressources || "N/A",
@@ -2131,6 +2195,8 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
       profilFinal: niveauResilience,
       mapCodeToName: { r: "RÃ©silience (r)", K: "StabilitÃ© (K)" }
     };
+
+    _log_res(DEBUG_RES_FLOW, `<- Fin de calculerResultats_rK_Resilience. Niveau final: ${niveauResilience}.`);
     return finalData;
 
   } catch (e) {
@@ -2140,6 +2206,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
 }
 
 function _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsData) {
+  _log_res(DEBUG_RES_DATA, `DÃ©termination du niveau : Score r=${pourcentage_r.toFixed(1)}%, Score K=${pourcentage_K.toFixed(1)}%`);
   for (const row of profilsData) {
     const codeProfil = row.Code_Profil;
     const seuilStr = row.Seuil_Score || '';
@@ -2173,7 +2240,8 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
       return [];
     }
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    // VERSION ROBUSTE : Nettoyage des en-tÃªtes
+    const headers = data.shift().map(h => String(h || '').trim());
     const jsonData = data.map(row => {
       let obj = {};
       headers.forEach((header, index) => {
@@ -2326,7 +2394,8 @@ try {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js ---
 
 /**
- * @fileoverview Orchestrateur principal pour le traitement des rÃ©ponses.
+ *T_Main.gs
+  *  @fileoverview Orchestrateur principal pour le traitement des rÃ©ponses.
  * Contient les points d'entrÃ©e (onFormSubmit), la logique centrale (traiterLigne)
  * et les fonctions liÃ©es Ã  l'interface utilisateur (menus de retraitement).
  * @version 1.0
@@ -2554,8 +2623,9 @@ function retraitementTestSansEnvoi(rowIndex, options) {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
 
 /**
+ * T_Mail.gs
  * @fileoverview GÃ¨re la composition et l'envoi des e-mails de rÃ©sultats.
- * @version 1.1 - CorrigÃ©
+ * @version 2.0 - Logique de piÃ¨ce jointe intelligente (fusion ou attachement direct).
  */
 
 function normalizeAndDedupeCompositionEmailsRows_(rows, idx) {
@@ -2588,7 +2658,7 @@ function _enrichirDonneesPourEmail_(reponse, resultats) {
 }
 
 function _envoyerEmailDeConfirmation(config, reponse, langueCible) {
-    // Placeholder
+    // Placeholder pour une future logique d'email de confirmation simple.
 }
 
 function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}) {
@@ -2596,92 +2666,60 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   let codeNiveauEmail = (config.ID_Gabarit_Email_Repondant || '').toString().replace('RESULTATS_', '').trim();
   if (optionsSurcharge && optionsSurcharge.niveau && optionsSurcharge.niveau !== '') codeNiveauEmail = optionsSurcharge.niveau;
   const profilFinal = (resultats.profilFinal || '').toString().trim();
-
+  
   const systemIds = getSystemIds();
   const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
   const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
   const compoData = compoSheet.getDataRange().getValues();
-  const compoHeaders = compoData.shift();
-  const idx = {
-    typeTest: compoHeaders.indexOf('Type_Test'),
-    langue: compoHeaders.indexOf('Code_Langue'),
-    niveau: compoHeaders.indexOf('Code_Niveau_Email'),
-    profil: compoHeaders.indexOf('Code_Profil'),
-    element: compoHeaders.indexOf('Element'),
-    ordre: compoHeaders.indexOf('Ordre'),
-    contenu: compoHeaders.indexOf('Contenu / ID_Document')
-  };
+  const compoHeaders = compoData.shift().map(h => String(h || '').trim());
+  const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
   const compoRows = normalizeAndDedupeCompositionEmailsRows_(compoData, idx);
-
+  
   let briquesDeContenu = compoRows.filter((row) => {
     const typeLigne = (row[idx.typeTest] || '').toString().trim();
     const langLigne = (row[idx.langue] || '').toString().trim();
     const levelValue = (row[idx.niveau] || '').toString();
     const profilLigne = (row[idx.profil] || '').toString().trim();
-
     const typeMatch = (typeLigne === typeTest || typeLigne === '');
     const langMatch = (langLigne === langueCible || langLigne === '');
     const levelList = levelValue.split(',').map(s => s.trim()).filter(Boolean);
-    
-    // CORRECTION APPLIQUÃ‰E ICI
     const levelMatch = levelList.length > 0 ? levelList.includes(codeNiveauEmail) : levelValue.includes(codeNiveauEmail);
-
     const profileMatch = (profilLigne === profilFinal || profilLigne === '');
-
     return typeMatch && langMatch && levelMatch && profileMatch;
   });
 
-  if (briquesDeContenu.length === 0) {
-    Logger.log("ERREUR âŒ: Aucune brique de contenu n'a Ã©tÃ© trouvÃ©e pour construire l'e-mail.");
-  }
-
+  if (briquesDeContenu.length === 0) { Logger.log("ERREUR âŒ: Aucune brique de contenu n'a Ã©tÃ© trouvÃ©e pour construire l'e-mail."); }
   briquesDeContenu.sort((a, b) => (Number(a[idx.ordre]) || 0) - (Number(b[idx.ordre]) || 0));
-
+  
   const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
+  let sujet = `RÃ©sultats de votre test ${typeTest}`;
+  let corpsHtml = "";
   let contenuInfoCopie = null;
+  const piecesJointesIds = new Set();
   const indexInfoCopie = briquesDeContenu.findIndex(b => (b[idx.element] || '').toString().trim() === 'Info_Copie');
   if (indexInfoCopie > -1) {
     contenuInfoCopie = briquesDeContenu[indexInfoCopie][idx.contenu];
     briquesDeContenu.splice(indexInfoCopie, 1);
   }
 
-  let sujet = `RÃ©sultats de votre test ${typeTest}`;
-  let corpsHtml = "";
-  const piecesJointesIds = new Set();
-
   for (const brique of briquesDeContenu) {
     const elementType = (brique[idx.element] || '').toString().trim();
     const contenu = brique[idx.contenu];
     switch (elementType) {
-      case 'Sujet_Email':
-        sujet = contenu;
-        break;
-      case 'Introduction':
-      case 'Corps_Texte':
-        corpsHtml += (contenu || "") + "<br>";
-        break;
-      case 'Champ_Profil':
-        if (contenu && donneesPourEmail[contenu]) {
-          corpsHtml += donneesPourEmail[contenu] + "<br>";
-        }
-        break;
-      case 'Document':
-        if (contenu && String(contenu).trim()) {
-          piecesJointesIds.add(String(contenu).trim());
-        }
-        break;
+      case 'Sujet_Email': sujet = contenu; break;
+      case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
+      case 'Champ_Profil': if (contenu && donneesPourEmail[contenu]) { corpsHtml += donneesPourEmail[contenu] + "<br>"; } break;
+      case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
       case 'Ligne_Score':
         const scoresAAfficher = resultats.scoresData;
         if (scoresAAfficher) {
-          Object.entries(scoresAAfficher)
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([code, score]) => {
-              let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-              const nomProfil = resultats.mapCodeToName[code] || code;
-              let ligneScore = (contenu || `- {{nom_profil}} : {{score}}`)
-                .replace(/{{nom_profil}}/g, nomProfil).replace(/{{score}}/g, scoreArrondi);
-              corpsHtml += ligneScore + "<br>";
-            });
+          Object.entries(scoresAAfficher).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => {
+            let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+            const nomProfil = resultats.mapCodeToName[code] || code;
+            const totalPossible = resultats.scoresMaxPossible ? (resultats.scoresMaxPossible[code] || '') : '';
+            let ligneScore = (contenu || `- {{nom_profil}} : {{score}}`).replace(/{{nom_profil}}/g, nomProfil).replace(/{{score}}/g, scoreArrondi).replace(/{{total_possible}}/g, totalPossible);
+            corpsHtml += ligneScore + "<br>";
+          });
         }
         break;
     }
@@ -2703,43 +2741,45 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   }
 
   for (const contenuDoc of Array.from(piecesJointesIds)) {
-    let candidate = contenuDoc;
-    if (candidate.startsWith("{{") && candidate.endsWith("}}")) {
-      const cle = candidate.slice(2, -2);
-      candidate = variablesFusion[cle] || "";
+    let candidateId = contenuDoc;
+    if (candidateId.startsWith("{{") && candidateId.endsWith("}}")) {
+      const cle = candidateId.slice(2, -2);
+      candidateId = variablesFusion[cle] || "";
     }
-    if (/^[a-zA-Z0-9_-]{20,}$/.test(candidate)) {
+    if (/^[a-zA-Z0-9_-]{20,}$/.test(candidateId)) {
       try {
-        const nomRapport = (resultats.Titre_Profil || resultats.profilFinal || config.Type_Test || "Rapport");
-        const pdf = genererPdfDepuisModele(candidate, variablesFusion, nomRapport);
-        if (pdf) {
-          piecesJointes.push(pdf);
+        const file = DriveApp.getFileById(candidateId);
+        const mimeType = file.getMimeType();
+
+        if (mimeType === MimeType.GOOGLE_DOCS) {
+          Logger.log(`DÃ©tection d'un Google Doc (ID: ${candidateId}). Lancement de la gÃ©nÃ©ration PDF...`);
+          const nomRapport = (resultats.Titre_Profil || resultats.profilFinal || "Rapport");
+          const pdf = genererPdfDepuisModele(candidateId, variablesFusion, nomRapport);
+          if (pdf) { piecesJointes.push(pdf); }
+        } else {
+          Logger.log(`DÃ©tection d'un fichier statique (ID: ${candidateId}, Type: ${mimeType}). Ajout direct.`);
+          piecesJointes.push(file.getBlob());
         }
       } catch (e) {
-        Logger.log("Fusion Doc->PDF Ã©chouÃ©e pour " + candidate + " : " + e.message);
-        try {
-          piecesJointes.push(DriveApp.getFileById(candidate).getBlob());
-        } catch (_) {}
+        Logger.log(`Impossible de traiter la piÃ¨ce jointe avec l'ID ${candidateId} : ${e.message}`);
       }
     } else {
-      Logger.log("IgnorÃ© (Document) : valeur non reconnue " + candidate);
+      Logger.log("IgnorÃ© (Document) : valeur non reconnue comme un ID de fichier valide : " + candidateId);
     }
   }
-
+  
   const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email;
   const override = optionsSurcharge.overrideRecipients === true;
   const ignoreDev = optionsSurcharge.ignoreDeveloppeurEmail === true;
   const dryRun = optionsSurcharge.dryRun === true;
   const destS = optionsSurcharge.destinataires || {};
   const adressesUniques = new Set();
-
+  
   if (override) {
     if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
     if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
     if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail);
-    if (destS.test && destS.test.trim() !== '') {
-      destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email));
-    }
+    if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); }
   } else {
     if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
     if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email);
@@ -2755,7 +2795,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     Logger.log('PiÃ¨ces jointes (nb) : ' + piecesJointes.length);
     return;
   }
-
+  
   adressesUniques.forEach(adresse => {
     try {
       let sujetFinal = sujet;
@@ -2771,7 +2811,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
         attachments: piecesJointes,
         from: (optionsSurcharge.alias || config.Email_Alias || null)
       };
-
+      
       GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", {
         htmlBody: mailOptions.htmlBody,
         attachments: mailOptions.attachments,
@@ -2991,6 +3031,7 @@ function diagnostic_CompoEmails_v20_1() {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
 
 /**
+ * T_PDF.gs
  * GÃ©nÃ¨re un fichier PDF Ã  partir d'un modÃ¨le Google Doc en remplaÃ§ant des variables.
  * @param {string} templateId L'ID du fichier Google Doc servant de modÃ¨le.
  * @param {Object} variables Un objet oÃ¹ les clÃ©s sont les noms des variables Ã  remplacer (sans les accolades).
@@ -3041,15 +3082,38 @@ function genererPdfDepuisModele(templateId, variables, nomFichier) {
 
 /**
  * =================================================================================
- * == FICHIER : Moteur_rK_Creativite.gs
- * == VERSION : 2.2 - Nettoyage automatique des en-tÃªtes de profils
+ * == FICHIER : Moteur_rK_Creativite.js
+ * == VERSION : 2.4 - Harmonisation des noms de variables pour les placeholders.
  * == RÃ”LE    : Moteur de calcul dÃ©diÃ© pour le test r&K CrÃ©ativitÃ©.
  * =================================================================================
  */
 
+// ======================= SECTION DE DÃ‰BOGAGE (ESPIONS) =======================
+const DEBUG_MODE_CREATIVITE = true; // INTERRUPTEUR GÃ‰NÃ‰RAL : Mettre Ã  false pour dÃ©sactiver TOUS les espions.
+
+// --- Interrupteurs spÃ©cifiques ---
+const DEBUG_CREA_FLOW = true;      // Espionne le flux gÃ©nÃ©ral (entrÃ©e/sortie des fonctions).
+const DEBUG_CREA_DATA = true;      // Espionne le chargement des donnÃ©es (Questions, Profils).
+const DEBUG_CREA_SCORING = false;  // Espionne le calcul des scores par axe.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de dÃ©bogage pour ce moteur.
+ */
+function _log_crea(flag, ...args) {
+  if (DEBUG_MODE_CREATIVITE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION CrÃ©ativitÃ©] ${message}`);
+  }
+}
+// =================================================================================
+
+
 function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOrigine) {
+  _log_crea(DEBUG_CREA_FLOW, '-> DÃ©marrage de calculerResultats_rK_Creativite.');
   try {
     const { questionsMap } = _chargerQuestionsAvecAxe(config.Type_Test, _normLang(langueOrigine));
+    _log_crea(DEBUG_CREA_DATA, `Chargement des questions terminÃ©. ${Object.keys(questionsMap || {}).length} questions trouvÃ©es.`);
+
     let resultatsBruts = { scoresData: {} };
     let scoresParAxe = {
       "IdÃ©ation": { r: 0, K: 0, total: 0 }, "SÃ©lection": { r: 0, K: 0, total: 0 },
@@ -3076,6 +3140,7 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
           scoresParAxe[axe].r += score_r;
           scoresParAxe[axe].K += score_K;
           scoresParAxe[axe].total += score_r + score_K;
+           _log_crea(DEBUG_CREA_SCORING, `Question ${idQuestion}, Axe '${axe}': r=${score_r}, K=${score_K}`);
         }
       }
     }
@@ -3086,14 +3151,18 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
     const pourcentage_r = (grand_total_global > 0) ? (total_r_global / grand_total_global) * 100 : 0;
 
     const profilFinal = _determinerProfilCreativite(pourcentage_r);
-    const profilsDataBrutes = _chargerDonneesProfilsBrutes_V2(config.Type_Test, langueCible); // Appel de la nouvelle fonction robuste
+    const profilsDataBrutes = _chargerDonneesProfilsBrutes_V2(config.Type_Test, langueCible);
+    _log_crea(DEBUG_CREA_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
+    
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === profilFinal) || {};
-
+    _log_crea(DEBUG_CREA_DATA, `Profil final dÃ©terminÃ©: "${profilFinal}". DonnÃ©es trouvÃ©es:`, profilData);
+    
     const finalData = {
       ...profilData,
       profilFinal: profilFinal,
-      "Pourcentage Exploratoire (r)": parseFloat(pourcentage_r.toFixed(1)),
-      "Pourcentage StructurÃ© (K)": parseFloat((100 - pourcentage_r).toFixed(1)),
+      Titre_Profil: profilFinal,
+      Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
+      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
       Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
@@ -3102,14 +3171,15 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
     };
     
     finalData.scoresData = {
-        "Pourcentage Exploratoire (r)": finalData["Pourcentage Exploratoire (r)"],
-        "Pourcentage StructurÃ© (K)": finalData["Pourcentage StructurÃ© (K)"]
+        "Pourcentage Exploratoire (r)": finalData.Pourcentage_r,
+        "Pourcentage StructurÃ© (K)": finalData.Pourcentage_K
     };
     finalData.mapCodeToName = {
         "Pourcentage Exploratoire (r)": "Pourcentage Exploratoire (r)",
         "Pourcentage StructurÃ© (K)": "Pourcentage StructurÃ© (K)"
     };
 
+    _log_crea(DEBUG_CREA_FLOW, `<- Fin de calculerResultats_rK_Creativite.`);
     return finalData;
 
   } catch (e) {
@@ -3135,7 +3205,7 @@ function _chargerQuestionsAvecAxe(typeTest, langue) {
     if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
     
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    const headers = data.shift().map(h => String(h || '').trim());
     const idCol = headers.indexOf('ID');
     const paramsCol = headers.indexOf('ParamÃ¨tres (JSON)');
     const axeCol = headers.indexOf('Axe');
@@ -3166,10 +3236,6 @@ function _chargerQuestionsAvecAxe(typeTest, langue) {
   }
 }
 
-/**
- * ## FONCTION UTILITAIRE AMÃ‰LIORÃ‰E ##
- * Charge les donnÃ©es brutes des profils et nettoie les en-tÃªtes.
- */
 function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
   try {
     const systemIds = getSystemIds();
@@ -3181,7 +3247,6 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
       return [];
     }
     const data = sheet.getDataRange().getValues();
-    // La ligne ci-dessous est la correction clÃ© : elle nettoie chaque en-tÃªte.
     const headers = data.shift().map(h => String(h || '').trim());
     
     const jsonData = data.map(row => {

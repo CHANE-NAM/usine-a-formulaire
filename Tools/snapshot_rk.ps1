@@ -58,11 +58,10 @@ if ($EnableSpy) {
 # ------------------------------------------------------------------------------------
 # 1) Import des helpers (manifest/brief/diff) — robuste et sans récursion
 # ------------------------------------------------------------------------------------
-# On tente plusieurs emplacements probables pour snapshot_helpers.ps1
 $HelpersCandidates = @(
-  (Join-Path $ScriptRoot 'snapshot_helpers.ps1'),                               # si Tools\ est le cwd
-  (Join-Path $ScriptRoot 'Tools\snapshot_helpers.ps1'),                         # si lancé depuis la racine repo
-  (Join-Path ((Resolve-Path (Join-Path $ScriptRoot '..')).Path) 'Tools\snapshot_helpers.ps1') # secours
+  (Join-Path $ScriptRoot 'snapshot_helpers.ps1'),
+  (Join-Path $ScriptRoot 'Tools\snapshot_helpers.ps1'),
+  (Join-Path ((Resolve-Path (Join-Path $ScriptRoot '..')).Path) 'Tools\snapshot_helpers.ps1')
 ) | Select-Object -Unique
 
 $HelpersPath = $null
@@ -86,10 +85,8 @@ if ($HelpersPath) {
 # ------------------------------------------------------------------------------------
 # 2) Dossiers
 # ------------------------------------------------------------------------------------
-# $ScriptRoot pointe sur Tools\ ; la racine repo est ..\ depuis Tools\
 $Repo      = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
 $ExportDir = Join-Path $Repo "export-onglets-csv"
-# $LogsDir déjà créé plus haut
 New-Item -ItemType Directory -Force -Path $ExportDir | Out-Null
 
 # ------------------------------------------------------------------------------------
@@ -118,14 +115,12 @@ try {
 # ------------------------------------------------------------------------------------
 Write-Section "[2/4] Concat des scripts par projet ..."
 
-# BDD : gère le nom avec/sans accents
 $bdd1 = Join-Path $Repo "03_BaseDeDonnées"
 $bdd2 = Join-Path $Repo "03_BaseDeDonnees"
 if     (Test-Path -LiteralPath $bdd1) { $bddDir = $bdd1 }
 elseif (Test-Path -LiteralPath $bdd2) { $bddDir = $bdd2 }
 else { $bddDir = $null }
 
-# Liste des projets : paires [0]=name ; [1]=dir
 $Projets = @()
 $Projets += ,@("[MOTEUR]V2 Usine à Tests",        (Join-Path $Repo "01_Moteur"))
 $Projets += ,@("[CONFIG]V2 Usine à Tests",        (Join-Path $Repo "02_configuration"))
@@ -138,17 +133,14 @@ foreach ($p in $Projets) {
 
   if (-not (Test-Path -LiteralPath $pdir)) { Write-Warning ("Dossier introuvable: {0}" -f $pdir); continue }
 
-  # Nom de fichier "safe" (ASCII: lettres/chiffres/underscore/tiret)
   $safeName = ($pname -replace '[^\w\-]+','_')
   $outTxt   = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
 
-  # Filtrage robuste (pas de -Include)
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
            Where-Object { ($_.Extension -in ".gs",".js",".ts") -or ($_.Name -eq "appsscript.json") }
 
   if (-not $files) { Write-Warning ("Aucun fichier GAS trouvé dans {0}" -f $pdir); continue }
 
-  # En-tête de projet (sans backticks)
   ("=== Projet: {0} ({1}) ==={2}" -f $pname, $pdir, [Environment]::NewLine) |
     Out-File -FilePath $outTxt -Encoding UTF8
 
@@ -164,10 +156,10 @@ foreach ($p in $Projets) {
 # ------------------------------------------------------------------------------------
 Write-Section "[3/4] Export des onglets -> CSV ..."
 $Ids = @(
-  "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8", # [BDD]V2 Tests & Profils
-  "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ", # [CONFIG] Usine à Tests
-  "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU", # [TEMPLATE]V2 Kit de Traitement
-  "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests
+  "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8",
+  "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ",
+  "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU",
+  "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"
 )
 
 $nodeArgs = @(
@@ -199,7 +191,6 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
     $manifest = Write-Manifest -SnapshotDir $SnapDir -RepoRoot $Repo
     $briefMd  = Write-BriefMd  -SnapshotDir $SnapDir -Manifest $manifest
 
-    # cherche le snapshot précédent *qui possède un manifest.json*
     $prev = Get-ChildItem -LiteralPath $ExportDir -Directory |
             Where-Object { $_.FullName -ne $SnapDir -and (Test-Path (Join-Path $_.FullName 'manifest.json')) } |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -225,12 +216,11 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
 
 # ------------------------------------------------------------------------------------
 # 8) HOOK optionnel : génération de documents “AI / État / Utilisateurs”
-#     -> script indépendant Tools\gen_docs.ps1 (s’il existe, on l’appelle)
 # ------------------------------------------------------------------------------------
 try {
   $GenDocs = Join-Path $ScriptRoot "gen_docs.ps1"
   if (Test-Path -LiteralPath $GenDocs) {
-    Write-Section "[8/4] Génération des documents (hook gen_docs.ps1) ..."
+    Write-Section "[opt] Génération des documents (hook gen_docs.ps1) ..."
     & $GenDocs -RepoRoot $Repo -SnapshotDir $SnapDir -ExportDir $ExportDir -Timestamp $ts
   }
 } catch {
@@ -275,5 +265,4 @@ try {
 Write-Host ""
 Write-Host ("[DONE] Snapshot: {0}" -f $SnapDir)
 
-# Fin transcript
 try { Stop-Transcript | Out-Null } catch {}
