@@ -1,88 +1,133 @@
-# Tools\AI-Brief.ps1 — brief enrichi + IA_kit
-[CmdletBinding()]param()
-$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[System.Text.Encoding]::UTF8
-$ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
-$Repo=(Resolve-Path (Join-Path $ScriptRoot '..')).Path
-$ExportDir=Join-Path $Repo 'export-onglets-csv'
-if (-not (Test-Path -LiteralPath $ExportDir)) { throw "export-onglets-csv introuvable : $ExportDir" }
-$Snap = Get-ChildItem -LiteralPath $ExportDir -Directory | Where-Object { $_.Name -like 'SNAPSHOT_*' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if (-not $Snap) { throw "Aucun snapshot trouvé dans $ExportDir" }
-$DocsDir=Join-Path $Snap.FullName 'docs'; New-Item -ItemType Directory -Force -Path $DocsDir | Out-Null
-$BriefPath=Join-Path $DocsDir '00_SESSION_BRIEF.md'
-$ManPath=Join-Path $Snap.FullName 'manifest.json'
-$DiffPath=Join-Path $Snap.FullName 'diff.md'
+# Tools\AI-Brief.ps1 — brief riche (ASCII-safe)
+[CmdletBinding()]
+param()
 
-# Résumé manifest
-$resume = '_manifest.json indisponible pour ce snapshot._'
-if (Test-Path $ManPath) {
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# ====== Reglages ======
+$MaxCommits   = 8
+$MaxDiffItems = 10
+$MaxAiList    = 8
+# ======================
+
+# Racine du projet (ce script est dans Tools\)
+$Root   = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$Export = Join-Path $Root 'export-onglets-csv'
+if (-not (Test-Path -LiteralPath $Export)) { throw "export-onglets-csv introuvable: $Export" }
+
+# Dernier snapshot
+$snap = Get-ChildItem -LiteralPath $Export -Directory |
+        Where-Object { $_.Name -like 'SNAPSHOT_*' } |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+if (-not $snap) { throw "Aucun snapshot trouve dans $Export" }
+
+# Dossiers/fichiers utiles
+$DocsDir   = Join-Path $snap.FullName 'docs'
+New-Item -ItemType Directory -Force -Path $DocsDir | Out-Null
+$BriefPath = Join-Path $DocsDir '00_SESSION_BRIEF.md'
+$ManPath   = Join-Path $snap.FullName 'manifest.json'
+$DiffPath  = Join-Path $snap.FullName 'diff.md'
+$AiDir     = Join-Path $DocsDir 'ai'
+
+# ====== Manifest: resume + par type ======
+$Resume = '_manifest.json indisponible pour ce snapshot._'
+$ByTypeLines = @()
+if (Test-Path -LiteralPath $ManPath) {
   try {
-    $m = Get-Content -LiteralPath $ManPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $byType=''; if ($m.summary.counts.byType) {
-      $props=$m.summary.counts.byType.PSObject.Properties | Sort-Object Name
-      $lines = $props | Select-Object -First 8 | ForEach-Object { "  - **$($_.Name)** : $($_.Value)" }
-      if ($lines) { $byType = "- **Par type** :`r`n" + ($lines -join "`r`n") }
+    $m = Get-Content -LiteralPath $ManPath -Raw | ConvertFrom-Json
+    $total = [string]$m.summary.counts.total
+    $size  = [string]$m.summary.totalSize
+    $Resume = "- **Fichiers total** : $total`n- **Taille totale (octets)** : $size"
+
+    if ($m.summary.counts.byType) {
+      $props = $m.summary.counts.byType.PSObject.Properties | Sort-Object Name
+      foreach ($p in $props) { $ByTypeLines += ('  - **{0}** : {1}' -f $p.Name, $p.Value) }
     }
-    $resume = "- **Fichiers total** : $($m.summary.counts.total)`r`n- **Taille totale (octets)** : $($m.summary.totalSize)"
-    if ($byType) { $resume += "`r`n$byType" }
-  } catch { $resume = "_Échec lecture manifest.json : $($_.Exception.Message)_" }
+  } catch { }
 }
 
-# Extrait du diff
-$diffBlock=''
-if (Test-Path $DiffPath) {
+# ====== Compte CSV ======
+$CsvCount = (Get-ChildItem -LiteralPath $snap.FullName -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue).Count
+
+# ====== Diff condense (Ajouts/Suppressions/Modifications) ======
+$TopAdded=@(); $TopRemoved=@(); $TopChanged=@()
+if (Test-Path -LiteralPath $DiffPath) {
   $d = Get-Content -LiteralPath $DiffPath -Raw -Encoding UTF8
-  $curr=''; $add=@(); $rem=@(); $chg=@()
-  foreach($line in ($d -split "`r?`n")){
-    if ($line -match '^\#\#\s+(Ajouts|Suppressions|Modifications)\b'){ $curr=$Matches[1]; continue }
-    if ($line -match '^\*\s+') { switch ($curr) { 'Ajouts'{$add+=$line}; 'Suppressions'{$rem+=$line}; 'Modifications'{$chg+=$line} } }
+  $curr = ''
+  foreach ($line in ($d -split "`r?`n")) {
+    if ($line -match '^\#\#\s+(Ajouts|Suppressions|Modifications)\b') { $curr = $matches[1]; continue }
+    if ($line -match '^\*\s+') {
+      switch ($curr) {
+        'Ajouts'        { $TopAdded   += $line }
+        'Suppressions'  { $TopRemoved += $line }
+        'Modifications' { $TopChanged += $line }
+      }
+    }
   }
-  $add=$add | Select-Object -First 8; $rem=$rem | Select-Object -First 8; $chg=$chg | Select-Object -First 8
-  if ($add.Count -or $rem.Count -or $chg.Count) {
-    $sb = New-Object System.Text.StringBuilder
-    if ($add.Count){ [void]$sb.AppendLine('**Ajouts**');         $add | ForEach-Object { [void]$sb.AppendLine($_) } }
-    if ($rem.Count){ [void]$sb.AppendLine(''); [void]$sb.AppendLine('**Suppressions**');  $rem | ForEach-Object { [void]$sb.AppendLine($_) } }
-    if ($chg.Count){ [void]$sb.AppendLine(''); [void]$sb.AppendLine('**Modifications**'); $chg | ForEach-Object { [void]$sb.AppendLine($_) } }
-    $diffBlock = $sb.ToString()
-  }
+  $TopAdded   = $TopAdded   | Select-Object -First $MaxDiffItems
+  $TopRemoved = $TopRemoved | Select-Object -First $MaxDiffItems
+  $TopChanged = $TopChanged | Select-Object -First $MaxDiffItems
 }
 
-# IA_kit (appel optionnel)
-$KitDir = Join-Path $Snap.FullName 'IA_kit'
-$KitScript1 = Join-Path $Repo 'Build-IA-Kit.ps1'
-$KitScript2 = Join-Path $Repo 'Tools\Build-IA-Kit.ps1'
-$kitBuilt=$false
+# ====== Liste courte des docs AI ======
+$AiList = @()
+if (Test-Path -LiteralPath $AiDir) {
+  $files = Get-ChildItem -LiteralPath $AiDir -File -Filter *.md -ErrorAction SilentlyContinue | Sort-Object Name
+  foreach ($f in ($files | Select-Object -First $MaxAiList)) { $AiList += ('- docs/ai/' + $f.Name) }
+}
+
+# ====== Commits recents (optionnel) ======
+$Commits = @()
 try {
-  if (Test-Path $KitScript1) { & $KitScript1; $kitBuilt=$true }
-  elseif (Test-Path $KitScript2) { & $KitScript2; $kitBuilt=$true }
-} catch { Write-Warning ("Build-IA-Kit.ps1 a échoué : {0}" -f $_.Exception.Message) }
-if (-not $kitBuilt) {
-  New-Item -ItemType Directory -Force -Path $KitDir | Out-Null
-  $toCopy=@()
-  $EtatPath = Join-Path $DocsDir 'etat\etat_projet.md'
-  if (Test-Path $BriefPath) { $toCopy += $BriefPath }
-  if (Test-Path $EtatPath)  { $toCopy += $EtatPath }
-  if (Test-Path $DiffPath)  { $toCopy += $DiffPath }
-  foreach($f in $toCopy){ Copy-Item -LiteralPath $f -Destination $KitDir -Force }
+  Push-Location -LiteralPath $Root
+  $Commits = git log --oneline -n $MaxCommits 2>$null
+} catch {} finally { Pop-Location }
+
+# ====== Construction du brief (ASCII uniquement) ======
+$content = New-Object System.Text.StringBuilder
+[void]$content.AppendLine('# BRIEF SESSION - a coller au debut de la conversation')
+[void]$content.AppendLine('')
+[void]$content.AppendLine('> **Snapshot** : ' + $snap.Name + '  **Genere** : ' + (Get-Date -Format 'yyyy-MM-dd HH:mm'))
+[void]$content.AppendLine('> **Chemins utiles** :')
+[void]$content.AppendLine('> - docs/etat/etat_projet.md')
+[void]$content.AppendLine('> - diff.md')
+[void]$content.AppendLine('> - docs/ai/*.md')
+[void]$content.AppendLine('> - scripts_*.txt')
+[void]$content.AppendLine('')
+[void]$content.AppendLine('## Resume rapide')
+[void]$content.AppendLine($Resume)
+if ($ByTypeLines.Count) {
+  [void]$content.AppendLine('')
+  [void]$content.AppendLine('- **Par type** :')
+  foreach ($l in $ByTypeLines) { [void]$content.AppendLine($l) }
 }
+[void]$content.AppendLine('')
+[void]$content.AppendLine('- **CSV exportes** : ' + $CsvCount)
+[void]$content.AppendLine('')
+[void]$content.AppendLine('## Commits recents')
+if ($Commits -and $Commits.Count) { foreach ($c in $Commits) { [void]$content.AppendLine('* ' + $c) } }
+else { [void]$content.AppendLine('_(git log indisponible)_') }
 
-# Liste IA_kit
-$kitList=''; if (Test-Path $KitDir) {
-  $files = Get-ChildItem -LiteralPath $KitDir -File | Select-Object -Expand Name
-  if ($files) { $kitList = '- ' + ($files -join "`r`n- ") }
-}
+[void]$content.AppendLine('')
+[void]$content.AppendLine('## Changements cles (diff condense)')
+if ($TopAdded.Count)   { [void]$content.AppendLine('**Ajouts**');         foreach ($l in $TopAdded)   { [void]$content.AppendLine($l) } }
+if ($TopRemoved.Count) { [void]$content.AppendLine(''); [void]$content.AppendLine('**Suppressions**'); foreach ($l in $TopRemoved) { [void]$content.AppendLine($l) } }
+if ($TopChanged.Count) { [void]$content.AppendLine(''); [void]$content.AppendLine('**Modifications**'); foreach ($l in $TopChanged) { [void]$content.AppendLine($l) } }
+if (-not ($TopAdded.Count -or $TopRemoved.Count -or $TopChanged.Count)) { [void]$content.AppendLine('_Aucun diff detecte._') }
 
-# Brief enrichi
-$content  = "# BRIEF SESSION — à coller au début de la conversation`r`n`r`n"
-$content += "> **Snapshot** : $($Snap.Name)  **Généré** : $(Get-Date -Format 'yyyy-MM-dd HH:mm')`r`n"
-$content += "> **Chemins utiles** :`r`n> - docs/etat/etat_projet.md`r`n> - diff.md`r`n> - docs/ai/*.md`r`n> - scripts_*.txt`r`n`r`n"
-$content += "## Résumé rapide`r`n$resume`r`n`r`n"
-if ($diffBlock) { $content += "## Changements clés (extrait du diff)`r`n$diffBlock`r`n`r`n" }
-if ($kitList)   { $content += "## Fichiers joints (IA_kit)`r`n$kitList`r`n`r`n" }
+[void]$content.AppendLine('')
+[void]$content.AppendLine('## Docs AI a me fournir si besoin')
+if ($AiList.Count) { foreach ($l in $AiList) { [void]$content.AppendLine($l) } } else { [void]$content.AppendLine('- (aucun fichier dans docs/ai)') }
 
+# Ecrit en UTF-8 sans BOM
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($BriefPath,$content,$utf8NoBom)
+[IO.File]::WriteAllText($BriefPath, $content.ToString(), $utf8NoBom)
 
-try { Get-Content -Raw -LiteralPath $BriefPath -Encoding UTF8 | Set-Clipboard } catch { Write-Warning "Set-Clipboard indisponible : $($_.Exception.Message)" }
+# Copie dans presse-papiers si dispo et ouvre Notepad
+if (Get-Command Set-Clipboard -ErrorAction SilentlyContinue) {
+  Get-Content -LiteralPath $BriefPath -Raw | Set-Clipboard
+}
 Start-Process notepad $BriefPath
-if (Test-Path $KitDir) { Start-Process explorer $KitDir }
-Write-Host "[BRIEF] Généré, copié et ouvert : $BriefPath"
+Write-Host "[BRIEF] Genere, copie et ouvert : $BriefPath"
