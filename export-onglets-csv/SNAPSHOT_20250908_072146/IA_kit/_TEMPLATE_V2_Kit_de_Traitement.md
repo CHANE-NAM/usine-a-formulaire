@@ -1,7 +1,10 @@
-﻿=== Projet: [TEMPLATE]V2 Kit de Traitement (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates) ===
+# _TEMPLATE_V2_Kit_de_Traitement
 
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250908_072146**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -18,8 +21,11 @@
     ]
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -343,8 +349,11 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Menu.gs
@@ -561,9 +570,11 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -651,8 +662,14 @@ function _getReponsesSheet_(config, options) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
-    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.repon
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
+
+```javascript
+
+ config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
     ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
@@ -1064,9 +1081,6 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
-
 // =================================================================================
 // == FICHIER : Utilities.gs
 // == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clÃ©â†’valeur)
@@ -1153,8 +1167,14 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRow[0].toLowerCase();
-    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
+    const header0 = headersRo
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
+
+```javascript
+
+s('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1466,9 +1486,6 @@ function mapQuestionsById(bdd, nomFeuille) {
   return mapById;
 }
 
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
-
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
 // == VERSION : 1.0 (CrÃ©ation initiale)
@@ -1586,8 +1603,11 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js
+
+```javascript
 
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
@@ -1625,9 +1645,11 @@ function testFusionRapportFull() {
   const pdf = genererPdfDepuisModele(templateId, vars, 'Test_Rapport_Expert_FULL');
   DriveApp.createFile(pdf).setName('Test_Rapport_Expert_FULL.pdf');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js ---
+```javascript
 
 /**********************************************
  * Injecteur de scÃ©narios â€” r&K_Environnement
@@ -1905,11 +1927,11 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -2064,8 +2086,11 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2255,8 +2280,11 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2319,8 +2347,11 @@ function creerGraphiqueRadar(axesData) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js
+
+```javascript
 
 const fs = require('fs');
 const path = require('path');
@@ -2390,8 +2421,11 @@ try {
 } catch (error) {
     console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js
+
+```javascript
 
 /**
  *T_Main.gs
@@ -2619,8 +2653,11 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js
+
+```javascript
 
 /**
  * T_Mail.gs
@@ -2823,8 +2860,11 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js
+
+```javascript
 
 /**
  * T_Data.gs
@@ -3027,8 +3067,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js
+
+```javascript
 
 /**
  * T_PDF.gs
@@ -3077,8 +3120,11 @@ function genererPdfDepuisModele(templateId, variables, nomFichier) {
     return null;
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -3262,3 +3308,40 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
+```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Feuille_36.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* ... (22 de plus)
+

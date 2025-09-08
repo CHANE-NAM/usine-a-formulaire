@@ -1,10 +1,9 @@
-@echo off
+﻿@echo off
 setlocal
+rem --- PowerShell 7 si dispo, sinon Windows PowerShell ---
+set "ROOT=%~dp0"
 set "PS7=%ProgramFiles%\PowerShell\7\pwsh.exe"
-set "SCRIPT=%~dp0Tools\Snapshot_rk.ps1"
+if exist "%PS7%" (set "PS=%PS7%") else set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-if exist "%PS7%" (
-  "%PS7%" -NoLogo -ExecutionPolicy Bypass -File "%SCRIPT%" %*
-) else (
-  powershell -NoLogo -ExecutionPolicy Bypass -File "%SCRIPT%" %*
-)
+rem --- Lance l’instantané complet (CSV + manifest/brief/diff + docs si dispo) ---
+"%PS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%Tools\snapshot_rk.ps1"

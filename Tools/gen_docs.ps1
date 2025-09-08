@@ -1,4 +1,8 @@
-﻿# Tools\gen_docs.ps1  — robuste aux paramètres nommés, positionnels, ou via $args
+﻿# Tools\gen_docs.ps1 — génère docs AI/État/Users + brief IA
+# Utilisation :
+#   1) Sans paramètre (auto-détection) :  powershell -NoLogo -ExecutionPolicy Bypass -File .\Tools\gen_docs.ps1
+#   2) Avec paramètres (nommés ou positionnels) : -RepoRoot <repo> -SnapshotDir <snap> -ExportDir <export>
+
 #requires -Version 5.1
 [CmdletBinding()]
 param(
@@ -11,7 +15,44 @@ param(
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# ---- Fallback si le bloc param n'a rien reçu (positionnels nus ou parsing exotique)
+# ---------- Helpers sûrs ----------
+function As-Scalar([object]$v) {
+  if ($null -eq $v) { return '' }
+  if ($v -is [System.Array]) { foreach ($e in $v) { if ($e) { return [string]$e } }; return '' }
+  return [string]$v
+}
+function SafeJoin {
+  param([Parameter(Mandatory=$true)]$Base,[Parameter(Mandatory=$true)]$Child)
+  $b = As-Scalar $Base
+  if ($Child -is [System.Array]) {
+    $acc = $b; foreach ($seg in $Child) { $acc = [System.IO.Path]::Combine($acc, [string]$seg) }; return $acc
+  } else {
+    return (Join-Path -Path $b -ChildPath (As-Scalar $Child))
+  }
+}
+function New-Dir([string]$p) { New-Item -ItemType Directory -Force -Path $p | Out-Null }
+function Write-FileUtf8([string]$Path,[string]$Content) {
+  $enc = New-Object System.Text.UTF8Encoding($false)  # UTF-8 sans BOM
+  [System.IO.File]::WriteAllText((As-Scalar $Path), $Content, $enc)
+}
+function Guess-CodeFence([string]$filePath) {
+  switch ([System.IO.Path]::GetExtension($filePath).ToLowerInvariant()) {
+    '.js' { 'javascript' } '.gs' { 'javascript' } '.ts' { 'typescript' }
+    '.html' { 'html' } '.json' { 'json' } default { '' }
+  }
+}
+function Make-Tree([string]$root) {
+  $root = As-Scalar $root
+  $sb = New-Object System.Text.StringBuilder
+  if (-not (Test-Path -LiteralPath $root)) { return '' }
+  $rootLen = $root.Length
+  $items = Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue
+  foreach ($it in $items) { $rel = $it.FullName.Substring($rootLen).TrimStart('\'); [void]$sb.AppendLine('* ' + $rel) }
+  $sb.ToString()
+}
+
+# ---------- Auto-détection des chemins si non fournis ----------
+# 1) Essaie les $args nus (positionnels) si le binder n’a pas rempli les variables
 if (-not $RepoRoot -or -not $SnapshotDir -or -not $ExportDir) {
   if ($args.Count -ge 3) {
     if (-not $RepoRoot)    { $RepoRoot    = [string]$args[0] }
@@ -21,83 +62,64 @@ if (-not $RepoRoot -or -not $SnapshotDir -or -not $ExportDir) {
   }
 }
 
-function Show-Usage {
-  Write-Host "USAGE:" -ForegroundColor Yellow
-  Write-Host "  powershell -NoLogo -ExecutionPolicy Bypass -File .\Tools\gen_docs.ps1 `"<RepoRoot>`" `"<SnapshotDir>`" `"<ExportDir>`""
-  Write-Host "ou (nommés) :"
-  Write-Host "  .\Tools\gen_docs.ps1 -RepoRoot `"<RepoRoot>`" -SnapshotDir `"<SnapshotDir>`" -ExportDir `"<ExportDir>`""
+# 2) Si toujours vide, auto-détecte par rapport à l’emplacement du script (Tools\… -> repo = ..)
+$ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
+elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
+else { (Get-Location).Path }
+
+if (-not $RepoRoot)    { $RepoRoot  = (Resolve-Path (Join-Path $ScriptRoot '..')).Path }
+if (-not $ExportDir)   { $ExportDir = SafeJoin $RepoRoot 'export-onglets-csv' }
+if (-not $SnapshotDir) {
+  $Latest = (Get-ChildItem -LiteralPath $ExportDir -Directory |
+             Where-Object { $_.Name -like 'SNAPSHOT_*' } |
+             Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+  if ($Latest) { $SnapshotDir = $Latest.FullName }
 }
 
-if ([string]::IsNullOrWhiteSpace($RepoRoot) -or
-    [string]::IsNullOrWhiteSpace($SnapshotDir) -or
-    [string]::IsNullOrWhiteSpace($ExportDir)) {
-  Show-Usage
-  exit 2
-}
+# 3) Dernier filet : variables d’environnement
+if (-not $RepoRoot -and $env:REPO_ROOT)      { $RepoRoot = $env:REPO_ROOT }
+if (-not $ExportDir -and $env:EXPORT_DIR)    { $ExportDir = $env:EXPORT_DIR }
+if (-not $SnapshotDir -and $env:SNAPSHOT_DIR){ $SnapshotDir = $env:SNAPSHOT_DIR }
 
-# ---- Helpers robustes
-function As-Scalar([object]$v) {
-  if ($null -eq $v) { return '' }
-  if ($v -is [System.Array]) {
-    foreach ($e in $v) { if ($e) { return [string]$e } }
-    return ''
-  }
-  return [string]$v
-}
-function SafeJoin([object]$Base,[object]$Child) {
-  $base = As-Scalar $Base
-  if ($Child -is [System.Array]) {
-    $acc = $base
-    foreach ($seg in $Child) { $acc = [System.IO.Path]::Combine($acc, [string]$seg) }
-    return $acc
-  } else {
-    return (Join-Path -Path $base -ChildPath (As-Scalar $Child))
-  }
-}
-function New-Dir([string]$p) { New-Item -ItemType Directory -Force -Path $p | Out-Null }
-function Write-FileUtf8([string]$Path,[string]$Content) {
-  $enc = New-Object System.Text.UTF8Encoding($false)  # UTF-8 sans BOM
-  [System.IO.File]::WriteAllText($Path, $Content, $enc)
-}
-function Guess-CodeFence([string]$filePath) {
-  switch ([System.IO.Path]::GetExtension($filePath).ToLowerInvariant()) {
-    '.js' { 'javascript' } '.gs' { 'javascript' } '.ts' { 'typescript' }
-    '.html' { 'html' } '.json' { 'json' } default { '' }
-  }
-}
-
-# ---- Dossiers de sortie
+# Normalise en chaînes simples
 $RepoRoot    = As-Scalar $RepoRoot
 $SnapshotDir = As-Scalar $SnapshotDir
 $ExportDir   = As-Scalar $ExportDir
 $Timestamp   = As-Scalar $Timestamp
 
+if ([string]::IsNullOrWhiteSpace($RepoRoot) -or
+    [string]::IsNullOrWhiteSpace($ExportDir) -or
+    [string]::IsNullOrWhiteSpace($SnapshotDir)) {
+  throw "Chemins insuffisants. RepoRoot='$RepoRoot'  ExportDir='$ExportDir'  SnapshotDir='$SnapshotDir'"
+}
+
+# ---------- Dossiers de sortie ----------
 $DocsRoot = SafeJoin $SnapshotDir 'docs'
 $DirAI    = SafeJoin $DocsRoot 'ai'
 $DirEtat  = SafeJoin $DocsRoot 'etat'
 $DirUsers = SafeJoin $DocsRoot 'users'
 New-Dir $DocsRoot; New-Dir $DirAI; New-Dir $DirEtat; New-Dir $DirUsers
 
-# ---- 1) AI-friendly (scripts_*.txt)
+# ========================= 1) AI-friendly (scripts_*.txt) =========================
 $concatFiles = Get-ChildItem -LiteralPath $SnapshotDir -File -Filter 'scripts_*.txt' -ErrorAction SilentlyContinue
 foreach ($cf in $concatFiles) {
   $projectName = ([System.IO.Path]::GetFileNameWithoutExtension($cf.Name) -replace '^scripts_','')
   $outPath = SafeJoin $DirAI ($projectName + '.md')
 
   $whole = Get-Content -LiteralPath $cf.FullName -Raw -Encoding UTF8
-  if (-not $whole) { continue }
+  if ([string]::IsNullOrEmpty($whole)) { continue }
 
   $parts = [System.Text.RegularExpressions.Regex]::Split($whole, '(?m)^\s*---\s*FILE:\s*(.+?)\s*---\s*$')
 
   $sb = New-Object System.Text.StringBuilder
   [void]$sb.AppendLine('# ' + $projectName)
   [void]$sb.AppendLine('')
-  [void]$sb.AppendLine('> Généré automatiquement depuis **' + $cf.Name + '** — snapshot: **' + ([System.IO.Path]::GetFileName($SnapshotDir)) + '**.')
+  [void]$sb.AppendLine('> Généré automatiquement depuis **' + $cf.Name + '** — snapshot: **' + (Split-Path -Leaf $SnapshotDir) + '**.')
   [void]$sb.AppendLine('')
 
   for ($i=1; $i -lt $parts.Count; $i+=2) {
-    $filePath = (($parts[$i] | ForEach-Object { $_ }) -join '').Trim()
-    $content  = if ($i + 1 -lt $parts.Count) { $parts[$i+1] } else { '' }
+    $filePath = (As-Scalar $parts[$i]).Trim()
+    $content  = if ($i + 1 -lt $parts.Count) { As-Scalar $parts[$i+1] } else { '' }
     $lang = Guess-CodeFence $filePath
 
     [void]$sb.AppendLine('## ' + $filePath)
@@ -110,25 +132,20 @@ foreach ($cf in $concatFiles) {
 
   $csvs = Get-ChildItem -LiteralPath $SnapshotDir -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue
   if ($csvs.Count -gt 0) {
-    [void]$sb.AppendLine('---')
-    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('---'); [void]$sb.AppendLine('')
     [void]$sb.AppendLine('### Fichiers CSV exportés (aperçu)')
-    $preview = $csvs | Select-Object -First 30
-    foreach ($c in $preview) {
+    foreach ($c in ($csvs | Select-Object -First 30)) {
       $rel = $c.FullName.Replace($SnapshotDir, '').TrimStart('\')
       [void]$sb.AppendLine('* ' + $rel)
     }
-    if ($csvs.Count -gt 30) {
-      $more = $csvs.Count - 30
-      [void]$sb.AppendLine(('* ... ({0} de plus)' -f $more))
-    }
+    if ($csvs.Count -gt 30) { [void]$sb.AppendLine(('* ... ({0} de plus)' -f ($csvs.Count - 30))) }
     [void]$sb.AppendLine('')
   }
 
   Write-FileUtf8 $outPath $sb.ToString()
 }
 
-# ---- 2) État du projet
+# ========================= 2) État du projet =========================
 $EtatPath     = SafeJoin $DirEtat 'etat_projet.md'
 $manifestPath = SafeJoin $SnapshotDir 'manifest.json'
 $man = $null
@@ -143,19 +160,17 @@ $aiFiles  = Get-ChildItem -LiteralPath $DirAI -File -Filter '*.md' -ErrorAction 
 $csvCount = (Get-ChildItem -LiteralPath $SnapshotDir -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue).Count
 
 $sbEtat = New-Object System.Text.StringBuilder
-[void]$sbEtat.AppendLine('# État du projet — ' + (Split-Path -Leaf (As-Scalar $SnapshotDir)))
+[void]$sbEtat.AppendLine('# État du projet — ' + (Split-Path -Leaf $SnapshotDir))
 [void]$sbEtat.AppendLine('')
 [void]$sbEtat.AppendLine('- **Généré** : ' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))
-[void]$sbEtat.AppendLine('- **Snapshot** : ' + (Split-Path -Leaf (As-Scalar $SnapshotDir)))
+[void]$sbEtat.AppendLine('- **Snapshot** : ' + (Split-Path -Leaf $SnapshotDir))
 [void]$sbEtat.AppendLine('- **CSV exportés** : ' + $csvCount)
 [void]$sbEtat.AppendLine('- **Racine repo** : ' + $RepoRoot)
 [void]$sbEtat.AppendLine('')
 [void]$sbEtat.AppendLine('## Résumé (manifest)')
 if ($man) {
-  $filesTotal = $man.summary.counts.total
-  $totalBytes = $man.summary.totalSize
-  [void]$sbEtat.AppendLine('- **fichiersTotal** : ' + $filesTotal)
-  [void]$sbEtat.AppendLine('- **tailleTotale** : ' + $totalBytes + ' octets')
+  [void]$sbEtat.AppendLine('- **fichiersTotal** : ' + $man.summary.counts.total)
+  [void]$sbEtat.AppendLine('- **tailleTotale** : ' + $man.summary.totalSize + ' octets')
   [void]$sbEtat.AppendLine('- **par type** :')
   if ($man.summary.counts.byType) {
     $props = $man.summary.counts.byType.PSObject.Properties
@@ -180,21 +195,10 @@ else { [void]$sbEtat.AppendLine('_Aucun document AI généré (pas de scripts_*.
 [void]$sbEtat.AppendLine('- `manifest.json` : ' + [System.IO.File]::Exists($manifestPath))
 [void]$sbEtat.AppendLine('- `diff.md` : ' + [System.IO.File]::Exists((SafeJoin $SnapshotDir 'diff.md')))
 [void]$sbEtat.AppendLine('- `brief.md` : ' + [System.IO.File]::Exists((SafeJoin $SnapshotDir 'brief.md')))
-[void]$sbEtat.AppendLine('- `zip` : ' + [System.IO.File]::Exists((SafeJoin $ExportDir ((Split-Path -Leaf (As-Scalar $SnapshotDir)) + '.zip'))))
-
+[void]$sbEtat.AppendLine('- `zip` : ' + [System.IO.File]::Exists((SafeJoin $ExportDir ((Split-Path -Leaf $SnapshotDir) + '.zip'))))
 Write-FileUtf8 $EtatPath $sbEtat.ToString()
 
-# ---- 3) Docs utilisateurs
-function Make-Tree([string]$root) {
-  $sb = New-Object System.Text.StringBuilder
-  if (-not (Test-Path -LiteralPath $root)) { return '' }
-  $rootLen = $root.Length
-  $items = Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue
-  foreach ($it in $items) {
-    $rel = $it.FullName.Substring($rootLen).TrimStart('\'); [void]$sb.AppendLine('* ' + $rel)
-  }
-  $sb.ToString()
-}
+# ========================= 3) Docs utilisateurs =========================
 $gasRoots = @(
   SafeJoin $RepoRoot '01_Moteur',
   SafeJoin $RepoRoot '02_configuration',
@@ -214,7 +218,7 @@ $treeMd = $treeSb.ToString()
 
 $GuidePath = SafeJoin $DirUsers 'guide_utilisateur.md'
 $guideSb = New-Object System.Text.StringBuilder
-[void]$guideSb.AppendLine('# Guide utilisateur — Usine à Formulaire (snapshot ' + (Split-Path -Leaf (As-Scalar $SnapshotDir)) + ')')
+[void]$guideSb.AppendLine('# Guide utilisateur — Usine à Formulaire (snapshot ' + (Split-Path -Leaf $SnapshotDir) + ')')
 [void]$guideSb.AppendLine('')
 [void]$guideSb.AppendLine('## Objet')
 [void]$guideSb.AppendLine('Ce document explique comment utiliser l''application (création/édition de formulaires, exécutions, récupération des résultats).')
@@ -229,7 +233,7 @@ $guideSb = New-Object System.Text.StringBuilder
 [void]$guideSb.AppendLine('3. Vérifier la génération côté [TEMPLATE] / [MOTEUR] si applicable.')
 [void]$guideSb.AppendLine('')
 [void]$guideSb.AppendLine('## Points d''attention')
-[void]$guideSb.AppendLine('- Les exports CSV sont disponibles dans `export-onglets-csv\' + (Split-Path -Leaf (As-Scalar $SnapshotDir)) + '\`.')
+[void]$guideSb.AppendLine('- Les exports CSV sont disponibles dans `export-onglets-csv\' + (Split-Path -Leaf $SnapshotDir) + '\`.')
 [void]$guideSb.AppendLine('- Les documents AI-friendly sont dans `docs\ai\`.')
 Write-FileUtf8 $GuidePath $guideSb.ToString()
 
@@ -258,7 +262,7 @@ Write-FileUtf8 $GlossPath $glossSb.ToString()
 
 $IndexPath = SafeJoin $DocsRoot 'README.md'
 $indexSb = New-Object System.Text.StringBuilder
-[void]$indexSb.AppendLine('# Paquet de documentation (snapshot ' + (Split-Path -Leaf (As-Scalar $SnapshotDir)) + ')')
+[void]$indexSb.AppendLine('# Paquet de documentation (snapshot ' + (Split-Path -Leaf $SnapshotDir) + ')')
 [void]$indexSb.AppendLine('')
 [void]$indexSb.AppendLine('- AI-friendly : docs/ai/ — 1 fichier par projet (code segmenté par source).')
 [void]$indexSb.AppendLine('- État du projet : docs/etat/etat_projet.md')
@@ -267,29 +271,23 @@ $indexSb = New-Object System.Text.StringBuilder
 [void]$indexSb.AppendLine('Ces fichiers sont régénérés à chaque snapshot.')
 Write-FileUtf8 $IndexPath $indexSb.ToString()
 
-# === 4) Brief minimal pour IA (00_SESSION_BRIEF.md) ===
-$BriefPath = Join-Path $DocsRoot '00_SESSION_BRIEF.md'
+# ========================= 4) Brief minimal pour IA =========================
+$BriefPath = SafeJoin $DocsRoot '00_SESSION_BRIEF.md'
 
-# Petites aides
-function _MdKV($k,$v){ '- **{0}** : {1}' -f $k,$v }
-function _Take($arr,$n){ if($null -eq $arr){ @() } else { $arr | Select-Object -First $n } }
-
-# 4.1) Résumé manifest (si présent)
 $countsByTypeLines = @()
 if ($man -and $man.summary -and $man.summary.counts -and $man.summary.counts.byType) {
   $props = $man.summary.counts.byType.PSObject.Properties | Sort-Object Name
-  foreach($p in (_Take $props 8)){ $countsByTypeLines += ('  - **{0}** : {1}' -f $p.Name,$p.Value) }
+  foreach ($p in ($props | Select-Object -First 8)) { $countsByTypeLines += ('  - **{0}** : {1}' -f $p.Name, $p.Value) }
 }
 
-# 4.2) Diff condensé (si disponible)
-$diffPath = Join-Path $SnapshotDir 'diff.md'
+$diffPath = SafeJoin $SnapshotDir 'diff.md'
 $topAdded=@(); $topRemoved=@(); $topChanged=@()
 if (Test-Path -LiteralPath $diffPath) {
   $d = Get-Content -LiteralPath $diffPath -Raw -Encoding UTF8
   $curr = ''
   foreach ($line in ($d -split "`r?`n")) {
     if ($line -match '^\#\#\s+(Ajouts|Suppressions|Modifications)\b') { $curr = $matches[1]; continue }
-    if ($line -match '^\*\s+' ) {
+    if ($line -match '^\*\s+') {
       switch ($curr) {
         'Ajouts'        { $topAdded   += $line }
         'Suppressions'  { $topRemoved += $line }
@@ -297,24 +295,19 @@ if (Test-Path -LiteralPath $diffPath) {
       }
     }
   }
-  $topAdded   = _Take $topAdded   10
-  $topRemoved = _Take $topRemoved 10
-  $topChanged = _Take $topChanged 10
+  $topAdded   = $topAdded   | Select-Object -First 10
+  $topRemoved = $topRemoved | Select-Object -First 10
+  $topChanged = $topChanged | Select-Object -First 10
 }
 
-# 4.3) Liste AI-friendly (docs/ai) courte
 $aiIndexLines = @()
-if ($aiFiles -and $aiFiles.Count) {
-  foreach($f in (_Take $aiFiles 6)){
-    $aiIndexLines += ('- ' + $f.Name)
-  }
-}
+$aiMdFiles = Get-ChildItem -LiteralPath $DirAI -File -Filter '*.md' -ErrorAction SilentlyContinue | Sort-Object Name
+foreach ($f in ($aiMdFiles | Select-Object -First 6)) { $aiIndexLines += ('- ' + $f.Name) }
 
-# 4.4) Construit le brief (compact, prêt à coller)
 $sbBrief = New-Object System.Text.StringBuilder
 [void]$sbBrief.AppendLine('# BRIEF SESSION — à coller au début de la conversation')
 [void]$sbBrief.AppendLine('')
-[void]$sbBrief.AppendLine('> **Snapshot** : ' + (Split-Path -Leaf (As-Scalar $SnapshotDir)) + ' — **Généré** : ' + (Get-Date).ToString('yyyy-MM-dd HH:mm'))
+[void]$sbBrief.AppendLine('> **Snapshot** : ' + (Split-Path -Leaf $SnapshotDir) + ' — **Généré** : ' + (Get-Date).ToString('yyyy-MM-dd HH:mm'))
 [void]$sbBrief.AppendLine('> **Chemins utiles** :')
 [void]$sbBrief.AppendLine('> - docs/etat/etat_projet.md (commits, métriques)')
 [void]$sbBrief.AppendLine('> - diff.md (ajouts/suppressions/modifications)')
@@ -323,38 +316,32 @@ $sbBrief = New-Object System.Text.StringBuilder
 [void]$sbBrief.AppendLine('')
 [void]$sbBrief.AppendLine('## Résumé rapide')
 if ($man) {
-  [void]$sbBrief.AppendLine(_MdKV 'Fichiers total' $man.summary.counts.total)
-  [void]$sbBrief.AppendLine(_MdKV 'Taille totale (octets)' $man.summary.totalSize)
-  if ($countsByTypeLines.Count){ [void]$sbBrief.AppendLine('- **Par type** :'); foreach($l in $countsByTypeLines){ [void]$sbBrief.AppendLine($l) } }
+  [void]$sbBrief.AppendLine( ("- **{0}** : {1}" -f 'Fichiers total', $man.summary.counts.total) )
+  [void]$sbBrief.AppendLine( ("- **{0}** : {1}" -f 'Taille totale (octets)', $man.summary.totalSize) )
+  if ($countsByTypeLines.Count) { [void]$sbBrief.AppendLine('- **Par type** :'); foreach ($l in $countsByTypeLines) { [void]$sbBrief.AppendLine($l) } }
 } else {
   [void]$sbBrief.AppendLine('_manifest.json indisponible pour ce snapshot._')
 }
-
 [void]$sbBrief.AppendLine('')
 [void]$sbBrief.AppendLine('## Commits récents')
-if ($gitLog -and $gitLog.Count) { foreach($l in (_Take $gitLog 8)){ [void]$sbBrief.AppendLine('* ' + $l) } }
+if ($gitLog -and $gitLog.Count) { foreach ($l in ($gitLog | Select-Object -First 8)) { [void]$sbBrief.AppendLine('* ' + $l) } }
 else { [void]$sbBrief.AppendLine('_(git log indisponible)_') }
-
 [void]$sbBrief.AppendLine('')
 [void]$sbBrief.AppendLine('## Changements clés (diff condensé)')
-if ($topAdded.Count){ [void]$sbBrief.AppendLine('**Ajouts**'); foreach($l in $topAdded){ [void]$sbBrief.AppendLine($l) } }
-if ($topRemoved.Count){ [void]$sbBrief.AppendLine(''); [void]$sbBrief.AppendLine('**Suppressions**'); foreach($l in $topRemoved){ [void]$sbBrief.AppendLine($l) } }
-if ($topChanged.Count){ [void]$sbBrief.AppendLine(''); [void]$sbBrief.AppendLine('**Modifications**'); foreach($l in $topChanged){ [void]$sbBrief.AppendLine($l) } }
+if ($topAdded.Count)   { [void]$sbBrief.AppendLine('**Ajouts**');         foreach ($l in $topAdded)   { [void]$sbBrief.AppendLine($l) } }
+if ($topRemoved.Count) { [void]$sbBrief.AppendLine(''); [void]$sbBrief.AppendLine('**Suppressions**'); foreach ($l in $topRemoved) { [void]$sbBrief.AppendLine($l) } }
+if ($topChanged.Count) { [void]$sbBrief.AppendLine(''); [void]$sbBrief.AppendLine('**Modifications**'); foreach ($l in $topChanged) { [void]$sbBrief.AppendLine($l) } }
 if (-not ($topAdded.Count -or $topRemoved.Count -or $topChanged.Count)) { [void]$sbBrief.AppendLine('_Aucun diff détecté._') }
-
 [void]$sbBrief.AppendLine('')
 [void]$sbBrief.AppendLine('## Docs à me demander au besoin (pointeurs)')
-if ($aiIndexLines.Count) { foreach($l in $aiIndexLines){ [void]$sbBrief.AppendLine($l) } }
+if ($aiIndexLines.Count) { foreach ($l in $aiIndexLines) { [void]$sbBrief.AppendLine($l) } }
 else { [void]$sbBrief.AppendLine('- (Aucun fichier dans docs/ai)') }
-
 [void]$sbBrief.AppendLine('')
 [void]$sbBrief.AppendLine('---')
 [void]$sbBrief.AppendLine('### Prompt suggéré (copier/coller après le brief)')
 [void]$sbBrief.AppendLine('> Lis le brief ci-dessus. Propose-moi les points d''attention et liste les documents complémentaires qu''il te faudrait (nom exact dans ce snapshot). Dis-moi dans quel ordre les lire. Puis pose tes questions de clarification.')
 [void]$sbBrief.AppendLine('')
-
 Write-FileUtf8 $BriefPath $sbBrief.ToString()
-
 
 Write-Host '[DOCS] Génération terminée : ' $DocsRoot
 exit 0
