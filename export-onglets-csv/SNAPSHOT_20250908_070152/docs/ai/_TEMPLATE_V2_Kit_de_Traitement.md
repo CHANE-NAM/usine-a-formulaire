@@ -1,7 +1,10 @@
-﻿=== Projet: [TEMPLATE]V2 Kit de Traitement (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates) ===
+# _TEMPLATE_V2_Kit_de_Traitement
 
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250908_070152**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -18,23 +21,46 @@
     ]
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js
+
+```javascript
 
 /**
  * =================================================================================
  * == FICHIER : Logique_Universel.gs
- * == VERSION : 18.2 - Nettoyage aprÃ¨s ajout du moteur CrÃ©ativitÃ©.
+ * == VERSION : 18.3 - Ajout d'un systÃ¨me de dÃ©bogage avec interrupteurs
  * == RÃ”LE    : Aiguilleur principal et conteneur des logiques de calcul standards.
  * =================================================================================
  */
+
+// ======================= SECTION DE DÃ‰BOGAGE (ESPIONS) =======================
+const DEBUG_MODE = true; // INTERRUPTEUR GÃ‰NÃ‰RAL : Mettre Ã  false pour dÃ©sactiver TOUS les espions.
+
+// --- Interrupteurs spÃ©cifiques ---
+const DEBUG_DATA_LOADING = true;  // (RECOMMANDÃ‰) Espionne le chargement des donnÃ©es de profil (notre bug actuel).
+const DEBUG_FLOW = false;         // Espionne le flux gÃ©nÃ©ral (entrÃ©e/sortie des fonctions).
+const DEBUG_SCORING = false;      // Espionne le calcul des scores question par question.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de dÃ©bogage.
+ */
+function _log(flag, ...args) {
+  if (DEBUG_MODE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION] ${message}`);
+  }
+}
+// =================================================================================
+
 
 /**
  * POINT D'ENTRÃ‰E PRINCIPAL (REMANIÃ‰)
  * Aiguille vers le bon moteur de calcul en fonction du Type_Test.
  */
 function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigine) {
-  Logger.log(`DÃ©marrage du calcul des rÃ©sultats pour le Type_Test: "${config.Type_Test}".`);
+  _log(DEBUG_FLOW, `-> calculerResultats : DÃ©marrage pour Type_Test="${config.Type_Test}".`);
 
   // --- Aiguillage vers les moteurs de calcul spÃ©cifiques et complexes ---
   if (config.Type_Test === 'r&K_Resilience') {
@@ -88,13 +114,20 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     resultats = { ...resultats, ...profilEtReco };
     const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
     const infosProfilComplet = profilsMap[resultats.profilFinal];
+
+    // --- ESPIONS POUR LE BUG DE CORRESPONDANCE ---
+    _log(DEBUG_DATA_LOADING, 'PROFIL RECHERCHÃ‰ :', `"${resultats.profilFinal}"`);
+    _log(DEBUG_DATA_LOADING, 'PROFILS DISPONIBLES :', Object.keys(profilsMap));
+    _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
+    // --- FIN DES ESPIONS ---
+
     if (infosProfilComplet) {
       resultats = { ...resultats, ...infosProfilComplet };
     }
     resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
   }
 
-  Logger.log(`Calculs terminÃ©s. Profil Final: "${resultats.profilFinal}"`);
+  _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
   return resultats;
 }
 
@@ -121,6 +154,7 @@ function _executerCalcul(reponses, questionsMap, resultats, nbQuestionsLimite) {
 
 function _aiguillerCalcul(mode, reponse, parametres, resultats) {
   var m = String(mode || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  _log(DEBUG_SCORING, `Aiguillage : mode="${m}", reponse="${reponse}"`);
   switch (m) {
     case 'QCU_CAT':      _traiterQCU_CAT(reponse, parametres, resultats);    break;
     case 'ECHELLE_NOTE': _traiterECHELLE_NOTE(reponse, parametres, resultats); break;
@@ -138,6 +172,7 @@ function _traiterQCU_CAT(reponseUtilisateur, parametres, resultats) {
     const profil = optionTrouvee.profil;
     const valeur = (typeof optionTrouvee.valeur === 'number') ? optionTrouvee.valeur : 1;
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeur;
+    _log(DEBUG_SCORING, `_traiterQCU_CAT : Ajout de ${valeur} au profil ${profil}. Total: ${resultats.scoresData[profil]}`);
   }
 }
 
@@ -150,6 +185,7 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
   const valeurNumerique = parseFloat(String(reponseUtilisateur).replace(',', '.'));
   if (!isNaN(valeurNumerique)) {
     resultats.scoresData[profil] = (resultats.scoresData[profil] || 0) + valeurNumerique;
+    _log(DEBUG_SCORING, `_traiterECHELLE_NOTE : Ajout de ${valeurNumerique} au profil ${profil}. Total: ${resultats.scoresData[profil]}`);
   }
 }
 
@@ -185,11 +221,23 @@ function _chargerProfils(typeTest, langue) {
     const nomFeuille = `Profils_${typeTest}_${langue}`;
     const sheet = bdd.getSheetByName(nomFeuille);
     if (!sheet) return {};
+
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    // LIGNE CORRIGÃ‰E : On nettoie les en-tÃªtes pour les rendre robustes.
+    const headers = data.shift().map(h => String(h || '').trim()); 
+    
     const profilsMap = {};
-    const codeColIndex = headers.indexOf('Code_Profil') > -1 ? headers.indexOf('Code_Profil') : headers.indexOf('Profil');
-    if (codeColIndex === -1) return {};
+    let codeColIndex = headers.indexOf('Code_Profil');
+    if (codeColIndex === -1) {
+       // Tentative de fallback pour une ancienne nomenclature
+       const fallbackIndex = headers.indexOf('Profil');
+       if (fallbackIndex === -1) {
+         _log(DEBUG_DATA_LOADING, "ERREUR _chargerProfils : Colonne 'Code_Profil' ou 'Profil' introuvable.");
+         return {};
+       }
+       codeColIndex = fallbackIndex;
+    }
+
     data.forEach(row => {
       const codeProfil = row[codeColIndex];
       if (codeProfil) {
@@ -282,7 +330,6 @@ function _calculerScoresMaxPossibles(typeTest, langue) {
       }
     }
   }
-  Logger.log(`Scores max possibles calculÃ©s pour ${typeTest}: ${JSON.stringify(maxScores)}`);
   return maxScores;
 }
 
@@ -302,8 +349,11 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Menu.gs
@@ -520,9 +570,11 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -610,8 +662,14 @@ function _getReponsesSheet_(config, options) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
-    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.repon
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
+
+```javascript
+
+ config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
     ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
@@ -1023,9 +1081,6 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
-
 // =================================================================================
 // == FICHIER : Utilities.gs
 // == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clÃ©â†’valeur)
@@ -1424,9 +1479,11 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
+```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -1545,8 +1602,11 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js
+
+```javascript
 
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
@@ -1584,9 +1644,11 @@ function testFusionRapportFull() {
   const pdf = genererPdfDepuisModele(templateId, vars, 'Test_Rapport_Expert_FULL');
   DriveApp.createFile(pdf).setName('Test_Rapport_Expert_FULL.pdf');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js ---
+```javascript
 
 /**********************************************
  * Injecteur de scÃ©narios â€” r&K_Environnement
@@ -1864,11 +1926,11 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -2023,21 +2085,48 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js
+
+```javascript
 
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Resilience.js
- * == VERSION : 1.6 - FINAL : Ajout de Recommandation_Generale dans les rÃ©sultats.
+ * == VERSION : 1.7 - Ajout d'un systÃ¨me de dÃ©bogage et robustesse du chargement de donnÃ©es.
  * == RÃ”LE    : Moteur de calcul dÃ©diÃ© pour le test r&K RÃ©silience.
  * =================================================================================
  */
 
+// ======================= SECTION DE DÃ‰BOGAGE (ESPIONS) =======================
+const DEBUG_MODE_RESILIENCE = true; // INTERRUPTEUR GÃ‰NÃ‰RAL : Mettre Ã  false pour dÃ©sactiver les espions de ce moteur.
+
+// --- Interrupteurs spÃ©cifiques ---
+const DEBUG_RES_FLOW = true;      // Espionne le flux gÃ©nÃ©ral (entrÃ©e/sortie des fonctions).
+const DEBUG_RES_DATA = true;      // Espionne le chargement des donnÃ©es (Questions, Profils).
+const DEBUG_RES_SCORING = false;  // Espionne le calcul des scores question par question.
+const DEBUG_RES_AXES = true;      // Espionne les scores finaux calculÃ©s pour chaque axe.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de dÃ©bogage pour ce moteur.
+ */
+function _log_res(flag, ...args) {
+  if (DEBUG_MODE_RESILIENCE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION RÃ©silience] ${message}`);
+  }
+}
+// =================================================================================
+
+
 function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOrigine) {
+  _log_res(DEBUG_RES_FLOW, '-> DÃ©marrage de calculerResultats_rK_Resilience.');
   try {
     const langOrigineNorm = _normLang(langueOrigine);
     const questionsMap = _chargerQuestions(config.Type_Test, langOrigineNorm);
+    _log_res(DEBUG_RES_DATA, `Chargement des questions terminÃ©. ${Object.keys(questionsMap || {}).length} questions trouvÃ©es.`);
+
     let resultatsBruts = {
       scoresData: {},
       scoresNormalisesParAxe: { Echec: [], Changement: [], Ressources: [], Crise: [], Objectifs: [] }
@@ -2069,6 +2158,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
         }
         if (params.axe && resultatsBruts.scoresNormalisesParAxe[params.axe]) {
           resultatsBruts.scoresNormalisesParAxe[params.axe].push(scoreNormalise);
+          _log_res(DEBUG_RES_SCORING, `Question ${idQuestion}: rÃ©ponse='${reponse}', scoreNormalisÃ©=${scoreNormalise.toFixed(2)}, ajoutÃ© Ã  l'axe '${params.axe}'.`);
         }
       }
     }
@@ -2082,6 +2172,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
 
     // 3. DÃ©termination du niveau de rÃ©silience
     const profilsDataBrutes = _chargerDonneesProfilsBrutes(config.Type_Test, langueCible);
+     _log_res(DEBUG_RES_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
     const niveauResilience = _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsDataBrutes);
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === niveauResilience) || {};
     
@@ -2095,6 +2186,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
         interpretation: scoreMoyen > 7.5 ? "Point fort" : scoreMoyen >= 4 ? "Ã‰quilibrÃ©" : "Point de vigilance"
       };
     }
+    _log_res(DEBUG_RES_AXES, "Scores moyens par axe :", axesData);
     
     // 5. Assemblage final
     const finalData = {
@@ -2105,11 +2197,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
       Niveau_Resilience: niveauResilience,
       Titre_Profil: profilData.Titre_Profil || niveauResilience,
       Message_Clef: profilData.Message_Clef || "Message clÃ© non configurÃ©.",
-      
-      // ====================== CORRECTION AJOUTÃ‰E ICI ======================
       Recommandation_Generale: profilData.Recommandation_Generale || "Recommandation non disponible.",
-      // ====================================================================
-
       Score_Echec: axesData.Echec.score, Interpretation_Echec: axesData.Echec.interpretation, Recommandations_Echec: profilData.Reco_Axe_Echec || "N/A",
       Score_Changement: axesData.Changement.score, Interpretation_Changement: axesData.Changement.interpretation, Recommandations_Changement: profilData.Reco_Axe_Changement || "N/A",
       Score_Ressources: axesData.Ressources.score, Interpretation_Ressources: axesData.Ressources.interpretation, Recommandations_Ressources: profilData.Reco_Axe_Ressources || "N/A",
@@ -2131,6 +2219,8 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
       profilFinal: niveauResilience,
       mapCodeToName: { r: "RÃ©silience (r)", K: "StabilitÃ© (K)" }
     };
+
+    _log_res(DEBUG_RES_FLOW, `<- Fin de calculerResultats_rK_Resilience. Niveau final: ${niveauResilience}.`);
     return finalData;
 
   } catch (e) {
@@ -2140,6 +2230,7 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
 }
 
 function _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsData) {
+  _log_res(DEBUG_RES_DATA, `DÃ©termination du niveau : Score r=${pourcentage_r.toFixed(1)}%, Score K=${pourcentage_K.toFixed(1)}%`);
   for (const row of profilsData) {
     const codeProfil = row.Code_Profil;
     const seuilStr = row.Seuil_Score || '';
@@ -2173,7 +2264,8 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
       return [];
     }
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    // VERSION ROBUSTE : Nettoyage des en-tÃªtes
+    const headers = data.shift().map(h => String(h || '').trim());
     const jsonData = data.map(row => {
       let obj = {};
       headers.forEach((header, index) => {
@@ -2187,8 +2279,11 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2251,8 +2346,11 @@ function creerGraphiqueRadar(axesData) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js
+
+```javascript
 
 const fs = require('fs');
 const path = require('path');
@@ -2322,8 +2420,11 @@ try {
 } catch (error) {
     console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js
+
+```javascript
 
 /**
  *T_Main.gs
@@ -2551,8 +2652,11 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js
+
+```javascript
 
 /**
  * T_Mail.gs
@@ -2755,8 +2859,11 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js
+
+```javascript
 
 /**
  * T_Data.gs
@@ -2959,8 +3066,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js
+
+```javascript
 
 /**
  * T_PDF.gs
@@ -3009,20 +3119,46 @@ function genererPdfDepuisModele(templateId, variables, nomFichier) {
     return null;
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js
+
+```javascript
 
 /**
  * =================================================================================
- * == FICHIER : Moteur_rK_Creativite.gs
- * == VERSION : 2.2 - Nettoyage automatique des en-tÃªtes de profils
+ * == FICHIER : Moteur_rK_Creativite.js
+ * == VERSION : 2.4 - Harmonisation des noms de variables pour les placeholders.
  * == RÃ”LE    : Moteur de calcul dÃ©diÃ© pour le test r&K CrÃ©ativitÃ©.
  * =================================================================================
  */
 
+// ======================= SECTION DE DÃ‰BOGAGE (ESPIONS) =======================
+const DEBUG_MODE_CREATIVITE = true; // INTERRUPTEUR GÃ‰NÃ‰RAL : Mettre Ã  false pour dÃ©sactiver TOUS les espions.
+
+// --- Interrupteurs spÃ©cifiques ---
+const DEBUG_CREA_FLOW = true;      // Espionne le flux gÃ©nÃ©ral (entrÃ©e/sortie des fonctions).
+const DEBUG_CREA_DATA = true;      // Espionne le chargement des donnÃ©es (Questions, Profils).
+const DEBUG_CREA_SCORING = false;  // Espionne le calcul des scores par axe.
+
+/**
+ * Fonction utilitaire pour l'affichage conditionnel des logs de dÃ©bogage pour ce moteur.
+ */
+function _log_crea(flag, ...args) {
+  if (DEBUG_MODE_CREATIVITE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    Logger.log(`[ESPION CrÃ©ativitÃ©] ${message}`);
+  }
+}
+// =================================================================================
+
+
 function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOrigine) {
+  _log_crea(DEBUG_CREA_FLOW, '-> DÃ©marrage de calculerResultats_rK_Creativite.');
   try {
     const { questionsMap } = _chargerQuestionsAvecAxe(config.Type_Test, _normLang(langueOrigine));
+    _log_crea(DEBUG_CREA_DATA, `Chargement des questions terminÃ©. ${Object.keys(questionsMap || {}).length} questions trouvÃ©es.`);
+
     let resultatsBruts = { scoresData: {} };
     let scoresParAxe = {
       "IdÃ©ation": { r: 0, K: 0, total: 0 }, "SÃ©lection": { r: 0, K: 0, total: 0 },
@@ -3049,6 +3185,7 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
           scoresParAxe[axe].r += score_r;
           scoresParAxe[axe].K += score_K;
           scoresParAxe[axe].total += score_r + score_K;
+           _log_crea(DEBUG_CREA_SCORING, `Question ${idQuestion}, Axe '${axe}': r=${score_r}, K=${score_K}`);
         }
       }
     }
@@ -3059,14 +3196,18 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
     const pourcentage_r = (grand_total_global > 0) ? (total_r_global / grand_total_global) * 100 : 0;
 
     const profilFinal = _determinerProfilCreativite(pourcentage_r);
-    const profilsDataBrutes = _chargerDonneesProfilsBrutes_V2(config.Type_Test, langueCible); // Appel de la nouvelle fonction robuste
+    const profilsDataBrutes = _chargerDonneesProfilsBrutes_V2(config.Type_Test, langueCible);
+    _log_crea(DEBUG_CREA_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
+    
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === profilFinal) || {};
-
+    _log_crea(DEBUG_CREA_DATA, `Profil final dÃ©terminÃ©: "${profilFinal}". DonnÃ©es trouvÃ©es:`, profilData);
+    
     const finalData = {
       ...profilData,
       profilFinal: profilFinal,
-      "Pourcentage Exploratoire (r)": parseFloat(pourcentage_r.toFixed(1)),
-      "Pourcentage StructurÃ© (K)": parseFloat((100 - pourcentage_r).toFixed(1)),
+      Titre_Profil: profilFinal,
+      Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
+      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
       Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
@@ -3075,14 +3216,15 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
     };
     
     finalData.scoresData = {
-        "Pourcentage Exploratoire (r)": finalData["Pourcentage Exploratoire (r)"],
-        "Pourcentage StructurÃ© (K)": finalData["Pourcentage StructurÃ© (K)"]
+        "Pourcentage Exploratoire (r)": finalData.Pourcentage_r,
+        "Pourcentage StructurÃ© (K)": finalData.Pourcentage_K
     };
     finalData.mapCodeToName = {
         "Pourcentage Exploratoire (r)": "Pourcentage Exploratoire (r)",
         "Pourcentage StructurÃ© (K)": "Pourcentage StructurÃ© (K)"
     };
 
+    _log_crea(DEBUG_CREA_FLOW, `<- Fin de calculerResultats_rK_Creativite.`);
     return finalData;
 
   } catch (e) {
@@ -3108,7 +3250,7 @@ function _chargerQuestionsAvecAxe(typeTest, langue) {
     if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
     
     const data = sheet.getDataRange().getValues();
-    const headers = data.shift();
+    const headers = data.shift().map(h => String(h || '').trim());
     const idCol = headers.indexOf('ID');
     const paramsCol = headers.indexOf('ParamÃ¨tres (JSON)');
     const axeCol = headers.indexOf('Axe');
@@ -3139,10 +3281,6 @@ function _chargerQuestionsAvecAxe(typeTest, langue) {
   }
 }
 
-/**
- * ## FONCTION UTILITAIRE AMÃ‰LIORÃ‰E ##
- * Charge les donnÃ©es brutes des profils et nettoie les en-tÃªtes.
- */
 function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
   try {
     const systemIds = getSystemIds();
@@ -3154,7 +3292,6 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
       return [];
     }
     const data = sheet.getDataRange().getValues();
-    // La ligne ci-dessous est la correction clÃ© : elle nettoie chaque en-tÃªte.
     const headers = data.shift().map(h => String(h || '').trim());
     
     const jsonData = data.map(row => {
@@ -3170,3 +3307,40 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
+```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Feuille_36.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* ... (22 de plus)
+

@@ -267,5 +267,94 @@ $indexSb = New-Object System.Text.StringBuilder
 [void]$indexSb.AppendLine('Ces fichiers sont régénérés à chaque snapshot.')
 Write-FileUtf8 $IndexPath $indexSb.ToString()
 
+# === 4) Brief minimal pour IA (00_SESSION_BRIEF.md) ===
+$BriefPath = Join-Path $DocsRoot '00_SESSION_BRIEF.md'
+
+# Petites aides
+function _MdKV($k,$v){ '- **{0}** : {1}' -f $k,$v }
+function _Take($arr,$n){ if($null -eq $arr){ @() } else { $arr | Select-Object -First $n } }
+
+# 4.1) Résumé manifest (si présent)
+$countsByTypeLines = @()
+if ($man -and $man.summary -and $man.summary.counts -and $man.summary.counts.byType) {
+  $props = $man.summary.counts.byType.PSObject.Properties | Sort-Object Name
+  foreach($p in (_Take $props 8)){ $countsByTypeLines += ('  - **{0}** : {1}' -f $p.Name,$p.Value) }
+}
+
+# 4.2) Diff condensé (si disponible)
+$diffPath = Join-Path $SnapshotDir 'diff.md'
+$topAdded=@(); $topRemoved=@(); $topChanged=@()
+if (Test-Path -LiteralPath $diffPath) {
+  $d = Get-Content -LiteralPath $diffPath -Raw -Encoding UTF8
+  $curr = ''
+  foreach ($line in ($d -split "`r?`n")) {
+    if ($line -match '^\#\#\s+(Ajouts|Suppressions|Modifications)\b') { $curr = $matches[1]; continue }
+    if ($line -match '^\*\s+' ) {
+      switch ($curr) {
+        'Ajouts'        { $topAdded   += $line }
+        'Suppressions'  { $topRemoved += $line }
+        'Modifications' { $topChanged += $line }
+      }
+    }
+  }
+  $topAdded   = _Take $topAdded   10
+  $topRemoved = _Take $topRemoved 10
+  $topChanged = _Take $topChanged 10
+}
+
+# 4.3) Liste AI-friendly (docs/ai) courte
+$aiIndexLines = @()
+if ($aiFiles -and $aiFiles.Count) {
+  foreach($f in (_Take $aiFiles 6)){
+    $aiIndexLines += ('- ' + $f.Name)
+  }
+}
+
+# 4.4) Construit le brief (compact, prêt à coller)
+$sbBrief = New-Object System.Text.StringBuilder
+[void]$sbBrief.AppendLine('# BRIEF SESSION — à coller au début de la conversation')
+[void]$sbBrief.AppendLine('')
+[void]$sbBrief.AppendLine('> **Snapshot** : ' + (Split-Path -Leaf (As-Scalar $SnapshotDir)) + ' — **Généré** : ' + (Get-Date).ToString('yyyy-MM-dd HH:mm'))
+[void]$sbBrief.AppendLine('> **Chemins utiles** :')
+[void]$sbBrief.AppendLine('> - docs/etat/etat_projet.md (commits, métriques)')
+[void]$sbBrief.AppendLine('> - diff.md (ajouts/suppressions/modifications)')
+[void]$sbBrief.AppendLine('> - docs/ai/*.md (code par projet)')
+[void]$sbBrief.AppendLine('> - scripts_*.txt (concat code brut)')
+[void]$sbBrief.AppendLine('')
+[void]$sbBrief.AppendLine('## Résumé rapide')
+if ($man) {
+  [void]$sbBrief.AppendLine(_MdKV 'Fichiers total' $man.summary.counts.total)
+  [void]$sbBrief.AppendLine(_MdKV 'Taille totale (octets)' $man.summary.totalSize)
+  if ($countsByTypeLines.Count){ [void]$sbBrief.AppendLine('- **Par type** :'); foreach($l in $countsByTypeLines){ [void]$sbBrief.AppendLine($l) } }
+} else {
+  [void]$sbBrief.AppendLine('_manifest.json indisponible pour ce snapshot._')
+}
+
+[void]$sbBrief.AppendLine('')
+[void]$sbBrief.AppendLine('## Commits récents')
+if ($gitLog -and $gitLog.Count) { foreach($l in (_Take $gitLog 8)){ [void]$sbBrief.AppendLine('* ' + $l) } }
+else { [void]$sbBrief.AppendLine('_(git log indisponible)_') }
+
+[void]$sbBrief.AppendLine('')
+[void]$sbBrief.AppendLine('## Changements clés (diff condensé)')
+if ($topAdded.Count){ [void]$sbBrief.AppendLine('**Ajouts**'); foreach($l in $topAdded){ [void]$sbBrief.AppendLine($l) } }
+if ($topRemoved.Count){ [void]$sbBrief.AppendLine(''); [void]$sbBrief.AppendLine('**Suppressions**'); foreach($l in $topRemoved){ [void]$sbBrief.AppendLine($l) } }
+if ($topChanged.Count){ [void]$sbBrief.AppendLine(''); [void]$sbBrief.AppendLine('**Modifications**'); foreach($l in $topChanged){ [void]$sbBrief.AppendLine($l) } }
+if (-not ($topAdded.Count -or $topRemoved.Count -or $topChanged.Count)) { [void]$sbBrief.AppendLine('_Aucun diff détecté._') }
+
+[void]$sbBrief.AppendLine('')
+[void]$sbBrief.AppendLine('## Docs à me demander au besoin (pointeurs)')
+if ($aiIndexLines.Count) { foreach($l in $aiIndexLines){ [void]$sbBrief.AppendLine($l) } }
+else { [void]$sbBrief.AppendLine('- (Aucun fichier dans docs/ai)') }
+
+[void]$sbBrief.AppendLine('')
+[void]$sbBrief.AppendLine('---')
+[void]$sbBrief.AppendLine('### Prompt suggéré (copier/coller après le brief)')
+[void]$sbBrief.AppendLine('> Lis le brief ci-dessus. Propose-moi les points d''attention et liste les documents complémentaires qu''il te faudrait (nom exact dans ce snapshot). Dis-moi dans quel ordre les lire. Puis pose tes questions de clarification.')
+[void]$sbBrief.AppendLine('')
+
+Write-FileUtf8 $BriefPath $sbBrief.ToString()
+
+
 Write-Host '[DOCS] Génération terminée : ' $DocsRoot
 exit 0
