@@ -1,4 +1,4 @@
-﻿# Build-IA-Kit.ps1 — prépare un kit minimal pour l'IA
+# Build-IA-Kit.ps1 — prépare un kit minimal pour l'IA
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
