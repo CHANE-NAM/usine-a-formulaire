@@ -1,9 +1,9 @@
 /**
- *T_Main.gs
-  *  @fileoverview Orchestrateur principal pour le traitement des réponses.
+ * T_Main.gs
+ * @fileoverview Orchestrateur principal pour le traitement des réponses.
  * Contient les points d'entrée (onFormSubmit), la logique centrale (traiterLigne)
  * et les fonctions liées à l'interface utilisateur (menus de retraitement).
- * @version 1.0
+ * @version 2.2 - Version finalisée et validée de l'orchestrateur de traitement.
  */
 
 // ============================================================================
@@ -29,7 +29,7 @@ function _getRowFromSelectionOrAsk_() {
 function ui_DryRunDerniereLigne() {
   try {
     if (typeof getTestConfiguration !== 'function' || typeof _getReponsesSheet_ !== 'function') {
-      SpreadsheetApp.getUi().alert('⚠️ Fonctions manquantes (getTestConfiguration/_getReponsesSheet_). Vérifie que le projet contient TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('⚠️ Fonctions manquantes (getTestConfiguration/_getReponsesSheet_). Vérifie que le projet contient les bons fichiers de traitement.');
       return;
     }
     const cfg = getTestConfiguration();
@@ -41,7 +41,7 @@ function ui_DryRunDerniereLigne() {
       : 'FR';
     const niveau = (String(cfg.ID_Gabarit_Email_Repondant || '').replace('RESULTATS_', '').trim() || 'N1');
     if (typeof retraitementTestSansEnvoi !== 'function') {
-      SpreadsheetApp.getUi().alert('⚠️ Fonction manquante: retraitementTestSansEnvoi(). Vérifie TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('⚠️ Fonction manquante: retraitementTestSansEnvoi(). Vérifiez la présence du fichier T_Main.gs.');
       return;
     }
 
@@ -66,7 +66,7 @@ function ui_DryRunLigneSelection() {
       : 'FR';
     const niveau = (String(cfg.ID_Gabarit_Email_Repondant || '').replace('RESULTATS_', '').trim() || 'N1');
     if (typeof retraitementTestSansEnvoi !== 'function') {
-      SpreadsheetApp.getUi().alert('⚠️ Fonction manquante: retraitementTestSansEnvoi(). Vérifie TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('⚠️ Fonction manquante: retraitementTestSansEnvoi(). Vérifiez la présence du fichier T_Main.gs.');
       return;
     }
 
@@ -86,10 +86,9 @@ function ui_EnvoiReelLigneSelection() {
   try {
     const row = _getRowFromSelectionOrAsk_();
     if (typeof traiterLigne !== 'function') {
-      SpreadsheetApp.getUi().alert('⚠️ Fonction manquante: traiterLigne(). Vérifie TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('⚠️ Fonction manquante: traiterLigne(). Vérifiez la présence du fichier T_Main.gs.');
       return;
     }
-    // Envoi réel (pas de dryRun, destinataires selon CONFIG)
     traiterLigne(row, { isRetraitement: true, dryRun: false, ignoreDeveloppeurEmail: false });
     SpreadsheetApp.getUi().alert('Envoi RÉEL lancé sur la ligne ' + row + '. Voir Journaux.');
   } catch (e) {
@@ -184,8 +183,6 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
  */
 function lancerRetraitementDepuisUI(options) {
   try {
-    const destinatairesSurcharge = options.destinataires || {};
-    destinatairesSurcharge.overrideRecipients = true;
     traiterLigne(options.rowIndex, {
       isRetraitement: true,
       dryRun: false,
@@ -193,7 +190,8 @@ function lancerRetraitementDepuisUI(options) {
       langue: options.langue,
       niveau: options.niveau,
       alias: options.alias,
-      destinataires: destinatairesSurcharge
+      destinataires: options.destinataires || {},
+      overrideRecipients: true
     });
     Logger.log(`Retraitement manuel lancé pour la ligne ${options.rowIndex} avec succès.`);
     return `Retraitement pour la ligne ${options.rowIndex} terminé avec succès !`;

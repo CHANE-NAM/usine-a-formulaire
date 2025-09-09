@@ -1,7 +1,7 @@
 /**
  * T_Mail.gs
  * @fileoverview Gère la composition et l'envoi des e-mails de résultats.
- * @version 2.0 - Logique de pièce jointe intelligente (fusion ou attachement direct).
+ * @version 2.2 - Correction de la logique de sélection des destinataires et des variables de fusion lors du retraitement.
  */
 
 function normalizeAndDedupeCompositionEmailsRows_(rows, idx) {
@@ -28,13 +28,10 @@ function _enrichirDonneesPourEmail_(reponse, resultats) {
     Nom_et_prenom: nomPrenom,
     Votre_nom_et_prenom: nomPrenom,
     Email_du_repondant: email,
+    Votre_adresse_e_mail: email, // Correction : Ajout de la clé pour la fusion
     Date_du_jour: new Date().toLocaleDateString('fr-FR')
   };
   return { ...base, ...resultats };
-}
-
-function _envoyerEmailDeConfirmation(config, reponse, langueCible) {
-    // Placeholder pour une future logique d'email de confirmation simple.
 }
 
 function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}) {
@@ -100,17 +97,17 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
         break;
     }
   }
-
-  for (const key in donneesPourEmail) {
+  
+  const variablesFusion = { ...donneesPourEmail, ...resultats };
+  for (const key in variablesFusion) {
     const placeholder = `{{${key}}}`;
-    const valeur = donneesPourEmail[key] || '';
+    const valeur = variablesFusion[key] || '';
     const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
     sujet = sujet.replace(regex, valeur);
     corpsHtml = corpsHtml.replace(regex, valeur);
     if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur);
   }
 
-  const variablesFusion = { ...donneesPourEmail, ...resultats };
   const piecesJointes = [];
   if (resultats.Graphique_Radar_Blob) {
     piecesJointes.push(resultats.Graphique_Radar_Blob.setName('Profil_Resilience.png'));
@@ -152,9 +149,9 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   const adressesUniques = new Set();
   
   if (override) {
-    if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
-    if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
-    if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail);
+    if (destS.repondant === true && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
+    if (destS.formateur === true && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
+    if (destS.patron === true && destS.patronEmail) adressesUniques.add(destS.patronEmail);
     if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); }
   } else {
     if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
