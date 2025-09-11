@@ -1,6 +1,6 @@
 # _BDD_V2_Tests_Profils
 
-> Généré automatiquement depuis **scripts__BDD_V2_Tests_Profils.txt** — snapshot: **SNAPSHOT_20250908_072146**.
+> Généré automatiquement depuis **scripts__BDD_V2_Tests_Profils.txt** — snapshot: **SNAPSHOT_20250910_210002**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\appsscript.json
 
@@ -165,5 +165,5 @@ function getFilesRecursive(folder, fileList) {
 * BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
-* ... (22 de plus)
+* ... (21 de plus)
 

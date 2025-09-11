@@ -1,6 +1,6 @@
 # _TEMPLATE_V2_Kit_de_Traitement
 
-> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250908_072146**.
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250910_210002**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
 
@@ -455,10 +455,14 @@ function activerTraitementAutomatique() {
     .onFormSubmit()
     .create();
 
-  SpreadsheetApp.getUi().alert('âœ… DÃ©clencheur activÃ© ! Le traitement automatique des rÃ©ponses est maintenant opÃ©rationnel.');
-}
+  SpreadsheetApp.getUi().alert('âœ… DÃ©clen
+```
 
-/* ============================================================================
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js
+
+```javascript
+
+=========================================
  * SOUS-MENU "Usine Ã  Tests" : helpers & actions
  * NÃ©cessite : getTestConfiguration(), getOriginalLanguage(),
  * _creerObjetReponse(), _getReponsesSheet_(), retraitementTestSansEnvoi(), traiterLigne()
@@ -570,11 +574,6 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js
-
-```javascript
 
 /**
  * =================================================================================
@@ -662,14 +661,8 @@ function _getReponsesSheet_(config, options) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.repon
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
-
-```javascript
-
- config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
+    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
     ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
@@ -1081,6 +1074,12 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
+
+```javascript
+
 // =================================================================================
 // == FICHIER : Utilities.gs
 // == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clÃ©â†’valeur)
@@ -1167,14 +1166,8 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRo
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
-
-```javascript
-
-s('key'));
+    const header0 = headersRow[0].toLowerCase();
+    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1485,6 +1478,11 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -2428,11 +2426,11 @@ try {
 ```javascript
 
 /**
- *T_Main.gs
-  *  @fileoverview Orchestrateur principal pour le traitement des rÃ©ponses.
+ * T_Main.gs
+ * @fileoverview Orchestrateur principal pour le traitement des rÃ©ponses.
  * Contient les points d'entrÃ©e (onFormSubmit), la logique centrale (traiterLigne)
  * et les fonctions liÃ©es Ã  l'interface utilisateur (menus de retraitement).
- * @version 1.0
+ * @version 2.2 - Version finalisÃ©e et validÃ©e de l'orchestrateur de traitement.
  */
 
 // ============================================================================
@@ -2458,7 +2456,7 @@ function _getRowFromSelectionOrAsk_() {
 function ui_DryRunDerniereLigne() {
   try {
     if (typeof getTestConfiguration !== 'function' || typeof _getReponsesSheet_ !== 'function') {
-      SpreadsheetApp.getUi().alert('âš ï¸ Fonctions manquantes (getTestConfiguration/_getReponsesSheet_). VÃ©rifie que le projet contient TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('âš ï¸ Fonctions manquantes (getTestConfiguration/_getReponsesSheet_). VÃ©rifie que le projet contient les bons fichiers de traitement.');
       return;
     }
     const cfg = getTestConfiguration();
@@ -2470,7 +2468,7 @@ function ui_DryRunDerniereLigne() {
       : 'FR';
     const niveau = (String(cfg.ID_Gabarit_Email_Repondant || '').replace('RESULTATS_', '').trim() || 'N1');
     if (typeof retraitementTestSansEnvoi !== 'function') {
-      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: retraitementTestSansEnvoi(). VÃ©rifie TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: retraitementTestSansEnvoi(). VÃ©rifiez la prÃ©sence du fichier T_Main.gs.');
       return;
     }
 
@@ -2495,7 +2493,7 @@ function ui_DryRunLigneSelection() {
       : 'FR';
     const niveau = (String(cfg.ID_Gabarit_Email_Repondant || '').replace('RESULTATS_', '').trim() || 'N1');
     if (typeof retraitementTestSansEnvoi !== 'function') {
-      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: retraitementTestSansEnvoi(). VÃ©rifie TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: retraitementTestSansEnvoi(). VÃ©rifiez la prÃ©sence du fichier T_Main.gs.');
       return;
     }
 
@@ -2515,10 +2513,9 @@ function ui_EnvoiReelLigneSelection() {
   try {
     const row = _getRowFromSelectionOrAsk_();
     if (typeof traiterLigne !== 'function') {
-      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: traiterLigne(). VÃ©rifie TraitementReponses.gs v20.4+');
+      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: traiterLigne(). VÃ©rifiez la prÃ©sence du fichier T_Main.gs.');
       return;
     }
-    // Envoi rÃ©el (pas de dryRun, destinataires selon CONFIG)
     traiterLigne(row, { isRetraitement: true, dryRun: false, ignoreDeveloppeurEmail: false });
     SpreadsheetApp.getUi().alert('Envoi RÃ‰EL lancÃ© sur la ligne ' + row + '. Voir Journaux.');
   } catch (e) {
@@ -2613,8 +2610,6 @@ function traiterLigne(rowIndex, optionsSurcharge = {}) {
  */
 function lancerRetraitementDepuisUI(options) {
   try {
-    const destinatairesSurcharge = options.destinataires || {};
-    destinatairesSurcharge.overrideRecipients = true;
     traiterLigne(options.rowIndex, {
       isRetraitement: true,
       dryRun: false,
@@ -2622,7 +2617,8 @@ function lancerRetraitementDepuisUI(options) {
       langue: options.langue,
       niveau: options.niveau,
       alias: options.alias,
-      destinataires: destinatairesSurcharge
+      destinataires: options.destinataires || {},
+      overrideRecipients: true
     });
     Logger.log(`Retraitement manuel lancÃ© pour la ligne ${options.rowIndex} avec succÃ¨s.`);
     return `Retraitement pour la ligne ${options.rowIndex} terminÃ© avec succÃ¨s !`;
@@ -2662,7 +2658,7 @@ function retraitementTestSansEnvoi(rowIndex, options) {
 /**
  * T_Mail.gs
  * @fileoverview GÃ¨re la composition et l'envoi des e-mails de rÃ©sultats.
- * @version 2.0 - Logique de piÃ¨ce jointe intelligente (fusion ou attachement direct).
+ * @version 2.2 - Correction de la logique de sÃ©lection des destinataires et des variables de fusion lors du retraitement.
  */
 
 function normalizeAndDedupeCompositionEmailsRows_(rows, idx) {
@@ -2689,13 +2685,10 @@ function _enrichirDonneesPourEmail_(reponse, resultats) {
     Nom_et_prenom: nomPrenom,
     Votre_nom_et_prenom: nomPrenom,
     Email_du_repondant: email,
+    Votre_adresse_e_mail: email, // Correction : Ajout de la clÃ© pour la fusion
     Date_du_jour: new Date().toLocaleDateString('fr-FR')
   };
   return { ...base, ...resultats };
-}
-
-function _envoyerEmailDeConfirmation(config, reponse, langueCible) {
-    // Placeholder pour une future logique d'email de confirmation simple.
 }
 
 function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}) {
@@ -2761,17 +2754,17 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
         break;
     }
   }
-
-  for (const key in donneesPourEmail) {
+  
+  const variablesFusion = { ...donneesPourEmail, ...resultats };
+  for (const key in variablesFusion) {
     const placeholder = `{{${key}}}`;
-    const valeur = donneesPourEmail[key] || '';
+    const valeur = variablesFusion[key] || '';
     const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
     sujet = sujet.replace(regex, valeur);
     corpsHtml = corpsHtml.replace(regex, valeur);
     if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur);
   }
 
-  const variablesFusion = { ...donneesPourEmail, ...resultats };
   const piecesJointes = [];
   if (resultats.Graphique_Radar_Blob) {
     piecesJointes.push(resultats.Graphique_Radar_Blob.setName('Profil_Resilience.png'));
@@ -2813,9 +2806,9 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   const adressesUniques = new Set();
   
   if (override) {
-    if (destS.repondant && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
-    if (destS.formateur && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
-    if (destS.patron && destS.patronEmail) adressesUniques.add(destS.patronEmail);
+    if (destS.repondant === true && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
+    if (destS.formateur === true && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
+    if (destS.patron === true && destS.patronEmail) adressesUniques.add(destS.patronEmail);
     if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); }
   } else {
     if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
@@ -3310,6 +3303,90 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
 }
 ```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js
+
+```javascript
+
+/**
+ * @OnlyCurrentDoc
+ * Ce script connecteur sert de pont entre cette feuille de calcul et la bibliothÃ¨que de code centralisÃ©e.
+ * Il identifie le kit actuel et relaie tous les appels vers la bibliothÃ¨que en transmettant son ID.
+ */
+
+// ===============================================================
+// == FONCTIONS DÃ‰CLENCHÃ‰ES PAR GOOGLE (TRIGGERS)
+// ===============================================================
+
+function onOpen() {
+  TEMPLATE.onOpen();
+}
+
+function onInstall(e) {
+  TEMPLATE.onInstall(e);
+}
+
+function onFormSubmit(e) {
+  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  TEMPLATE.onFormSubmit(e, kitId);
+}
+
+
+// ===============================================================
+// == FONCTIONS APPELÃ‰ES PAR LES MENUS
+// ===============================================================
+
+function activerTraitementAutomatique() {
+  TEMPLATE.activerTraitementAutomatique();
+}
+
+function retraiterReponse_UI() {
+  TEMPLATE.retraiterReponse_UI();
+}
+
+function ui_DryRunDerniereLigne() {
+  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  TEMPLATE.ui_DryRunDerniereLigne(kitId);
+}
+
+function ui_DryRunLigneSelection() {
+  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  TEMPLATE.ui_DryRunLigneSelection(kitId);
+}
+
+function ui_EnvoiReelLigneSelection() {
+  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  TEMPLATE.ui_EnvoiReelLigneSelection(kitId);
+}
+
+function ui_ConfigResponsesSheet() {
+  TEMPLATE.ui_ConfigResponsesSheet();
+}
+
+function injectScenarioStableLent() {
+  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  TEMPLATE.injectScenarioStableLent(kitId);
+}
+
+
+// ===============================================================
+// == FONCTIONS "RELAIS" POUR LES DIALOGUES HTML (google.script.run)
+// ===============================================================
+
+function ouvrirSidebarPourLigne(rowIndex) {
+  TEMPLATE.ouvrirSidebarPourLigne(rowIndex);
+}
+
+function getDonneesPourRetraitement(rowIndex) {
+  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  return TEMPLATE.getDonneesPourRetraitement(rowIndex, kitId);
+}
+
+function lancerRetraitementDepuisUI(options) {
+  options.kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  return TEMPLATE.lancerRetraitementDepuisUI(options);
+}
+```
+
 ---
 
 ### Fichiers CSV exportés (aperçu)
@@ -3343,5 +3420,5 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
 * BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
-* ... (22 de plus)
+* ... (21 de plus)
 
