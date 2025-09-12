@@ -25,6 +25,13 @@
       </div>
       
       <div class="mb-4">
+        <label for="typeMoteur" class="block text-sm font-medium text-gray-700">Type de Moteur</label>
+        <select id="typeMoteur" name="typeMoteur" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+          <option value="">Chargement...</option>
+        </select>
+      </div>
+      
+      <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700">Questions Standards (Blocs Méta)</label>
         <div id="meta-blocks-container" class="mt-2 p-3 bg-white border border-gray-300 rounded-md space-y-2">
           <p class="text-xs text-gray-500">Chargement des options...</p>
@@ -104,6 +111,15 @@
           typeTestSelect.appendChild(option);
         });
         
+        // MODIFICATION : Populage de la liste des moteurs
+        const typeMoteurSelect = document.getElementById('typeMoteur');
+        typeMoteurSelect.innerHTML = '<option value="">-- Choisissez un moteur --</option>';
+        (data.typesDeMoteur || []).forEach(type => {
+          const option = document.createElement('option');
+          option.value = type; option.textContent = type;
+          typeMoteurSelect.appendChild(option);
+        });
+        
         // Blocs méta
         const metaContainer = document.getElementById('meta-blocks-container');
         if (data.availableMetaBlocks && data.availableMetaBlocks.length > 0) {
@@ -152,8 +168,9 @@
 
       function submitForm(e) {
         e.preventDefault();
-        if (!document.getElementById('titreTest').value || !document.getElementById('typeTest').value || !document.getElementById('nbQuestions').value) {
-          alert('Veuillez remplir tous les champs obligatoires (Titre, Type, Nombre de questions).');
+        // MODIFICATION : Ajout de la validation pour le typeMoteur
+        if (!document.getElementById('titreTest').value || !document.getElementById('typeTest').value || !document.getElementById('nbQuestions').value || !document.getElementById('typeMoteur').value) {
+          alert('Veuillez remplir tous les champs obligatoires (Titre, Type de Test, Type de Moteur, Nombre de questions).');
           return;
         }
         
@@ -165,6 +182,7 @@
         const formObject = {
           titre: document.getElementById('titreTest').value,
           type: document.getElementById('typeTest').value,
+          moteur: document.getElementById('typeMoteur').value, // MODIFICATION : Ajout du moteur à l'objet envoyé
           blocsMeta: selectedMetaBlocks,
           nbQuestions: document.getElementById('nbQuestions').value,
 

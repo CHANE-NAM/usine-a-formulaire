@@ -1,6 +1,6 @@
 // =================================================================================
 // == FICHIER : Menu.gs
-// == VERSION : 4.2 - Ajout de la génération d'une fiche de test imprimable.
+// == VERSION : 4.3 - Ajout de la gestion du Type de Moteur dans le formulaire.
 // == RÔLE  : Logique côté serveur pour l'application web de configuration.
 // =================================================================================
 
@@ -52,9 +52,9 @@ function getInitialData() {
   }
 
   const optionsData = optionsSheet.getDataRange().getValues();
-  // const headers = optionsData.shift();
   const headers = optionsData.shift().map(h => String(h || '').trim());
   const optionsMap = {};
+
   headers.forEach((header, i) => {
     const options = optionsData.map(row => row[i]).filter(String);
     optionsMap[header] = options;
@@ -75,6 +75,8 @@ function getInitialData() {
 
   return {
     typesDeTest: optionsMap['Type_Test'] || [],
+    // MODIFICATION : On ajoute la liste des types de moteur
+    typesDeMoteur: optionsMap['Type_Moteur'] || [],
     availableMetaBlocks: availableMetaBlocks,
     options: {
       Repondant_Quand: optionsMap['Repondant_Quand'] || [],
@@ -138,7 +140,9 @@ function processNewTestConfiguration(formObject) {
 
     const dataRow = {
       'Id_Unique': '', 'Titre_Formulaire_Utilisateur': formObject.titre, 'Nom_Fichier_Complet': '',
-      'Statut': 'En construction', 'Type_Test': formObject.type, 'Moteur_Calcul': 'Universel',
+      'Statut': 'En construction', 'Type_Test': formObject.type, 
+      // MODIFICATION : On utilise la valeur du formulaire au lieu de "Universel" en dur
+      'Moteur_Calcul': formObject.moteur,
       'Blocs_Meta_A_Inclure': blocsMetaString, 'ID_Gabarit_Email_Repondant': idGabaritRepondant,
       'ID_Dossier_Cible': '', 'Limite_Lignes_A_Traiter': limiteLignes, 'nbQuestions': formObject.nbQuestions,
       'Repondant_Email_Actif': formObject.repondantActif ? "Oui" : "Non", 'Repondant_Quand': formObject.repondantQuand,
@@ -148,7 +152,7 @@ function processNewTestConfiguration(formObject) {
       'Formateur_Contenu': formObject.formateurContenu, 'Formateur_Email': formObject.formateurEmail,
       'Developpeur_Email': emailDev, 'ID_Formulaire_Cible': '', 'ID_Sheet_Cible': '', 'Email_Alias': formObject.emailAlias
     };
-    
+
     const nouvelleLigne = headers.map(header => dataRow[header] !== undefined ? dataRow[header] : '');
     paramsSheet.appendRow(nouvelleLigne);
     return "Configuration enregistrée avec succès !";
