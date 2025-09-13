@@ -1,7 +1,10 @@
-﻿=== Projet: [CONFIG]V2 Usine à Tests (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration) ===
+# _CONFIG_V2_Usine_à_Tests
 
+> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250912_210002**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -10,12 +13,15 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8"
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\Menu.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Menu.gs
-// == VERSION : 4.2 - Ajout de la gÃ©nÃ©ration d'une fiche de test imprimable.
+// == VERSION : 4.3 - Ajout de la gestion du Type de Moteur dans le formulaire.
 // == RÃ”LE  : Logique cÃ´tÃ© serveur pour l'application web de configuration.
 // =================================================================================
 
@@ -67,9 +73,9 @@ function getInitialData() {
   }
 
   const optionsData = optionsSheet.getDataRange().getValues();
-  // const headers = optionsData.shift();
   const headers = optionsData.shift().map(h => String(h || '').trim());
   const optionsMap = {};
+
   headers.forEach((header, i) => {
     const options = optionsData.map(row => row[i]).filter(String);
     optionsMap[header] = options;
@@ -90,6 +96,8 @@ function getInitialData() {
 
   return {
     typesDeTest: optionsMap['Type_Test'] || [],
+    // MODIFICATION : On ajoute la liste des types de moteur
+    typesDeMoteur: optionsMap['Type_Moteur'] || [],
     availableMetaBlocks: availableMetaBlocks,
     options: {
       Repondant_Quand: optionsMap['Repondant_Quand'] || [],
@@ -153,7 +161,9 @@ function processNewTestConfiguration(formObject) {
 
     const dataRow = {
       'Id_Unique': '', 'Titre_Formulaire_Utilisateur': formObject.titre, 'Nom_Fichier_Complet': '',
-      'Statut': 'En construction', 'Type_Test': formObject.type, 'Moteur_Calcul': 'Universel',
+      'Statut': 'En construction', 'Type_Test': formObject.type, 
+      // MODIFICATION : On utilise la valeur du formulaire au lieu de "Universel" en dur
+      'Moteur_Calcul': formObject.moteur,
       'Blocs_Meta_A_Inclure': blocsMetaString, 'ID_Gabarit_Email_Repondant': idGabaritRepondant,
       'ID_Dossier_Cible': '', 'Limite_Lignes_A_Traiter': limiteLignes, 'nbQuestions': formObject.nbQuestions,
       'Repondant_Email_Actif': formObject.repondantActif ? "Oui" : "Non", 'Repondant_Quand': formObject.repondantQuand,
@@ -163,7 +173,7 @@ function processNewTestConfiguration(formObject) {
       'Formateur_Contenu': formObject.formateurContenu, 'Formateur_Email': formObject.formateurEmail,
       'Developpeur_Email': emailDev, 'ID_Formulaire_Cible': '', 'ID_Sheet_Cible': '', 'Email_Alias': formObject.emailAlias
     };
-    
+
     const nouvelleLigne = headers.map(header => dataRow[header] !== undefined ? dataRow[header] : '');
     paramsSheet.appendRow(nouvelleLigne);
     return "Configuration enregistrÃ©e avec succÃ¨s !";
@@ -321,8 +331,11 @@ function getSystemIds() {
   });
   return ids;
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js
+
+```javascript
 
 // Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine Ã  Tests.
 // const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
@@ -381,8 +394,11 @@ function convertirLiensExistantsEnCourts() {
     SpreadsheetApp.getUi().alert(`Une erreur est survenue : ${e.message}`);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ValidationRunner.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ValidationRunner.js
+
+```javascript
 
 /** ValidationRunner.gs â€” Runner de validation des en-tÃªtes (CONFIG â†’ BDD â†’ TEMPLATE)
  * Ajoute un menu "Validation" dans le classeur CONFIG pour vÃ©rifier les onglets requis
@@ -590,4 +606,41 @@ function validateAllHeaders() {
   SpreadsheetApp.getUi().showSidebar(out);
 }
 
+
+```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Feuille_36.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* ... (22 de plus)
 
