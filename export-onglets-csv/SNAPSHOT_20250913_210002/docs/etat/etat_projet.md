@@ -1,33 +1,33 @@
-# État du projet — SNAPSHOT_20250908_102104
+# État du projet — SNAPSHOT_20250913_210002
 
-- **Généré** : 2025-09-08 10:22:19
-- **Snapshot** : SNAPSHOT_20250908_102104
-- **CSV exportés** : 52
+- **Généré** : 2025-09-13 21:00:41
+- **Snapshot** : SNAPSHOT_20250913_210002
+- **CSV exportés** : 0
 - **Racine repo** : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm
 
 ## Résumé (manifest)
-- **fichiersTotal** : 56
-- **tailleTotale** : 568150 octets
+- **fichiersTotal** : 5
+- **tailleTotale** : 312183 octets
 - **par type** :
-  - **csv** : 52
-  - **concat** : 4
+  - **concat** : 5
 
 ## Derniers commits
+* 9757031 Backup auto 2025-09-13 21:00:27
+* c37b25f Backup auto 2025-09-13 05:16:32
+* 62e1d8f Backup auto 2025-09-12 21:00:20
+* 7511d74 Backup auto 2025-09-11 21:00:17
+* 3e8ce86 Backup auto 2025-09-11 15:17:19
+* 2ba7aaa Backup auto 2025-09-10 21:00:20
+* 18a5d07 Backup auto 2025-09-09 21:00:19
+* 61fd878 Backup auto 2025-09-08 21:00:18
 * db137c2 Backup auto 2025-09-08 10:21:30
 * b43e7f2 Backup auto 2025-09-08 10:15:57
 * 4afbd57 Backup auto 2025-09-08 09:44:07
 * 82db6af Backup auto 2025-09-08 08:51:06
-* 55650f7 Backup auto 2025-09-08 07:22:12
-* e76b3c2 Backup auto 2025-09-08 07:16:42
-* f12a77d Backup auto 2025-09-08 07:02:20
-* 6d6308c Backup auto 2025-09-08 05:49:33
-* 82b4883 Backup auto 2025-09-08 05:28:07
-* 78afcf9 Backup auto 2025-09-08 05:18:52
-* b37f6c7 Backup auto 2025-09-07 21:00:18
-* 6d2b54a Backup auto 2025-09-07 12:45:01
 
 ## Index documents AI-friendly
 * [_BDD_V2_Tests_Profils](_BDD_V2_Tests_Profils.md)
+* [_BIBLIOTHEQUE_TEMPLATE](_BIBLIOTHEQUE_TEMPLATE.md)
 * [_CONFIG_V2_Usine_à_Tests](_CONFIG_V2_Usine_à_Tests.md)
 * [_MOTEUR_V2_Usine_à_Tests](_MOTEUR_V2_Usine_à_Tests.md)
 * [_TEMPLATE_V2_Kit_de_Traitement](_TEMPLATE_V2_Kit_de_Traitement.md)
