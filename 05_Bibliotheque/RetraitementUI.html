@@ -2,6 +2,7 @@
 <html>
   <head>
     <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
     <style>
       body { font-family: 'Roboto', Arial, sans-serif; padding: 0 20px; background-color: #f8f9fa; color: #3c4043; }
       h3 { font-size: 20px; font-weight: 500; color: #1a73e8; border-bottom: 1px solid #dadce0; padding-bottom: 8px; margin-top: 24px; }
@@ -22,15 +23,12 @@
     <input type="hidden" id="row-index-data" value="<?= ligneActive ?>">
     
     <h3>Retraitement de Réponse</h3>
-
     <div id="info-section">
       <div class="form-group"> <label for="nom">NOM DU RÉPONDANT</label> <input type="text" id="nom" name="nom_repondant" readonly> </div>
       <div class="form-group"> <label for="email">E-MAIL DU RÉPONDANT</label> <input type="text" id="email" name="email_repondant" readonly> </div>
       <div class="form-group"> <label for="langue-origine">LANGUE D'ORIGINE</label> <input type="text" id="langue-origine" name="langue_origine" readonly> </div>
     </div>
-    
     <hr>
-    
     <h3>Options</h3>
     <div id="options-section">
         <div class="form-group">
@@ -48,13 +46,11 @@
            <option value="N3">Niveau 3</option>
          </select>
        </div>
-       
        <div class="form-group">
          <label for="alias-expediteur">ALIAS D'EXPÉDITION (VIDE = email par défaut)</label>
          <input type="email" id="alias-expediteur" name="alias_expediteur">
        </div>
        </div>
-    
     <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
     <div id="destinataires-section">
       <div class="form-group">
@@ -62,115 +58,105 @@
         <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-formateur" name="check_formateur" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Formateur </label>
         <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-patron" name="check_patron" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Patron </label>
       </div>
-      
       <div id="formateur-email-group" class="form-group hidden">
         <label for="email-formateur">E-MAIL DU FORMATEUR</label>
         <input type="email" id="email-formateur" name="email_formateur" placeholder="adresse.formateur@example.com">
       </div>
-      
       <div id="patron-email-group" class="form-group hidden">
         <label for="email-patron">E-MAIL DU PATRON</label>
         <input type="email" id="email-patron" name="email_patron" placeholder="adresse.patron@example.com">
       </div>
-
       <div class="form-group">
           <label for="email-test">AJOUTER UNE ADRESSE DE TEST</label>
           <input type="email" id="email-test" name="email_test" placeholder="adresse.test@example.com">
       </div>
     </div>
-
     <div class="button-group"> <button id="btn-annuler">Annuler</button> <button id="btn-lancer" disabled>🚀 Lancer le Retraitement</button> </div>
     <div id="status">Chargement des données...</div>
 
     <script>
       document.addEventListener('DOMContentLoaded', function() {
-        const rowIndex = document.getElementById('row-index-data').value;
-        const statusDiv = document.getElementById('status');
-        const lancerBtn = document.getElementById('btn-lancer');
-        
-        const checkFormateur = document.getElementById('check-formateur');
-        const formateurEmailGroup = document.getElementById('formateur-email-group');
-        const checkPatron = document.getElementById('check-patron');
-        const patronEmailGroup = document.getElementById('patron-email-group');
+        try {
+          const rowIndex = document.getElementById('row-index-data').value;
+          const statusDiv = document.getElementById('status');
+          const lancerBtn = document.getElementById('btn-lancer');
+          const checkFormateur = document.getElementById('check-formateur');
+          const formateurEmailGroup = document.getElementById('formateur-email-group');
+          const checkPatron = document.getElementById('check-patron');
+          const patronEmailGroup = document.getElementById('patron-email-group');
 
-        function onDataReceived(data) {
-          if (!data || typeof data !== 'object') {
-            onFailure({ message: "Les données reçues du serveur sont invalides ou vides. Vérifiez que la ligne " + rowIndex + " contient des données valides." });
-            return;
+          function onDataReceived(data) {
+            if (!data || typeof data !== 'object') {
+              onFailure({ message: "Les données reçues du serveur sont invalides pour la ligne " + rowIndex });
+              return;
+            }
+            document.getElementById('nom').value = data.nomRepondant || 'Non trouvé';
+            document.getElementById('email').value = data.emailRepondant || 'Non trouvé';
+            document.getElementById('langue-origine').value = data.langueOrigine || 'Non détectée';
+            document.getElementById('langue-cible').value = data.langueOrigine || 'FR';
+            document.getElementById('alias-expediteur').value = data.emailAlias || '';
+            document.getElementById('check-repondant').checked = data.repondantActif;
+            const isFormateurActive = data.formateurActif === true;
+            checkFormateur.checked = isFormateurActive;
+            document.getElementById('email-formateur').value = data.formateurEmail || '';
+            formateurEmailGroup.classList.toggle('hidden', !isFormateurActive);
+            const isPatronActive = data.patronActif === true;
+            checkPatron.checked = isPatronActive;
+            document.getElementById('email-patron').value = data.patronEmail || '';
+            patronEmailGroup.classList.toggle('hidden', !isPatronActive);
+            statusDiv.style.display = 'none';
+            lancerBtn.disabled = false;
           }
-          
-          document.getElementById('nom').value = data.nomRepondant || 'Non trouvé';
-          document.getElementById('email').value = data.emailRepondant || 'Non trouvé';
-          document.getElementById('langue-origine').value = data.langueOrigine || 'Non détectée';
-          document.getElementById('langue-cible').value = data.langueOrigine || 'FR';
-          document.getElementById('alias-expediteur').value = data.emailAlias || '';
-          
-          document.getElementById('check-repondant').checked = data.repondantActif;
-          
-          const isFormateurActive = data.formateurActif === true;
-          checkFormateur.checked = isFormateurActive;
-          document.getElementById('email-formateur').value = data.formateurEmail || '';
-          formateurEmailGroup.classList.toggle('hidden', !isFormateurActive);
-          
-          const isPatronActive = data.patronActif === true;
-          checkPatron.checked = isPatronActive;
-          document.getElementById('email-patron').value = data.patronEmail || '';
-          patronEmailGroup.classList.toggle('hidden', !isPatronActive);
 
-          statusDiv.style.display = 'none';
-          statusDiv.classList.remove('error');
-          lancerBtn.disabled = false;
-        }
+          function onLaunchSuccess(message) {
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            statusDiv.classList.remove('error');
+            setTimeout(() => google.script.host.close(), 3000); 
+          }
 
-        function onLaunchSuccess(message) {
-          statusDiv.textContent = message;
+          function onFailure(error) {
+            statusDiv.textContent = "Erreur : " + (error.message || "Une erreur inconnue est survenue.");
+            statusDiv.style.display = 'block';
+            statusDiv.classList.add('error');
+            lancerBtn.disabled = false;
+          }
+
+          checkFormateur.addEventListener('change', function() { formateurEmailGroup.classList.toggle('hidden', !this.checked); });
+          checkPatron.addEventListener('change', function() { patronEmailGroup.classList.toggle('hidden', !this.checked); });
+          
+          document.getElementById('btn-lancer').addEventListener('click', function() {
+            lancerBtn.disabled = true;
+            statusDiv.textContent = 'Traitement en cours...';
+            statusDiv.style.display = 'block';
+            statusDiv.classList.remove('error');
+            const options = {
+              rowIndex: rowIndex,
+              langue: document.getElementById('langue-cible').value,
+              niveau: document.getElementById('niveau-resultat').value,
+              alias: document.getElementById('alias-expediteur').value.trim(),
+              destinataires: {
+                repondant: document.getElementById('check-repondant').checked,
+                formateur: document.getElementById('check-formateur').checked,
+                formateurEmail: document.getElementById('email-formateur').value.trim(),
+                patron: document.getElementById('check-patron').checked,
+                patronEmail: document.getElementById('email-patron').value.trim(),
+                test: document.getElementById('email-test').value.trim()
+              }
+            };
+            google.script.run.withSuccessHandler(onLaunchSuccess).withFailureHandler(onFailure).lancerRetraitementDepuisUI(options);
+          });
+
+          document.getElementById('btn-annuler').addEventListener('click', () => google.script.host.close());
           statusDiv.style.display = 'block';
-          statusDiv.classList.remove('error');
-          setTimeout(() => google.script.host.close(), 3000); 
-        }
+          google.script.run.withSuccessHandler(onDataReceived).withFailureHandler(onFailure).getDonneesPourRetraitement(rowIndex);
 
-        function onFailure(error) {
-          statusDiv.textContent = "Erreur : " + (error.message || "Une erreur inconnue est survenue.");
+        } catch (e) {
+          var statusDiv = document.getElementById('status');
+          statusDiv.textContent = 'ERREUR FATALE (boucle infinie évitée) : ' + e.message;
           statusDiv.style.display = 'block';
           statusDiv.classList.add('error');
-          lancerBtn.disabled = false;
         }
-
-        checkFormateur.addEventListener('change', function() {
-          formateurEmailGroup.classList.toggle('hidden', !this.checked);
-        });
-        
-        checkPatron.addEventListener('change', function() {
-          patronEmailGroup.classList.toggle('hidden', !this.checked);
-        });
-        
-        document.getElementById('btn-lancer').addEventListener('click', function() {
-          lancerBtn.disabled = true;
-          statusDiv.textContent = 'Traitement en cours...';
-          statusDiv.style.display = 'block';
-          statusDiv.classList.remove('error');
-          
-          const options = {
-            rowIndex: rowIndex,
-            langue: document.getElementById('langue-cible').value,
-            niveau: document.getElementById('niveau-resultat').value,
-            alias: document.getElementById('alias-expediteur').value.trim(),
-            destinataires: {
-              repondant: document.getElementById('check-repondant').checked,
-              formateur: document.getElementById('check-formateur').checked,
-              formateurEmail: document.getElementById('email-formateur').value.trim(),
-              patron: document.getElementById('check-patron').checked,
-              patronEmail: document.getElementById('email-patron').value.trim(),
-              test: document.getElementById('email-test').value.trim()
-            }
-          };
-          google.script.run.withSuccessHandler(onLaunchSuccess).withFailureHandler(onFailure).lancerRetraitementDepuisUI(options);
-        });
-
-        document.getElementById('btn-annuler').addEventListener('click', () => google.script.host.close());
-
-        statusDiv.style.display = 'block';
-        google.script.run.withSuccessHandler(onDataReceived).withFailureHandler(onFailure).getDonneesPourRetraitement(rowIndex);
       });
     </script>
   </body>
