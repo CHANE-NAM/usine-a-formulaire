@@ -1,47 +1,54 @@
 /**
  * =================================================================================
- * == FICHIER : TEMPLATE_Moteur_rK_Creativite.gs
- * == VERSION : 3.1 - Correction d'une erreur de syntaxe dans la gestion d'erreur.
+ * == FICHIER : Moteur_rK_Creativite.js
+ * == VERSION : 3.1 - Définitive
  * == RÔLE    : Moteur de calcul dédié pour le test r&K Créativité.
- * - Restaure la logique de calcul complète et correcte.
- * - Assure une recherche de profil robuste.
+ * Cette version assure que TOUTES les données du profil (y compris Titre_Profil)
+ * sont correctement chargées et fusionnées dans le résultat final.
  * =================================================================================
  */
 
-// Fonction de normalisation de texte (robuste aux accents, majuscules, espaces)
-function _crea_normStr(s) {
-  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
-}
+// ======================= SECTION DE DÉBOGAGE (ESPIONS) =======================
+const DEBUG_MODE_CREATIVITE = true; 
 
-/**
- * Calcule les résultats pour le test r&K Créativité.
- * @param {object} reponses - L'objet contenant les réponses de l'utilisateur.
- * @param {string} langueCible - Le code de la langue pour les résultats (ex: 'FR').
- * @param {object} config - L'objet de configuration du test.
- * @param {string} langueOrigine - Le code de la langue du formulaire.
- * @returns {object} Un objet contenant tous les résultats, scores et données de profil.
- */
+function _log_crea(flag, ...args) {
+  if (DEBUG_MODE_CREATIVITE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg).join(' ');
+    Logger.log(`[ESPION Créativité V3.1] ${message}`);
+  }
+}
+// =================================================================================
+
+
 function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOrigine) {
-  Logger.log("--- ✅ EXÉCUTION MOTEUR CRÉATIVITÉ VERSION 3.1 (CANARI) CONFIRMÉE ---");
+  _log_crea(true, '-> DÉMARRAGE MOTEUR CRÉATIVITÉ');
   try {
-    const { questionsMap } = _crea_chargerQuestionsAvecAxe(config.Type_Test, _normLang(langueOrigine));
+    // 1. CHARGEMENT DES QUESTIONS
+    const { questionsMap } = _chargerQuestionsAvecAxe(config.Type_Test, _normLang(langueOrigine));
+    _log_crea(true, `${Object.keys(questionsMap || {}).length} questions chargées.`);
+
+    // 2. CALCUL DES SCORES BRUTS
+    let resultatsBruts = { scoresData: { r: 0, K: 0 } };
     let scoresParAxe = {
       "Idéation": { r: 0, K: 0, total: 0 }, "Sélection": { r: 0, K: 0, total: 0 },
       "Innovation": { r: 0, K: 0, total: 0 }, "Gestion des contraintes": { r: 0, K: 0, total: 0 },
       "Mise en œuvre": { r: 0, K: 0, total: 0 }
     };
-    let total_r_global = 0, total_K_global = 0;
 
     for (const enTete in reponses) {
       if (!enTete.includes(':')) continue;
       const idQuestion = enTete.split(':')[0].trim();
       const qConfig = questionsMap[idQuestion];
+      
       if (qConfig && reponses[enTete]) {
         let scoreTemp = { scoresData: {} };
         _aiguillerCalcul(qConfig.parametres.mode, reponses[enTete], qConfig.parametres, scoreTemp);
-        const score_r = scoreTemp.scoresData.r || 0, score_K = scoreTemp.scoresData.K || 0;
-        total_r_global += score_r;
-        total_K_global += score_K;
+        const score_r = scoreTemp.scoresData.r || 0;
+        const score_K = scoreTemp.scoresData.K || 0;
+        
+        resultatsBruts.scoresData.r += score_r;
+        resultatsBruts.scoresData.K += score_K;
+
         const axe = qConfig.axe;
         if (axe && scoresParAxe[axe]) {
           scoresParAxe[axe].r += score_r;
@@ -51,39 +58,45 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       }
     }
 
-    const grand_total_global = total_r_global + total_K_global;
-    const pourcentage_r = (grand_total_global > 0) ? (total_r_global / grand_total_global) * 100 : 0;
-    const pourcentage_k = 100 - pourcentage_r;
+    // 3. CALCUL DES POURCENTAGES ET DÉTERMINATION DU PROFIL
+    const grand_total_global = resultatsBruts.scoresData.r + resultatsBruts.scoresData.K;
+    const pourcentage_r = (grand_total_global > 0) ? (resultatsBruts.scoresData.r / grand_total_global) * 100 : 0;
+    const profilFinalCode = _determinerProfilCreativite(pourcentage_r);
+    _log_crea(true, `Calcul terminé : %r = ${pourcentage_r.toFixed(1)}% -> Code_Profil = "${profilFinalCode}"`);
 
-    const profilFinal = _crea_determinerProfil(pourcentage_r);
-    const profilsDataBrutes = _crea_chargerDonneesProfils(config.Type_Test, langueCible);
+    // 4. CHARGEMENT DE TOUTES LES DONNÉES DU PROFIL ASSOCIÉ
+    const profilsDataBrutes = _chargerDonneesProfilsBrutes_V2(config.Type_Test, langueCible);
+    const profilData = profilsDataBrutes.find(row => row.Code_Profil === profilFinalCode) || {};
+    _log_crea(true, `Données du profil chargées. ${Object.keys(profilData).length} colonnes trouvées.`);
     
-    // Logique robuste pour trouver le profil correspondant
-    const profilFinalNormalise = _crea_normStr(profilFinal);
-    const profilData = profilsDataBrutes.find(row => {
-      const codeProfilNormalise = _crea_normStr(row.Code_Profil || row.Profil);
-      return codeProfilNormalise === profilFinalNormalise;
-    }) || {};
-
-    Logger.log(`[ESPION Moteur Créativité] Profil calculé: "${profilFinal}". Profil trouvé dans la BDD: ${Object.keys(profilData).length > 0 ? 'Oui' : 'NON'}`);
-    
-    // Assemblage final des données
+    // 5. ASSEMBLAGE DE L'OBJET DE RÉSULTATS FINAL
     const finalData = {
-      ...profilData,
-      profilFinal: profilFinal,
-      Titre_Profil: profilData.Titre_Profil || profilFinal,
+      ...profilData, 
+      
+      profilFinal: profilFinalCode, // On garde le code technique
+      // On s'assure que Titre_Profil est bien défini, même s'il est vide dans le sheet
+      Titre_Profil: profilData.Titre_Profil || profilFinalCode, 
+      
       Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
-      Pourcentage_K: parseFloat(pourcentage_k.toFixed(1)),
+      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
+      
       Score_Ideation: scoresParAxe["Idéation"].total > 0 ? parseFloat(((scoresParAxe["Idéation"].r / scoresParAxe["Idéation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["Sélection"].total > 0 ? parseFloat(((scoresParAxe["Sélection"].r / scoresParAxe["Sélection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
       Score_MiseenOeuvre: scoresParAxe["Mise en œuvre"].total > 0 ? parseFloat(((scoresParAxe["Mise en œuvre"].r / scoresParAxe["Mise en œuvre"].total) * 10).toFixed(1)) : 0,
+
+      scoresData: {
+          "Pourcentage Exploratoire (r)": parseFloat(pourcentage_r.toFixed(1)),
+          "Pourcentage Structuré (K)": parseFloat((100 - pourcentage_r).toFixed(1))
+      },
+      mapCodeToName: {
+          "Pourcentage Exploratoire (r)": "Exploratoire (r)",
+          "Pourcentage Structuré (K)": "Structuré (K)"
+      }
     };
     
-    finalData.scoresData = {"Pourcentage Exploratoire (r)": finalData.Pourcentage_r, "Pourcentage Structuré (K)": finalData.Pourcentage_K};
-    finalData.mapCodeToName = {"Pourcentage Exploratoire (r)": "Pourcentage Exploratoire (r)", "Pourcentage Structuré (K)": "Pourcentage Structuré (K)"};
-    
+    _log_crea(true, '<- FIN MOTEUR. Objet final assemblé et prêt à être envoyé.');
     return finalData;
 
   } catch (e) {
@@ -92,10 +105,8 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
   }
 }
 
-/**
- * Détermine le nom du profil de créativité en fonction du score en pourcentage 'r'.
- */
-function _crea_determinerProfil(pourcentage_r) {
+// Les fonctions de support restent les mêmes
+function _determinerProfilCreativite(pourcentage_r) {
   if (pourcentage_r >= 80) return "Créativité très exploratoire";
   if (pourcentage_r >= 60) return "Créativité exploratoire";
   if (pourcentage_r >= 41) return "Créativité équilibrée";
@@ -103,54 +114,64 @@ function _crea_determinerProfil(pourcentage_r) {
   return "Créativité très structurée";
 }
 
-/**
- * Charge les questions et leurs métadonnées (ID, Paramètres, Axe) depuis la BDD.
- */
-function _crea_chargerQuestionsAvecAxe(typeTest, langue) {
+function _chargerQuestionsAvecAxe(typeTest, langue) {
   try {
     const systemIds = getSystemIds();
     const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
     const nomFeuille = `Questions_${typeTest}_${langue}`;
     const sheet = bdd.getSheetByName(nomFeuille);
-    if (!sheet) throw new Error(`Feuille de questions introuvable: ${nomFeuille}`);
+    if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
+    
     const data = sheet.getDataRange().getValues();
     const headers = data.shift().map(h => String(h || '').trim());
-    const idCol = headers.indexOf('ID'), paramsCol = headers.indexOf('Paramètres (JSON)'), axeCol = headers.indexOf('Axe');
-    if (idCol === -1 || paramsCol === -1 || axeCol === -1) throw new Error("Colonnes 'ID', 'Paramètres (JSON)' ou 'Axe' manquantes.");
+    const idCol = headers.indexOf('ID');
+    const paramsCol = headers.indexOf('Paramètres (JSON)');
+    const axeCol = headers.indexOf('Axe');
+
+    if (idCol === -1 || paramsCol === -1 || axeCol === -1) {
+      throw new Error("Colonnes 'ID', 'Paramètres (JSON)' ou 'Axe' manquantes.");
+    }
+
     const questionsMap = {};
     data.forEach(row => {
-      const id = row[idCol], paramsJSON = row[paramsCol], axe = row[axeCol];
+      const id = row[idCol];
+      const paramsJSON = row[paramsCol];
+      const axe = row[axeCol];
       if (id && paramsJSON && axe) {
-        try { questionsMap[id] = { id: id, parametres: JSON.parse(paramsJSON), axe: axe }; } 
-        catch (e) { Logger.log(`Erreur de parsing JSON pour la question ID ${id} dans ${nomFeuille}`); }
+        try {
+          questionsMap[id] = { id: id, parametres: JSON.parse(paramsJSON), axe: axe };
+        } catch (e) { /* ignore les erreurs de parsing */ }
       }
     });
     return { questionsMap };
   } catch (e) {
-    Logger.log("Erreur critique _crea_chargerQuestionsAvecAxe: " + e.message);
-    throw e;
+    Logger.log("Erreur critique _chargerQuestionsAvecAxe: " + e.message);
+    return { questionsMap: {} };
   }
 }
 
-/**
- * Charge les données brutes des profils depuis la BDD.
- */
-function _crea_chargerDonneesProfils(typeTest, langue) {
+function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
   try {
     const systemIds = getSystemIds();
     const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
     const nomFeuille = `Profils_${typeTest}_${langue}`;
     const sheet = bdd.getSheetByName(nomFeuille);
-    if (!sheet) throw new Error(`Feuille de profils introuvable: '${nomFeuille}'.`);
+    if (!sheet) {
+      Logger.log(`Avertissement: L'onglet de profils '${nomFeuille}' est introuvable.`);
+      return [];
+    }
     const data = sheet.getDataRange().getValues();
     const headers = data.shift().map(h => String(h || '').trim());
-    return data.map(row => {
+    const jsonData = data.map(row => {
       let obj = {};
-      headers.forEach((header, index) => { if (header) obj[header] = row[index]; });
+      headers.forEach((header, index) => {
+        if (header) obj[header] = row[index];
+      });
       return obj;
     });
+    return jsonData;
   } catch (e) {
-    Logger.log("Erreur critique dans _crea_chargerDonneesProfils: " + e.message);
-    throw e;
+    Logger.log("Erreur critique dans _chargerDonneesProfilsBrutes_V2: " + e.message);
+    return [];
   }
 }

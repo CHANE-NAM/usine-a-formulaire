@@ -1,7 +1,10 @@
-﻿=== Projet: [BDD]V2 Tests & Profils (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées) ===
+# _BDD_V2_Tests_Profils
 
+> Généré automatiquement depuis **scripts__BDD_V2_Tests_Profils.txt** — snapshot: **SNAPSHOT_20250914_162357**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -10,8 +13,11 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8"
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\Code.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\03_BaseDeDonnées\Code.js
+
+```javascript
 
 /**
 Â * @OnlyCurrentDoc
@@ -124,3 +130,5 @@ function getFilesRecursive(folder, fileList) {
         getFilesRecursive(subFolder, fileList);
     }
 }
+```
+

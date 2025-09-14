@@ -1,6 +1,6 @@
 # _TEMPLATE_V2_Kit_de_Traitement
 
-> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250911_151655**.
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250914_162357**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
 
@@ -16,6 +16,12 @@
         "userSymbol": "LoggerLib",
         "version": "1",
         "libraryId": "1sxhE-bPoQJ2S9gzvx4gSPXIS_QL17gG6iQmdgTe6VcRbARXVw2u-8qe3",
+        "developmentMode": false
+      },
+      {
+        "userSymbol": "TEMPLATE",
+        "version": "7",
+        "libraryId": "1CN599oSGN7twj-cPJzGcLrn2TVwK303fbtHD6t7tIGDel-QxLtPyq4lZ",
         "developmentMode": false
       }
     ]
@@ -1167,14 +1173,8 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRo
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
-
-```javascript
-
-s('key'));
+    const header0 = headersRow[0].toLowerCase();
+    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1485,6 +1485,11 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -1731,14 +1736,12 @@ function _injectScenario(opts) {
         }
         // Fallback : prendre le profil Ã  l'index courant
         if (!profil) {
-          profil = profilSequence[scaleIndex] || 'ENV
-```
+          profil = profilSequence[scaleIndex] || 'ENV_STABILITE';
+        }
 
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
-
-```javascript
-
-enario(profil, min, max, scenario, scaleIndex);
+        const min = scale.getLowerBound();
+        const max = scale.getUpperBound();
+        const val = _valueForScenario(profil, min, max, scenario, scaleIndex);
         resp.withItemResponse(scale.createResponse(val));
 
         scaleIndex++;
@@ -1929,8 +1932,11 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -2171,8 +2177,14 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
     const pourcentage_K = (grand_total > 0) ? (total_K / grand_total) * 100 : 0;
 
     // 3. DÃ©termination du niveau de rÃ©silience
-    const profilsDataBrutes = _chargerDonneesProfilsBrutes(config.Type_Test, langueCible);
-     _log_res(DEBUG_RES_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
+    const profilsDataBrutes = _chargerDonneesProfilsBr
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js
+
+```javascript
+
+h} profils trouvÃ©s.`);
     const niveauResilience = _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsDataBrutes);
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === niveauResilience) || {};
     
@@ -2279,12 +2291,6 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js
-
-```javascript
-
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
@@ -3387,39 +3393,4 @@ function lancerRetraitementDepuisUI(options) {
   return TEMPLATE.lancerRetraitementDepuisUI(options);
 }
 ```
-
----
-
-### Fichiers CSV exportés (aperçu)
-* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
-* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Feuille_36.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
-* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
-* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
-* ... (22 de plus)
 
