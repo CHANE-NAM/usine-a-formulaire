@@ -88,7 +88,7 @@ function ouvrirSidebarPourLigne(rowIndex) {
     template.ligneActive = rowIndex;
   const htmlOutput = template.evaluate()
     .setTitle('Retraitement - Ligne ' + rowIndex)
-    .setWidth(350);
+    .setWidth(450);
   ui.showSidebar(htmlOutput);
 }
 

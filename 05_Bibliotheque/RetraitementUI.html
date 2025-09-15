@@ -4,19 +4,60 @@
     <base target="_top">
     <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
     <style>
+      /* Styles généraux (inchangés) */
       body { font-family: 'Roboto', Arial, sans-serif; padding: 0 20px; background-color: #f8f9fa; color: #3c4043; }
       h3 { font-size: 20px; font-weight: 500; color: #1a73e8; border-bottom: 1px solid #dadce0; padding-bottom: 8px; margin-top: 24px; }
       .form-group { margin-bottom: 16px; }
       label { font-size: 12px; font-weight: 700; color: #5f6368; display: block; margin-bottom: 4px; }
       input[type="text"], input[type="email"], select { width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
       input[type="text"][readonly] { background-color: #f1f3f4; color: #5f6368; }
-      .button-group { margin-top: 24px; display: flex; justify-content: space-between; }
-      button { padding: 10px 16px; border: none; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; }
-      #btn-lancer { background-color: #1a73e8; color: white; }
-      #btn-annuler { background-color: #e8eaed; color: #5f6368; }
+      .button-group { margin-top: 24px; display: flex; justify-content: flex-end; align-items: center; } /* Modifié pour un meilleur alignement */
       #status { margin-top: 16px; font-size: 12px; color: #5f6368; padding: 8px; background-color: #e8f0fe; border-radius: 4px; text-align: center; display: none; }
       #status.error { background-color: #fce8e6; color: #a50e0e; }
       .hidden { display: none; }
+
+      /* --- SECTION DES BOUTONS MODIFIÉE --- */
+
+      /* Style de base pour tous les boutons */
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.2s; /* Effet de transition doux */
+      }
+
+      /* Style du bouton principal "Lancer le Retraitement" */
+      #btn-lancer {
+        background-color: #1a73e8; /* Bleu Google */
+        color: white;
+      }
+      
+      /* Style du bouton principal au survol de la souris */
+      #btn-lancer:hover {
+        background-color: #185ABC; /* Bleu plus foncé */
+      }
+
+      /* Style du bouton principal lorsqu'il est DÉSACTIVÉ (votre problème) */
+      #btn-lancer:disabled {
+        background-color: #F1F3F4; /* Gris clair, mais visible */
+        color: #A1A5A9;           /* Texte gris, visible */
+        cursor: not-allowed;
+      }
+      
+      /* Style du bouton secondaire "Annuler" */
+      #btn-annuler {
+        background-color: transparent;
+        color: #1a73e8; /* Texte bleu */
+      }
+
+      /* Style du bouton "Annuler" au survol */
+      #btn-annuler:hover {
+        background-color: #F0F5FE; /* Fond bleu très léger */
+      }
+
     </style>
   </head>
   <body>
@@ -45,12 +86,12 @@
            <option value="N2">Niveau 2</option>
            <option value="N3">Niveau 3</option>
          </select>
-       </div>
-       <div class="form-group">
+        </div>
+        <div class="form-group">
          <label for="alias-expediteur">ALIAS D'EXPÉDITION (VIDE = email par défaut)</label>
          <input type="email" id="alias-expediteur" name="alias_expediteur">
-       </div>
-       </div>
+        </div>
+        </div>
     <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
     <div id="destinataires-section">
       <div class="form-group">
