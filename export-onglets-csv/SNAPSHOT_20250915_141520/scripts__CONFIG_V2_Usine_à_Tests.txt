@@ -122,10 +122,10 @@ function getQuestionCountForTestType(typeTest) {
   }
 }
 
-function processNewTestConfiguration(formObject) {
-  try {
-    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
-    const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+f
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
+
+= ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
     if (!paramsSheet) { throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable."); }
     
     let headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
@@ -325,9 +325,6 @@ function getSystemIds() {
   });
   return ids;
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
-
 // Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine Ã  Tests.
 // const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
 

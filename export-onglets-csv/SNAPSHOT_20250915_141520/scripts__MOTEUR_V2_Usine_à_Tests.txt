@@ -398,8 +398,10 @@ function lancerDeploiementComplet(rowIndex) {
 Â  Â  Â  if (metaSheet) {
 Â  Â  Â  Â  const metaData = metaSheet.getDataRange().getValues();
 Â  Â  Â  Â  const metaHeaders = metaData.shift();
-Â  Â  Â  Â  const idCol = metaHeaders.indexOf('ID');
-Â  Â  Â  Â  const metaQuestionsMap = metaData.reduce((acc, row) => { acc[row[idCol]] = row; return acc; }, {});
+Â  
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js ---
+
+ row) => { acc[row[idCol]] = row; return acc; }, {});
 Â  Â  Â  Â  
 Â  Â  Â  Â  metaIds.forEach(id => {
 Â  Â  Â  Â  Â  if (metaQuestionsMap[id]) {
@@ -441,9 +443,6 @@ function lancerDeploiementComplet(rowIndex) {
 Â  }
 }
 
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js ---
 
 // =================================================================================
 // == FICHIER : UtilsV3.gs
@@ -541,10 +540,8 @@ function _construireQuestionsFormulaire(form, languesAInclure, nbQuestionsConfig
         const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
         const choices = [];
         languesAInclure.forEach(langue => {
-            const page = form.addPa
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js ---
-
-page));
+            const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
+            choices.push(itemLangue.createChoice(langue.nomComplet, page));
             
             _ajouterQuestionsDepuisFeuille(form, langue.feuille, nbQuestionsConfig);
             
@@ -661,6 +658,9 @@ function getLangueFullName(code) {
   const map = { FR: 'FranÃ§ais', EN: 'English', ES: 'EspaÃ±ol', DE: 'Deutsch' };
   return map[String(code || '').toUpperCase()] || code;
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js ---
+
 function forcerAutorisation() {
   // Cette simple ligne est suffisante pour demander les autorisations Drive.
   DriveApp.getRootFolder(); 

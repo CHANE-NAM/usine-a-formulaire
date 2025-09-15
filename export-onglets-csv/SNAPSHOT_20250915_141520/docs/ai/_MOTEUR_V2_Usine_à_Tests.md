@@ -1,6 +1,6 @@
 # _MOTEUR_V2_Usine_à_Tests
 
-> Généré automatiquement depuis **scripts__MOTEUR_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250914_200000**.
+> Généré automatiquement depuis **scripts__MOTEUR_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250915_141520**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\appsscript.json
 
@@ -412,8 +412,14 @@ function lancerDeploiementComplet(rowIndex) {
 Â  Â  Â  if (metaSheet) {
 Â  Â  Â  Â  const metaData = metaSheet.getDataRange().getValues();
 Â  Â  Â  Â  const metaHeaders = metaData.shift();
-Â  Â  Â  Â  const idCol = metaHeaders.indexOf('ID');
-Â  Â  Â  Â  const metaQuestionsMap = metaData.reduce((acc, row) => { acc[row[idCol]] = row; return acc; }, {});
+Â  
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js
+
+```javascript
+
+ row) => { acc[row[idCol]] = row; return acc; }, {});
 Â  Â  Â  Â  
 Â  Â  Â  Â  metaIds.forEach(id => {
 Â  Â  Â  Â  Â  if (metaQuestionsMap[id]) {
@@ -454,11 +460,7 @@ function lancerDeploiementComplet(rowIndex) {
 Â  Â  return null;
 Â  }
 }
-```
 
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js
-
-```javascript
 
 // =================================================================================
 // == FICHIER : UtilsV3.gs
@@ -556,14 +558,8 @@ function _construireQuestionsFormulaire(form, languesAInclure, nbQuestionsConfig
         const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
         const choices = [];
         languesAInclure.forEach(langue => {
-            const page = form.addPa
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js
-
-```javascript
-
-page));
+            const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
+            choices.push(itemLangue.createChoice(langue.nomComplet, page));
             
             _ajouterQuestionsDepuisFeuille(form, langue.feuille, nbQuestionsConfig);
             
@@ -680,6 +676,12 @@ function getLangueFullName(code) {
   const map = { FR: 'FranÃ§ais', EN: 'English', ES: 'EspaÃ±ol', DE: 'Deutsch' };
   return map[String(code || '').toUpperCase()] || code;
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js
+
+```javascript
+
 function forcerAutorisation() {
   // Cette simple ligne est suffisante pour demander les autorisations Drive.
   DriveApp.getRootFolder(); 
