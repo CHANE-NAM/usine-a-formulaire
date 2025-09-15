@@ -1,7 +1,10 @@
-﻿=== Projet: [BIBLIOTHEQUE]TEMPLATE (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque) ===
+# _BIBLIOTHEQUE_TEMPLATE
 
+> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250914_210002**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_GestionTriggers.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_GestionTriggers.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -120,8 +123,11 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -129,15 +135,20 @@ function envoyerEmailProgramme(e) {
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8"
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js
+
+```javascript
 
 function myFunction() {
   
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Logique_Universel.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Logique_Universel.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -232,8 +243,11 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
   _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
   return resultats;
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -296,8 +310,11 @@ function creerGraphiqueRadar(axesData) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Menu.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -499,8 +516,11 @@ function ui_ConfigResponsesSheet() {
 Â  props.setProperty('RESPONSES_SSID', val);
 Â  ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val);
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Environnement.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Environnement.js
+
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -655,8 +675,11 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Resilience.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Resilience.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -846,8 +869,11 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Utilities.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Utilities.js
+
+```javascript
 
 /**
 Â * =================================================================================
@@ -1153,53 +1179,63 @@ function findAttachments(config, profilCode, niveauPJ, langueCode) {
 Â  Â  return [];
 Â  }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js
+
+```javascript
 
 /**
  * =================================================================================
- * == FICHIER : TEMPLATE_Moteur_rK_Creativite.gs
- * == VERSION : 3.1 - Correction d'une erreur de syntaxe dans la gestion d'erreur.
+ * == FICHIER : Moteur_rK_Creativite.js
+ * == VERSION : 3.1 - DÃ©finitive
  * == RÃ”LE    : Moteur de calcul dÃ©diÃ© pour le test r&K CrÃ©ativitÃ©.
- * - Restaure la logique de calcul complÃ¨te et correcte.
- * - Assure une recherche de profil robuste.
+ * Cette version assure que TOUTES les donnÃ©es du profil (y compris Titre_Profil)
+ * sont correctement chargÃ©es et fusionnÃ©es dans le rÃ©sultat final.
  * =================================================================================
  */
 
-// Fonction de normalisation de texte (robuste aux accents, majuscules, espaces)
-function _crea_normStr(s) {
-  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
-}
+// ======================= SECTION DE DÃ‰BOGAGE (ESPIONS) =======================
+const DEBUG_MODE_CREATIVITE = true; 
 
-/**
- * Calcule les rÃ©sultats pour le test r&K CrÃ©ativitÃ©.
- * @param {object} reponses - L'objet contenant les rÃ©ponses de l'utilisateur.
- * @param {string} langueCible - Le code de la langue pour les rÃ©sultats (ex: 'FR').
- * @param {object} config - L'objet de configuration du test.
- * @param {string} langueOrigine - Le code de la langue du formulaire.
- * @returns {object} Un objet contenant tous les rÃ©sultats, scores et donnÃ©es de profil.
- */
+function _log_crea(flag, ...args) {
+  if (DEBUG_MODE_CREATIVITE && flag) {
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg).join(' ');
+    Logger.log(`[ESPION CrÃ©ativitÃ© V3.1] ${message}`);
+  }
+}
+// =================================================================================
+
+
 function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOrigine) {
-  Logger.log("--- âœ… EXÃ‰CUTION MOTEUR CRÃ‰ATIVITÃ‰ VERSION 3.1 (CANARI) CONFIRMÃ‰E ---");
+  _log_crea(true, '-> DÃ‰MARRAGE MOTEUR CRÃ‰ATIVITÃ‰');
   try {
-    const { questionsMap } = _crea_chargerQuestionsAvecAxe(config.Type_Test, _normLang(langueOrigine));
+    // 1. CHARGEMENT DES QUESTIONS
+    const { questionsMap } = _chargerQuestionsAvecAxe(config.Type_Test, _normLang(langueOrigine));
+    _log_crea(true, `${Object.keys(questionsMap || {}).length} questions chargÃ©es.`);
+
+    // 2. CALCUL DES SCORES BRUTS
+    let resultatsBruts = { scoresData: { r: 0, K: 0 } };
     let scoresParAxe = {
       "IdÃ©ation": { r: 0, K: 0, total: 0 }, "SÃ©lection": { r: 0, K: 0, total: 0 },
       "Innovation": { r: 0, K: 0, total: 0 }, "Gestion des contraintes": { r: 0, K: 0, total: 0 },
       "Mise en Å“uvre": { r: 0, K: 0, total: 0 }
     };
-    let total_r_global = 0, total_K_global = 0;
 
     for (const enTete in reponses) {
       if (!enTete.includes(':')) continue;
       const idQuestion = enTete.split(':')[0].trim();
       const qConfig = questionsMap[idQuestion];
+      
       if (qConfig && reponses[enTete]) {
         let scoreTemp = { scoresData: {} };
         _aiguillerCalcul(qConfig.parametres.mode, reponses[enTete], qConfig.parametres, scoreTemp);
-        const score_r = scoreTemp.scoresData.r || 0, score_K = scoreTemp.scoresData.K || 0;
-        total_r_global += score_r;
-        total_K_global += score_K;
+        const score_r = scoreTemp.scoresData.r || 0;
+        const score_K = scoreTemp.scoresData.K || 0;
+        
+        resultatsBruts.scoresData.r += score_r;
+        resultatsBruts.scoresData.K += score_K;
+
         const axe = qConfig.axe;
         if (axe && scoresParAxe[axe]) {
           scoresParAxe[axe].r += score_r;
@@ -1209,39 +1245,45 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       }
     }
 
-    const grand_total_global = total_r_global + total_K_global;
-    const pourcentage_r = (grand_total_global > 0) ? (total_r_global / grand_total_global) * 100 : 0;
-    const pourcentage_k = 100 - pourcentage_r;
+    // 3. CALCUL DES POURCENTAGES ET DÃ‰TERMINATION DU PROFIL
+    const grand_total_global = resultatsBruts.scoresData.r + resultatsBruts.scoresData.K;
+    const pourcentage_r = (grand_total_global > 0) ? (resultatsBruts.scoresData.r / grand_total_global) * 100 : 0;
+    const profilFinalCode = _determinerProfilCreativite(pourcentage_r);
+    _log_crea(true, `Calcul terminÃ© : %r = ${pourcentage_r.toFixed(1)}% -> Code_Profil = "${profilFinalCode}"`);
 
-    const profilFinal = _crea_determinerProfil(pourcentage_r);
-    const profilsDataBrutes = _crea_chargerDonneesProfils(config.Type_Test, langueCible);
+    // 4. CHARGEMENT DE TOUTES LES DONNÃ‰ES DU PROFIL ASSOCIÃ‰
+    const profilsDataBrutes = _chargerDonneesProfilsBrutes_V2(config.Type_Test, langueCible);
+    const profilData = profilsDataBrutes.find(row => row.Code_Profil === profilFinalCode) || {};
+    _log_crea(true, `DonnÃ©es du profil chargÃ©es. ${Object.keys(profilData).length} colonnes trouvÃ©es.`);
     
-    // Logique robuste pour trouver le profil correspondant
-    const profilFinalNormalise = _crea_normStr(profilFinal);
-    const profilData = profilsDataBrutes.find(row => {
-      const codeProfilNormalise = _crea_normStr(row.Code_Profil || row.Profil);
-      return codeProfilNormalise === profilFinalNormalise;
-    }) || {};
-
-    Logger.log(`[ESPION Moteur CrÃ©ativitÃ©] Profil calculÃ©: "${profilFinal}". Profil trouvÃ© dans la BDD: ${Object.keys(profilData).length > 0 ? 'Oui' : 'NON'}`);
-    
-    // Assemblage final des donnÃ©es
+    // 5. ASSEMBLAGE DE L'OBJET DE RÃ‰SULTATS FINAL
     const finalData = {
-      ...profilData,
-      profilFinal: profilFinal,
-      Titre_Profil: profilData.Titre_Profil || profilFinal,
+      ...profilData, 
+      
+      profilFinal: profilFinalCode, // On garde le code technique
+      // On s'assure que Titre_Profil est bien dÃ©fini, mÃªme s'il est vide dans le sheet
+      Titre_Profil: profilData.Titre_Profil || profilFinalCode, 
+      
       Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
-      Pourcentage_K: parseFloat(pourcentage_k.toFixed(1)),
+      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
+      
       Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
       Score_MiseenOeuvre: scoresParAxe["Mise en Å“uvre"].total > 0 ? parseFloat(((scoresParAxe["Mise en Å“uvre"].r / scoresParAxe["Mise en Å“uvre"].total) * 10).toFixed(1)) : 0,
+
+      scoresData: {
+          "Pourcentage Exploratoire (r)": parseFloat(pourcentage_r.toFixed(1)),
+          "Pourcentage StructurÃ© (K)": parseFloat((100 - pourcentage_r).toFixed(1))
+      },
+      mapCodeToName: {
+          "Pourcentage Exploratoire (r)": "Exploratoire (r)",
+          "Pourcentage StructurÃ© (K)": "StructurÃ© (K)"
+      }
     };
     
-    finalData.scoresData = {"Pourcentage Exploratoire (r)": finalData.Pourcentage_r, "Pourcentage StructurÃ© (K)": finalData.Pourcentage_K};
-    finalData.mapCodeToName = {"Pourcentage Exploratoire (r)": "Pourcentage Exploratoire (r)", "Pourcentage StructurÃ© (K)": "Pourcentage StructurÃ© (K)"};
-    
+    _log_crea(true, '<- FIN MOTEUR. Objet final assemblÃ© et prÃªt Ã  Ãªtre envoyÃ©.');
     return finalData;
 
   } catch (e) {
@@ -1250,10 +1292,8 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
   }
 }
 
-/**
- * DÃ©termine le nom du profil de crÃ©ativitÃ© en fonction du score en pourcentage 'r'.
- */
-function _crea_determinerProfil(pourcentage_r) {
+// Les fonctions de support restent les mÃªmes
+function _determinerProfilCreativite(pourcentage_r) {
   if (pourcentage_r >= 80) return "CrÃ©ativitÃ© trÃ¨s exploratoire";
   if (pourcentage_r >= 60) return "CrÃ©ativitÃ© exploratoire";
   if (pourcentage_r >= 41) return "CrÃ©ativitÃ© Ã©quilibrÃ©e";
@@ -1261,59 +1301,72 @@ function _crea_determinerProfil(pourcentage_r) {
   return "CrÃ©ativitÃ© trÃ¨s structurÃ©e";
 }
 
-/**
- * Charge les questions et leurs mÃ©tadonnÃ©es (ID, ParamÃ¨tres, Axe) depuis la BDD.
- */
-function _crea_chargerQuestionsAvecAxe(typeTest, langue) {
+function _chargerQuestionsAvecAxe(typeTest, langue) {
   try {
     const systemIds = getSystemIds();
     const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
     const nomFeuille = `Questions_${typeTest}_${langue}`;
     const sheet = bdd.getSheetByName(nomFeuille);
-    if (!sheet) throw new Error(`Feuille de questions introuvable: ${nomFeuille}`);
+    if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuille}`);
+    
     const data = sheet.getDataRange().getValues();
     const headers = data.shift().map(h => String(h || '').trim());
-    const idCol = headers.indexOf('ID'), paramsCol = headers.indexOf('ParamÃ¨tres (JSON)'), axeCol = headers.indexOf('Axe');
-    if (idCol === -1 || paramsCol === -1 || axeCol === -1) throw new Error("Colonnes 'ID', 'ParamÃ¨tres (JSON)' ou 'Axe' manquantes.");
+    const idCol = headers.indexOf('ID');
+    const paramsCol = headers.indexOf('ParamÃ¨tres (JSON)');
+    const axeCol = headers.indexOf('Axe');
+
+    if (idCol === -1 || paramsCol === -1 || axeCol === -1) {
+      throw new Error("Colonnes 'ID', 'ParamÃ¨tres (JSON)' ou 'Axe' manquantes.");
+    }
+
     const questionsMap = {};
     data.forEach(row => {
-      const id = row[idCol], paramsJSON = row[paramsCol], axe = row[axeCol];
+      const id = row[idCol];
+      const paramsJSON = row[paramsCol];
+      const axe = row[axeCol];
       if (id && paramsJSON && axe) {
-        try { questionsMap[id] = { id: id, parametres: JSON.parse(paramsJSON), axe: axe }; } 
-        catch (e) { Logger.log(`Erreur de parsing JSON pour la question ID ${id} dans ${nomFeuille}`); }
+        try {
+          questionsMap[id] = { id: id, parametres: JSON.parse(paramsJSON), axe: axe };
+        } catch (e) { /* ignore les erreurs de parsing */ }
       }
     });
     return { questionsMap };
   } catch (e) {
-    Logger.log("Erreur critique _crea_chargerQuestionsAvecAxe: " + e.message);
-    throw e;
+    Logger.log("Erreur critique _chargerQuestionsAvecAxe: " + e.message);
+    return { questionsMap: {} };
   }
 }
 
-/**
- * Charge les donnÃ©es brutes des profils depuis la BDD.
- */
-function _crea_chargerDonneesProfils(typeTest, langue) {
+function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
   try {
     const systemIds = getSystemIds();
     const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
     const nomFeuille = `Profils_${typeTest}_${langue}`;
     const sheet = bdd.getSheetByName(nomFeuille);
-    if (!sheet) throw new Error(`Feuille de profils introuvable: '${nomFeuille}'.`);
+    if (!sheet) {
+      Logger.log(`Avertissement: L'onglet de profils '${nomFeuille}' est introuvable.`);
+      return [];
+    }
     const data = sheet.getDataRange().getValues();
     const headers = data.shift().map(h => String(h || '').trim());
-    return data.map(row => {
+    const jsonData = data.map(row => {
       let obj = {};
-      headers.forEach((header, index) => { if (header) obj[header] = row[index]; });
+      headers.forEach((header, index) => {
+        if (header) obj[header] = row[index];
+      });
       return obj;
     });
+    return jsonData;
   } catch (e) {
-    Logger.log("Erreur critique dans _crea_chargerDonneesProfils: " + e.message);
-    throw e;
+    Logger.log("Erreur critique dans _chargerDonneesProfilsBrutes_V2: " + e.message);
+    return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Main.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Main.js
+
+```javascript
 
 /**
 Â * =================================================================================
@@ -1401,10 +1454,9 @@ function ui_DryRunLigneSelection(kitId) {
 Â  Â  Â  niveau: niveau,
 Â  Â  Â  destinataires: { test: Session.getActiveUser().getEmail() }
 Â  Â  });
-Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js ---
-
-tionnÃ©e) : ' + e.message);
+Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + '. Voir les journaux de la bibliothÃ¨que.');
+Â  } catch (e) {
+Â  Â  SpreadsheetApp.getUi().alert('Erreur Dry-run (ligne sÃ©lectionnÃ©e) : ' + e.message);
 Â  }
 }
 
@@ -1542,10 +1594,16 @@ function retraitementTestSansEnvoi(rowIndex, kitSpreadsheet, options) {
 Â  Â  throw new Error(e.message);
 Â  }
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
+
+```javascript
+
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_Mail.gs
- * == VERSION : 4.0 - IntÃ©gration d'un systÃ¨me de dÃ©bogage activable.
+ * == VERSION : 4.1 - Version corrigÃ©e et robustifiÃ©e
  * == RÃ”LE    : GÃ¨re la composition et l'envoi des e-mails de rÃ©sultats.
  * =================================================================================
  */
@@ -1565,6 +1623,13 @@ function _log_mail(flag, ...args) {
 // =================================================================================
 
 
+/**
+ * CrÃ©e un objet unique contenant toutes les donnÃ©es nÃ©cessaires Ã  la fusion,
+ * en combinant les informations de base du rÃ©pondant avec tous les rÃ©sultats calculÃ©s.
+ * @param {Object} reponse - L'objet contenant les rÃ©ponses du formulaire.
+ * @param {Object} resultats - L'objet contenant les rÃ©sultats des calculs du moteur.
+ * @returns {Object} Un objet complet prÃªt pour la fusion.
+ */
 function _enrichirDonneesPourEmail_(reponse, resultats) {
   const nomPrenom = (reponse.Votre_nom_et_prenom || reponse.Nom_et_prenom || "Participant");
   const email = (reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email || "");
@@ -1575,170 +1640,207 @@ function _enrichirDonneesPourEmail_(reponse, resultats) {
     Votre_adresse_e_mail: email,
     Date_du_jour: new Date().toLocaleDateString('fr-FR')
   };
+  // Fusionne les donnÃ©es de base avec l'intÃ©gralitÃ© de l'objet de rÃ©sultats
   return { ...base, ...resultats };
 }
 
+
+/**
+ * Assemble et envoie un e-mail universel basÃ© sur les briques de contenu de la BDD.
+ * @param {Object} config - La configuration du test.
+ * @param {Object} reponse - L'objet de rÃ©ponse de la ligne traitÃ©e.
+ * @param {Object} resultats - Les rÃ©sultats calculÃ©s par le moteur de test.
+ * @param {string} langueCible - Le code de la langue pour l'e-mail ('FR', 'EN'...).
+ * @param {Object} optionsSurcharge - Options pour le retraitement (destinataires, dryRun...).
+ * @param {Spreadsheet} kitSpreadsheet - L'objet Spreadsheet du kit actif.
+ */
 function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCible, optionsSurcharge = {}, kitSpreadsheet) {
-  const typeTest = (config.Type_Test || '').toString().trim();
-  let codeNiveauEmail = (config.ID_Gabarit_Email_Repondant || '').toString().replace('RESULTATS_', '').trim();
-  if (optionsSurcharge && optionsSurcharge.niveau && optionsSurcharge.niveau !== '') codeNiveauEmail = optionsSurcharge.niveau;
-  const profilFinal = (resultats.profilFinal || '').toString().trim();
+  _log_mail(true, '--- DÃ‰BUT ASSEMBLAGE EMAIL (VERSION CORRIGÃ‰E) ---');
+  try {
+    const typeTest = (config.Type_Test || '').toString().trim();
+    let codeNiveauEmail = (config.ID_Gabarit_Email_Repondant || '').toString().replace('RESULTATS_', '').trim();
+    if (optionsSurcharge && optionsSurcharge.niveau && optionsSurcharge.niveau !== '') {
+      codeNiveauEmail = optionsSurcharge.niveau;
+    }
+    const profilFinal = (resultats.profilFinal || '').toString().trim();
 
-  _log_mail(true, '--- DÃ‰BUT ASSEMBLAGE EMAIL ---');
-  _log_mail(true, `CritÃ¨res de recherche: Type_Test="${typeTest}", Langue="${langueCible}", Niveau="${codeNiveauEmail}", Profil="${profilFinal}"`);
+    // 1. CRÃ‰ATION DE L'OBJET DE FUSION CENTRALISÃ‰
+    // C'est l'Ã©tape clÃ© : toutes les variables sont rÃ©unies ici.
+    const variablesFusion = _enrichirDonneesPourEmail_(reponse, resultats);
+    _log_mail(true, 'Variables de fusion disponibles :', Object.keys(variablesFusion));
 
-  const systemIds = getSystemIds();
-  const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
-  const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
-  const compoData = compoSheet.getDataRange().getValues();
-  const compoHeaders = compoData.shift().map(h => String(h || '').trim());
-  const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
+    // 2. RÃ‰CUPÃ‰RATION DES BRIQUES DE CONTENU DE L'EMAIL
+    _log_mail(true, `CritÃ¨res de recherche: Type_Test="${typeTest}", Langue="${langueCible}", Niveau="${codeNiveauEmail}", Profil="${profilFinal}"`);
+    const systemIds = getSystemIds();
+    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+    const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
+    const compoData = compoSheet.getDataRange().getValues();
+    const compoHeaders = compoData.shift().map(h => String(h || '').trim());
+    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
+    
+    let briquesDeContenu = compoData.filter((row) => {
+        const typeLigne = (row[idx.typeTest] || '').toString().trim();
+        const langLigne = (row[idx.langue] || '').toString().trim();
+        const levelValue = (row[idx.niveau] || '').toString();
+        const profilLigne = (row[idx.profil] || '').toString().trim();
+        const typeMatch = (typeLigne === typeTest || typeLigne === '');
+        const langMatch = (langLigne === langueCible || langLigne === '');
+        const levelList = levelValue.split(',').map(s => s.trim()).filter(Boolean);
+        const levelMatch = levelList.length > 0 ? levelList.includes(codeNiveauEmail) : levelValue.includes(codeNiveauEmail);
+        const profileMatch = (profilLigne === profilFinal || profilLigne === '');
+        return typeMatch && langMatch && levelMatch && profileMatch;
+    });
+    
+    _log_mail(true, `${briquesDeContenu.length} briques de contenu trouvÃ©es aprÃ¨s filtrage.`);
+    if (briquesDeContenu.length === 0) {
+        _log_mail(true, 'ERREUR : Aucune brique de contenu trouvÃ©e. L\'e-mail ne sera pas construit.');
+        return; 
+    }
+    briquesDeContenu.sort((a, b) => (Number(a[idx.ordre]) || 0) - (Number(b[idx.ordre]) || 0));
 
-  let briquesDeContenu = compoData.filter((row) => {
-    const typeLigne = (row[idx.typeTest] || '').toString().trim();
-    const langLigne = (row[idx.langue] || '').toString().trim();
-    const levelValue = (row[idx.niveau] || '').toString();
-    const profilLigne = (row[idx.profil] || '').toString().trim();
-    const typeMatch = (typeLigne === typeTest || typeLigne === '');
-    const langMatch = (langLigne === langueCible || langLigne === '');
-    const levelList = levelValue.split(',').map(s => s.trim()).filter(Boolean);
-    const levelMatch = levelList.length > 0 ? levelList.includes(codeNiveauEmail) : levelValue.includes(codeNiveauEmail);
-    const profileMatch = (profilLigne === profilFinal || profilLigne === '');
-    return typeMatch && langMatch && levelMatch && profileMatch;
-  });
-  
-  _log_mail(true, `${briquesDeContenu.length} briques de contenu trouvÃ©es aprÃ¨s filtrage.`);
-  if (briquesDeContenu.length > 0) {
-    _log_mail(true, 'PremiÃ¨re brique trouvÃ©e (pour vÃ©rification) :', briquesDeContenu[0]);
-  } else {
-    _log_mail(true, 'AVERTISSEMENT : Aucune brique de contenu trouvÃ©e. L\'e-mail sera probablement vide.');
-  }
+    // 3. CONSTRUCTION DU SUJET ET DU CORPS DE L'EMAIL
+    let sujet = `RÃ©sultats de votre test ${typeTest}`;
+    let corpsHtml = "";
+    let contenuInfoCopie = null;
+    const piecesJointesIds = new Set();
+    
+    const indexInfoCopie = briquesDeContenu.findIndex(b => (b[idx.element] || '').toString().trim() === 'Info_Copie');
+    if (indexInfoCopie > -1) {
+        contenuInfoCopie = briquesDeContenu[indexInfoCopie][idx.contenu];
+        briquesDeContenu.splice(indexInfoCopie, 1);
+    }
 
-  briquesDeContenu.sort((a, b) => (Number(a[idx.ordre]) || 0) - (Number(b[idx.ordre]) || 0));
-
-  const donneesPourEmail = _enrichirDonneesPourEmail_(reponse, resultats);
-  let sujet = `RÃ©sultats de votre test ${typeTest}`;
-  let corpsHtml = "";
-  
-  // ... Le reste de la fonction reste identique ...
-  let contenuInfoCopie = null;
-  const piecesJointesIds = new Set();
-  const indexInfoCopie = briquesDeContenu.findIndex(b => (b[idx.element] || '').toString().trim() === 'Info_Copie');
-  if (indexInfoCopie > -1) {
-    contenuInfoCopie = briquesDeContenu[indexInfoCopie][idx.contenu];
-    briquesDeContenu.splice(indexInfoCopie, 1);
-  }
-
-  for (const brique of briquesDeContenu) {
-    const elementType = (brique[idx.element] || '').toString().trim();
-    const contenu = brique[idx.contenu];
-    switch (elementType) {
-      case 'Sujet_Email': sujet = contenu; break;
-      case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
-      case 'Champ_Profil': if (contenu && donneesPourEmail[contenu]) { corpsHtml += donneesPourEmail[contenu] + "<br>"; } break;
-      case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
-      case 'Ligne_Score':
-        const scoresAAfficher = resultats.scoresData;
-        if (scoresAAfficher) {
-          Object.entries(scoresAAfficher).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => {
-            let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
-            const nomProfil = resultats.mapCodeToName[code] || code;
-            const totalPossible = resultats.scoresMaxPossible ? (resultats.scoresMaxPossible[code] || '') : '';
-            let ligneScore = (contenu || `- {{nom_profil}} : {{score}}`).replace(/{{nom_profil}}/g, nomProfil).replace(/{{score}}/g, scoreArrondi).replace(/{{total_possible}}/g, totalPossible);
-            corpsHtml += ligneScore + "<br>";
-          });
+    briquesDeContenu.forEach(brique => {
+        const elementType = (brique[idx.element] || '').toString().trim();
+        const contenu = brique[idx.contenu];
+        switch (elementType) {
+            case 'Sujet_Email': sujet = contenu; break;
+            case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
+            case 'Champ_Profil': if (contenu && variablesFusion[contenu]) { corpsHtml += variablesFusion[contenu] + "<br>"; } break;
+            case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
+            case 'Ligne_Score':
+                const scoresAAfficher = resultats.scoresData;
+                if (scoresAAfficher) {
+                    Object.entries(scoresAAfficher).sort((a, b) => b[1] - a[1]).forEach(([code, score]) => {
+                        let scoreArrondi = (typeof score === 'number') ? score.toFixed(1) : score;
+                        const nomProfil = resultats.mapCodeToName[code] || code;
+                        const totalPossible = resultats.scoresMaxPossible ? (resultats.scoresMaxPossible[code] || '') : '';
+                        let ligneScore = (contenu || `- {{nom_profil}} : {{score}}`).replace(/{{nom_profil}}/g, nomProfil).replace(/{{score}}/g, scoreArrondi).replace(/{{total_possible}}/g, totalPossible);
+                        corpsHtml += ligneScore + "<br>";
+                    });
+                }
+                break;
         }
-        break;
+    });
+    
+    // 4. REMPLACEMENT DES PLACEHOLDERS EN UTILISANT L'OBJET DE FUSION COMPLET
+    for (const key in variablesFusion) {
+        const placeholder = `{{${key}}}`;
+        const valeur = variablesFusion[key] || '';
+        const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
+        sujet = sujet.replace(regex, valeur);
+        corpsHtml = corpsHtml.replace(regex, valeur);
+        if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur);
     }
-  }
-  
-  const variablesFusion = { ...donneesPourEmail, ...resultats };
-  _log_mail(true, 'Variables de fusion disponibles :', Object.keys(variablesFusion));
+    _log_mail(true, 'Sujet final (aprÃ¨s fusion) :', sujet);
 
-  for (const key in variablesFusion) {
-    const placeholder = `{{${key}}}`;
-    const valeur = variablesFusion[key] || '';
-    const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
-    sujet = sujet.replace(regex, valeur);
-    corpsHtml = corpsHtml.replace(regex, valeur);
-    if (contenuInfoCopie) contenuInfoCopie = contenuInfoCopie.replace(regex, valeur);
-  }
-  _log_mail(true, 'Sujet final :', sujet);
-  
-  const piecesJointes = [];
-  if (resultats.Graphique_Radar_Blob) {
-    piecesJointes.push(resultats.Graphique_Radar_Blob.setName('Profil_Resilience.png'));
-  }
-  
-  for (const contenuDoc of Array.from(piecesJointesIds)) {
-    let candidateId = contenuDoc;
-    if (candidateId.startsWith("{{") && candidateId.endsWith("}}")) {
-      const cle = candidateId.slice(2, -2);
-      candidateId = variablesFusion[cle] || "";
+    // 5. PRÃ‰PARATION DES PIÃˆCES JOINTES (PDF inclus)
+    const piecesJointes = [];
+    if (resultats.Graphique_Radar_Blob) {
+        piecesJointes.push(resultats.Graphique_Radar_Blob.setName('Profil_Resilience.png'));
     }
-    if (/^[a-zA-Z0-9_-]{20,}$/.test(candidateId)) {
-      try {
-        const file = DriveApp.getFileById(candidateId);
-        const mimeType = file.getMimeType();
-        if (mimeType === MimeType.GOOGLE_DOCS) {
-          _log_mail(true, `DÃ©tection d'un Google Doc (ID: ${candidateId}). Lancement de la gÃ©nÃ©ration PDF...`);
-          const nomRapport = (resultats.Titre_Profil || resultats.profilFinal || "Rapport");
-          const pdf = genererPdfDepuisModele(candidateId, variablesFusion, nomRapport);
-          if (pdf) { piecesJointes.push(pdf); }
-        } else {
-          _log_mail(true, `DÃ©tection d'un fichier statique (ID: ${candidateId}, Type: ${mimeType}). Ajout direct.`);
-          piecesJointes.push(file.getBlob());
+    
+    for (const contenuDoc of Array.from(piecesJointesIds)) {
+        let candidateId = contenuDoc;
+        if (candidateId.startsWith("{{") && candidateId.endsWith("}}")) {
+            const cle = candidateId.slice(2, -2);
+            candidateId = variablesFusion[cle] || "";
         }
-      } catch (e) {
-        _log_mail(true, `Impossible de traiter la piÃ¨ce jointe avec l'ID ${candidateId} : ${e.message}`);
-      }
+        if (/^[a-zA-Z0-9_-]{20,}$/.test(candidateId)) {
+            try {
+                const file = DriveApp.getFileById(candidateId);
+                const mimeType = file.getMimeType();
+                if (mimeType === MimeType.GOOGLE_DOCS) {
+                    _log_mail(true, `DÃ©tection d'un Google Doc (ID: ${candidateId}). Lancement de la gÃ©nÃ©ration PDF...`);
+                    const nomRapport = (resultats.Titre_Profil || resultats.profilFinal || "Rapport");
+                    const pdf = genererPdfDepuisModele(candidateId, variablesFusion, nomRapport);
+                    if (pdf) { 
+                        piecesJointes.push(pdf);
+                        _log_mail(true, `PDF "${nomRapport}.pdf" gÃ©nÃ©rÃ© avec succÃ¨s.`);
+                    }
+                } else {
+                    _log_mail(true, `DÃ©tection d'un fichier statique (ID: ${candidateId}, Type: ${mimeType}). Ajout direct.`);
+                    piecesJointes.push(file.getBlob());
+                }
+            } catch (e) {
+                _log_mail(true, `Impossible de traiter la piÃ¨ce jointe avec l'ID ${candidateId} : ${e.message}`);
+            }
+        }
     }
-  }
-  
-  const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email;
-  const override = optionsSurcharge.overrideRecipients === true;
-  const ignoreDev = optionsSurcharge.ignoreDeveloppeurEmail === true;
-  const dryRun = optionsSurcharge.dryRun === true;
-  const destS = optionsSurcharge.destinataires || {};
-  const adressesUniques = new Set();
-  
-  if (override) {
-    if (destS.repondant === true && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
-    if (destS.formateur === true && destS.formateurEmail) adressesUniques.add(destS.formateurEmail);
-    if (destS.patron === true && destS.patronEmail) adressesUniques.add(destS.patronEmail);
-    if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); }
-  } else {
-    if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
-    if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email);
-    if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) adressesUniques.add(config.Formateur_Email);
-    if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email);
-  }
+    
+    // 6. DÃ‰TERMINATION DES DESTINATAIRES ET ENVOI
+    const emailRepondantPrincipal = reponse.Votre_adresse_e_mail || reponse.Votre_adresse_email;
+    const override = optionsSurcharge.overrideRecipients === true;
+    const ignoreDev = optionsSurcharge.ignoreDeveloppeurEmail === true;
+    const dryRun = optionsSurcharge.dryRun === true;
+    const destS = optionsSurcharge.destinataires || {};
+    const adressesUniques = new Set();
+    
+    if (override) {
+        if (destS.repondant === true && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
+        if (destS.formateur === true && config.Formateur_Email) adressesUniques.add(config.Formateur_Email);
+        if (destS.patron === true && config.Patron_Email) adressesUniques.add(config.Patron_Email);
+        if (destS.test && destS.test.trim() !== '') { destS.test.split(',').map(e => e.trim()).forEach(email => adressesUniques.add(email)); }
+    } else {
+        if (config.Repondant_Email_Actif === 'Oui' && emailRepondantPrincipal) adressesUniques.add(emailRepondantPrincipal);
+        if (config.Patron_Email_Mode === 'Oui' && config.Patron_Email) adressesUniques.add(config.Patron_Email);
+        if (config.Formateur_Email_Actif === 'Oui' && config.Formateur_Email) adressesUniques.add(config.Formateur_Email);
+        if (config.Developpeur_Email && !ignoreDev) adressesUniques.add(config.Developpeur_Email);
+    }
 
-  _log_mail(true, 'Adresses de destination finales :', Array.from(adressesUniques));
-  if (dryRun) {
-    _log_mail(true, 'â€” DRY-RUN â€” AUCUN EMAIL ENVOYÃ‰ â€”');
-    return;
-  }
-  
-  adressesUniques.forEach(adresse => {
-    try {
-      let sujetFinal = sujet;
-      let corpsHtmlFinal = corpsHtml;
-      if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) {
-        sujetFinal = "Copie : " + sujet;
-        if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml;
-      }
-      const mailOptions = { to: adresse, subject: sujetFinal, htmlBody: corpsHtmlFinal, attachments: piecesJointes, from: (optionsSurcharge.alias || config.Email_Alias || null) };
-      GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", { htmlBody: mailOptions.htmlBody, attachments: mailOptions.attachments, from: mailOptions.from });
-      _log_mail(true, `E-mail de RÃ‰SULTATS envoyÃ© Ã  ${adresse}.`);
-    } catch (e) {
-      _log_mail(true, `Echec de l'envoi des rÃ©sultats Ã  ${adresse}. Erreur: ${e.message}`);
+    _log_mail(true, 'Adresses de destination finales :', Array.from(adressesUniques));
+    if (dryRun) {
+        _log_mail(true, 'â€” DRY-RUN â€” AUCUN EMAIL ENVOYÃ‰ â€”');
+        return;
     }
-  });
-  _log_mail(true, '--- FIN ASSEMBLAGE EMAIL ---');
+    
+    adressesUniques.forEach(adresse => {
+        try {
+            let sujetFinal = sujet;
+            let corpsHtmlFinal = corpsHtml;
+            if (adresse.toLowerCase() !== (emailRepondantPrincipal || "").toLowerCase()) {
+                sujetFinal = "Copie : " + sujet;
+                if (contenuInfoCopie) corpsHtmlFinal = contenuInfoCopie + corpsHtml;
+            }
+            const mailOptions = { 
+                to: adresse, 
+                subject: sujetFinal, 
+                htmlBody: corpsHtmlFinal, 
+                attachments: piecesJointes, 
+                from: (optionsSurcharge.alias || config.Email_Alias || null) 
+            };
+            GmailApp.sendEmail(mailOptions.to, mailOptions.subject, "", { 
+                htmlBody: mailOptions.htmlBody, 
+                attachments: mailOptions.attachments, 
+                from: mailOptions.from 
+            });
+            _log_mail(true, `E-mail de RÃ‰SULTATS envoyÃ© Ã  ${adresse}.`);
+        } catch (e) {
+            _log_mail(true, `Echec de l'envoi des rÃ©sultats Ã  ${adresse}. Erreur: ${e.message}`);
+        }
+    });
+
+  } catch(e) {
+      Logger.log("ERREUR FATALE dans assemblerEtEnvoyerEmailUniversel: " + e.message + "\n" + e.stack);
+  } finally {
+      _log_mail(true, '--- FIN ASSEMBLAGE EMAIL ---');
+  }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js
+
+```javascript
 
 /**
 Â * =================================================================================
@@ -1966,58 +2068,95 @@ function diagnostic_CompoEmails_v20_1(kitId) {
 Â  Â  Logger.log('ERREUR diagnostic compo: ' + e.message);
 Â  }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js
+
+```javascript
 
 /**
- * T_PDF.gs
+ * =================================================================================
+ * == FICHIER : TEMPLATE_T_PDF.gs
+ * == VERSION : 2.0 - Version robustifiÃ©e
+ * == RÃ”LE    : GÃ¨re la gÃ©nÃ©ration de fichiers PDF Ã  partir de modÃ¨les Google Docs.
+ * =================================================================================
+ */
+
+/**
  * GÃ©nÃ¨re un fichier PDF Ã  partir d'un modÃ¨le Google Doc en remplaÃ§ant des variables.
+ * Cette version amÃ©liorÃ©e vÃ©rifie le type de chaque variable avant de tenter un remplacement
+ * pour Ã©viter les erreurs avec des objets complexes, et assure un nettoyage fiable des fichiers temporaires.
+ *
  * @param {string} templateId L'ID du fichier Google Doc servant de modÃ¨le.
- * @param {Object} variables Un objet oÃ¹ les clÃ©s sont les noms des variables Ã  remplacer (sans les accolades).
+ * @param {Object} variables Un objet oÃ¹ les clÃ©s sont les noms des placeholders.
  * @param {string} nomFichier Le nom du nouveau fichier PDF (sans l'extension).
  * @returns {Blob|null} Le fichier PDF sous forme de Blob, ou null en cas d'erreur.
  */
 function genererPdfDepuisModele(templateId, variables, nomFichier) {
+  let newDocId = null; // DÃ©clarer l'ID ici pour qu'il soit accessible dans le 'finally'
   try {
     const tempFile = DriveApp.getFileById(templateId);
-    const tempFolder = DriveApp.getRootFolder();
-    const newDocId = tempFile.makeCopy(nomFichier, tempFolder).getId();
+    const tempFolder = tempFile.getParents().next(); 
+    newDocId = tempFile.makeCopy(nomFichier, tempFolder).getId();
     const newDoc = DocumentApp.openById(newDocId);
     const body = newDoc.getBody();
-    
-    // Insertion du graphique si le blob est fourni
+
+    // Remplacement des variables textuelles et numÃ©riques
+    for (const key in variables) {
+      const placeholder = `{{${key}}}`;
+      const valeur = variables[key];
+
+      // --- CORRECTION CRUCIALE ---
+      // On vÃ©rifie que la valeur est bien un type simple (texte, nombre, boolÃ©en)
+      // avant de tenter de l'insÃ©rer dans le document.
+      if (typeof valeur === 'string' || typeof valeur === 'number' || typeof valeur === 'boolean') {
+        // La valeur est simple, on peut la remplacer sans risque.
+        body.replaceText(placeholder, valeur.toString());
+      }
+      // Si la valeur est un objet (comme 'scoresData'), on l'ignore simplement.
+    }
+
+    // Cas particulier pour le graphique radar (si utilisÃ©)
     if (variables.Graphique_Radar_Blob) {
-      const placeholder = '{{Graphique_Radar_Blob}}';
-      const rangeElement = body.findText(placeholder);
+      const placeholderGraphique = '{{Graphique_Radar_Blob}}';
+      const rangeElement = body.findText(placeholderGraphique);
       if (rangeElement) {
         const element = rangeElement.getElement();
         const parent = element.getParent();
-        parent.asParagraph().clear().insertInlineImage(0, variables.Graphique_Radar_Blob);
-      } else {
-        Logger.log("Avertissement : Le placeholder {{Graphique_Radar_Blob}} n'a pas Ã©tÃ© trouvÃ© dans le modÃ¨le de document.");
-      }
-    }
-
-    // Remplacement des autres variables textuelles
-    for (const key in variables) {
-      if (key !== 'Graphique_Radar_Blob') { 
-        body.replaceText(`{{${key}}}`, variables[key] || '');
+        if (parent.asParagraph) {
+            parent.asParagraph().clear().insertInlineImage(0, variables.Graphique_Radar_Blob);
+        }
       }
     }
 
     newDoc.saveAndClose();
     const pdfBlob = DriveApp.getFileById(newDocId).getBlob().getAs('application/pdf');
     pdfBlob.setName(nomFichier + '.pdf');
-    DriveApp.getFileById(newDocId).setTrashed(true);
-    return pdfBlob;
     
+    // Le nettoyage du fichier temporaire est gÃ©rÃ© dans le bloc 'finally' pour plus de sÃ©curitÃ©.
+    
+    return pdfBlob;
+
   } catch (e) {
-    Logger.log(`Erreur lors de la gÃ©nÃ©ration du PDF depuis le modÃ¨le ${templateId}: ${e.message}`);
+    Logger.log(`Erreur critique lors de la gÃ©nÃ©ration du PDF depuis le modÃ¨le ${templateId}: ${e.message}\n${e.stack}`);
     return null;
+
+  } finally {
+    // S'assure que le fichier Google Doc temporaire est supprimÃ©, mÃªme en cas d'erreur.
+    if (newDocId) {
+      try { 
+        DriveApp.getFileById(newDocId).setTrashed(true); 
+      } catch (e2) {
+        // Ignore les erreurs si le fichier a dÃ©jÃ  Ã©tÃ© supprimÃ© ou est inaccessible.
+      }
+    }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Data_Utils.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Data_Utils.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2211,8 +2350,11 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2288,8 +2430,11 @@ function _executerCalcul_rK(reponsesUtilisateur, langueCible, config, langueOrig
 
   return resultats;
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2352,3 +2497,5 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
     _log(DEBUG_SCORING, `_traiterECHELLE_NOTE : Ajout de ${valeurNumerique} au profil ${profil}. Total: ${resultats.scoresData[profil]}`);
   }
 }
+```
+

@@ -1,21 +1,23 @@
 {
   "timeZone": "Indian/Mauritius",
-  "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "dependencies": {
     "libraries": [
       {
-        "userSymbol": "LoggerLib",
-        "version": "1",
-        "libraryId": "1sxhE-bPoQJ2S9gzvx4gSPXIS_QL17gG6iQmdgTe6VcRbARXVw2u-8qe3",
-        "developmentMode": false
-      },
-      {
         "userSymbol": "TEMPLATE",
-        "version": "7",
         "libraryId": "1CN599oSGN7twj-cPJzGcLrn2TVwK303fbtHD6t7tIGDel-QxLtPyq4lZ",
-        "developmentMode": false
+        "version": "22"
       }
     ]
-  }
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/script.send_mail",
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/forms.currentonly",
+    "https://www.googleapis.com/auth/script.scriptapp"
+  ]
 }
