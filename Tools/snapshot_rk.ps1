@@ -1,6 +1,5 @@
 ﻿# Tools\snapshot_rk.ps1
 # === Snapshot complet : GAS + CSV + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
-# --- AJOUTER TOUT EN HAUT ---
 [CmdletBinding()]
 param(
   [switch]$NoDocs,     # ne pas appeler gen_docs.ps1
@@ -21,7 +20,7 @@ function Write-Section($text) {
 # ------------------------------------------------------------------------------------
 $EnableSpy = [bool]$Spy
 
-# Base fiable pour les chemins (même en lancement manuel)
+# Base fiable pour les chemins (ok en .ps1 et en lancement manuel)
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
               elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
               else { (Get-Location).Path }
@@ -177,7 +176,7 @@ if (-not $NoCsv) {
   $credsPath = if ($env:RK_CREDS) { $env:RK_CREDS } else { "C:\secrets\rk_oauth\credentials.json" }
   $tokenPath = if ($env:RK_TOKEN) { $env:RK_TOKEN } else { "C:\secrets\rk_oauth\token.json" }
 
-  # Préconditions
+  # Préconditions minimales
   $IndexJs = Join-Path $ExportDir 'index.js'
   $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 
@@ -185,7 +184,10 @@ if (-not $NoCsv) {
   if (-not (Test-Path -LiteralPath $IndexJs)) { Write-Warning "[CSV] export-onglets-csv\index.js introuvable — étape CSV sautée."; $canRun = $false }
   if (-not $nodeCmd)                          { Write-Warning "[CSV] Node.js (commande 'node') introuvable — étape CSV sautée.";   $canRun = $false }
   if (-not (Test-Path -LiteralPath $credsPath)){ Write-Warning ("[CSV] credentials.json introuvable : {0} — étape CSV sautée." -f $credsPath); $canRun = $false }
-  if (-not (Test-Path -LiteralPath $tokenPath)){ Write-Warning ("[CSV] token.json introuvable : {0} — étape CSV sautée." -f $tokenPath);       $canRun = $false }
+  # NOTE: on NE bloque PAS si token.json est absent -> l'exporteur déclenchera le flow OAuth
+  if (-not (Test-Path -LiteralPath $tokenPath)) {
+    Write-Warning ("[CSV] token.json absent : {0} — un nouveau consentement OAuth sera demandé." -f $tokenPath)
+  }
   if (-not $Ids -or $Ids.Count -eq 0)         { Write-Warning "[CSV] Aucun ID de classeur fourni — étape CSV sautée.";            $canRun = $false }
 
   if ($canRun) {
@@ -196,7 +198,11 @@ if (-not $NoCsv) {
       "--token", $tokenPath
     ) + ($Ids | ForEach-Object { @("--id", $_) })
 
-    # Exécution
+    # Log de la commande exacte
+    $cmdPreview = "$($nodeCmd.Source) `"$IndexJs`" " + ($nodeArgs | ForEach-Object { if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ } }) -join ' '
+    Write-Host "NODE CMD: $cmdPreview" -ForegroundColor Cyan
+
+    # Exécution dans export-onglets-csv pour résoudre .\index.js correctement
     $csvBefore = (Get-ChildItem -LiteralPath $SnapDir -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue).Count
     Push-Location -LiteralPath $ExportDir
     try {
@@ -214,8 +220,6 @@ if (-not $NoCsv) {
 } else {
   Write-Host "[CSV] Étape export CSV ignorée (NoCsv)."
 }
-
-
 
 # ------------------------------------------------------------------------------------
 # 7) Manifest / Brief / Diff (si helpers chargés)
@@ -279,7 +283,7 @@ Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 # ------------------------------------------------------------------------------------
 # 10) RÉTENTION DES SNAPSHOTS (garder les N derniers)
 # ------------------------------------------------------------------------------------
-$RetentionCount = 8
+$RetentionCount = 12
 try {
   $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory |
               Where-Object { $_.Name -like 'SNAPSHOT_*' } |
