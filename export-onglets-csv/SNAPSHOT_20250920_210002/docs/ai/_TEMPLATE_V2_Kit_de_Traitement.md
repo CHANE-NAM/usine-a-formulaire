@@ -1,31 +1,40 @@
-﻿=== Projet: [TEMPLATE]V2 Kit de Traitement (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates) ===
+# _TEMPLATE_V2_Kit_de_Traitement
 
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250920_210002**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
-  "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "dependencies": {
     "libraries": [
       {
-        "userSymbol": "LoggerLib",
-        "version": "1",
-        "libraryId": "1sxhE-bPoQJ2S9gzvx4gSPXIS_QL17gG6iQmdgTe6VcRbARXVw2u-8qe3",
-        "developmentMode": false
-      },
-      {
         "userSymbol": "TEMPLATE",
-        "version": "7",
         "libraryId": "1CN599oSGN7twj-cPJzGcLrn2TVwK303fbtHD6t7tIGDel-QxLtPyq4lZ",
-        "developmentMode": false
+        "version": "23"
       }
     ]
-  }
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/script.scriptapp",
+    "https://www.googleapis.com/auth/forms.currentonly",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.settings.basic"
+  ],
+  "exceptionLogging": "STACKDRIVER"
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -349,8 +358,11 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Menu.gs
@@ -567,9 +579,11 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -1070,8 +1084,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Utilities.gs
@@ -1471,9 +1488,11 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
+```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -1592,8 +1611,11 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js
+
+```javascript
 
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
@@ -1631,9 +1653,11 @@ function testFusionRapportFull() {
   const pdf = genererPdfDepuisModele(templateId, vars, 'Test_Rapport_Expert_FULL');
   DriveApp.createFile(pdf).setName('Test_Rapport_Expert_FULL.pdf');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js ---
+```javascript
 
 /**********************************************
  * Injecteur de scÃ©narios â€” r&K_Environnement
@@ -1911,11 +1935,11 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -2070,8 +2094,11 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2153,10 +2180,8 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
     const pourcentage_K = (grand_total > 0) ? (total_K / grand_total) * 100 : 0;
 
     // 3. DÃ©termination du niveau de rÃ©silience
-    const profilsDataBrutes = _chargerDonneesProfilsBr
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
-
-h} profils trouvÃ©s.`);
+    const profilsDataBrutes = _chargerDonneesProfilsBrutes(config.Type_Test, langueCible);
+     _log_res(DEBUG_RES_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
     const niveauResilience = _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsDataBrutes);
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === niveauResilience) || {};
     
@@ -2263,6 +2288,12 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js
+
+```javascript
+
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
@@ -2324,8 +2355,11 @@ function creerGraphiqueRadar(axesData) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js
+
+```javascript
 
 const fs = require('fs');
 const path = require('path');
@@ -2395,8 +2429,11 @@ try {
 } catch (error) {
     console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js
+
+```javascript
 
 /**
  * T_Main.gs
@@ -2622,8 +2659,11 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js
+
+```javascript
 
 /**
  * T_Mail.gs
@@ -2823,8 +2863,11 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js
+
+```javascript
 
 /**
  * T_Data.gs
@@ -3027,8 +3070,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js
+
+```javascript
 
 /**
  * T_PDF.gs
@@ -3077,8 +3123,11 @@ function genererPdfDepuisModele(templateId, variables, nomFichier) {
     return null;
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -3262,84 +3311,317 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js
+
+```javascript
+
+// ===============================================================
+// == DÃ‰CLENCHEURS ET MENUS
+// ===============================================================
 
 /**
- * @OnlyCurrentDoc
- * Ce script connecteur sert de pont entre cette feuille de calcul et la bibliothÃ¨que de code centralisÃ©e.
- * Il identifie le kit actuel et relaie tous les appels vers la bibliothÃ¨que en transmettant son ID.
+ * S'exÃ©cute Ã  l'ouverture de la feuille de calcul pour crÃ©er le menu personnalisÃ©.
  */
-
-// ===============================================================
-// == FONCTIONS DÃ‰CLENCHÃ‰ES PAR GOOGLE (TRIGGERS)
-// ===============================================================
-
 function onOpen() {
-  TEMPLATE.onOpen();
+  SpreadsheetApp.getUi()
+    .createMenu('âš™ï¸ Actions du Kit')
+    .addItem("âœ… Activer le traitement automatique", "installTrigger")
+    .addSeparator()
+    .addItem("Relancer le traitement d'une ligne...", "runReprocessing")
+    .addToUi();
 }
 
-function onInstall(e) {
-  TEMPLATE.onInstall(e);
+/**
+ * Installe un dÃ©clencheur "installable" robuste.
+ * C'est la fonction appelÃ©e par le menu.
+ */
+function installTrigger() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const functionToTrigger = 'handleFormSubmit';
+
+  // 1. Nettoyer les anciens dÃ©clencheurs pour Ã©viter tout conflit (les anciens et ceux avec l'ancien nom)
+  const allTriggers = ScriptApp.getUserTriggers(ss);
+  for (const trigger of allTriggers) {
+    const handlerFunction = trigger.getHandlerFunction();
+    if (handlerFunction === functionToTrigger || handlerFunction === 'onFormSubmit') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  }
+
+  // 2. CrÃ©er le nouveau dÃ©clencheur installable qui pointe vers notre fonction renommÃ©e
+  ScriptApp.newTrigger(functionToTrigger)
+    .forSpreadsheet(ss)
+    .onFormSubmit()
+    .create();
+
+  // 3. Informer l'utilisateur
+  SpreadsheetApp.getUi().alert('âœ… SuccÃ¨s ! Le dÃ©clencheur installable a Ã©tÃ© activÃ© sur la fonction ' + functionToTrigger + '.');
 }
 
-function onFormSubmit(e) {
-  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
-  TEMPLATE.onFormSubmit(e, kitId);
+// ===============================================================
+// == FONCTION EXÃ‰CUTÃ‰E PAR LE DÃ‰CLENCHEUR
+// ===============================================================
+
+/**
+ * Fonction cible pour le dÃ©clencheur onFormSubmit.
+ * Elle n'est PAS un dÃ©clencheur "simple" car elle n'est pas nommÃ©e "onFormSubmit".
+ * C'est cette fonction qui sera maintenant exÃ©cutÃ©e avec les permissions complÃ¨tes.
+ * @param {Object} e L'objet Ã©vÃ©nement fourni par Google.
+ */
+function handleFormSubmit(e) {
+  Logger.log("DÃ‰CLENCHEUR INSTALLABLE handleFormSubmit a dÃ©marrÃ© pour la ligne : " + e.range.getRow());
+  TEMPLATE.main(e, SpreadsheetApp.getActiveSpreadsheet().getId());
 }
 
 
 // ===============================================================
-// == FONCTIONS APPELÃ‰ES PAR LES MENUS
+// == FONCTIONS "RELAIS" POUR L'INTERFACE UTILISATEUR (HTML)
 // ===============================================================
 
-function activerTraitementAutomatique() {
-  TEMPLATE.activerTraitementAutomatique();
+/**
+ * Affiche une boÃ®te de dialogue pour demander Ã  l'utilisateur le numÃ©ro de la ligne Ã  retraiter,
+ * puis appelle la bibliothÃ¨que pour afficher l'interface de retraitement (sidebar).
+ */
+function runReprocessing() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt(
+    'Retraitement de ligne',
+    'Veuillez entrer le numÃ©ro de la ligne Ã  retraiter :',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const rowNum = parseInt(response.getResponseText());
+    if (rowNum && rowNum > 1) {
+      // Appelle la fonction de la bibliothÃ¨que qui ouvre la sidebar
+      TEMPLATE.showAdvancedReprocessingDialog(rowNum);
+    } else {
+      ui.alert('NumÃ©ro de ligne invalide.');
+    }
+  }
 }
 
-function retraiterReponse_UI() {
-  TEMPLATE.retraiterReponse_UI();
-}
-
-function ui_DryRunDerniereLigne() {
-  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
-  TEMPLATE.ui_DryRunDerniereLigne(kitId);
-}
-
-function ui_DryRunLigneSelection() {
-  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
-  TEMPLATE.ui_DryRunLigneSelection(kitId);
-}
-
-function ui_EnvoiReelLigneSelection() {
-  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
-  TEMPLATE.ui_EnvoiReelLigneSelection(kitId);
-}
-
-function ui_ConfigResponsesSheet() {
-  TEMPLATE.ui_ConfigResponsesSheet();
-}
-
-function injectScenarioStableLent() {
-  const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
-  TEMPLATE.injectScenarioStableLent(kitId);
-}
-
-
-// ===============================================================
-// == FONCTIONS "RELAIS" POUR LES DIALOGUES HTML (google.script.run)
-// ===============================================================
-
-function ouvrirSidebarPourLigne(rowIndex) {
-  TEMPLATE.ouvrirSidebarPourLigne(rowIndex);
-}
-
+/**
+ * RELAIS #1 : RÃ©cupÃ¨re les donnÃ©es nÃ©cessaires Ã  l'affichage de la sidebar.
+ * @param {number} rowIndex Le numÃ©ro de la ligne Ã  retraiter.
+ * @returns {Object} Les donnÃ©es de la ligne (nom, email, etc.).
+ */
 function getDonneesPourRetraitement(rowIndex) {
   const kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
   return TEMPLATE.getDonneesPourRetraitement(rowIndex, kitId);
 }
 
+/**
+ * RELAIS #2 : DÃ©clenche le retraitement complet depuis l'interface (sidebar).
+ * @param {Object} options Les options sÃ©lectionnÃ©es dans l'interface.
+ * @returns {string} Un message de succÃ¨s ou d'erreur.
+ */
 function lancerRetraitementDepuisUI(options) {
+  options = options || {};
   options.kitId = SpreadsheetApp.getActiveSpreadsheet().getId();
   return TEMPLATE.lancerRetraitementDepuisUI(options);
 }
+
+// ===============================================================
+// == FONCTIONS DE TEST D'AUTORISATION
+// ===============================================================
+
+/**
+ * Fonction temporaire pour forcer la demande d'autorisation pour lire les alias Gmail.
+ */
+function testAuthGmail() {
+  const aliases = GmailApp.getAliases();
+  Logger.log('Alias disponibles : ' + aliases);
+}
+
+/**
+ * Fonction temporaire pour forcer la demande d'autorisation pour Google Docs.
+ */
+function testAuthDocs() {
+  try {
+    // Tente d'ouvrir un document fictif pour dÃ©clencher la demande.
+    DocumentApp.openById('12345_dummy_id_for_auth');
+  } catch (e) {
+    Logger.log('La demande d\'autorisation pour Google Docs a Ã©tÃ© dÃ©clenchÃ©e.');
+  }
+}
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js
+
+```javascript
+
+/*******************************
+ * AUDIT RAPIDE DU KIT (V1)
+ * Ã€ coller dans le projet du KIT (Sheet de rÃ©ponses)
+ * Utilisation:
+ *   1) Mets l'ID d'un modÃ¨le Google Doc accessible ci-dessous (DOC_MODELE_ID)
+ *   2) ExÃ©cute auditKit() (menu ExÃ©cuter)
+ *******************************/
+function auditKit() {
+  const DOC_MODELE_ID = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ'; // <-- remplace si besoin
+  const out = {
+    horodatage: new Date().toISOString(),
+    kitSpreadsheetId: SpreadsheetApp.getActiveSpreadsheet().getId(),
+    effectiveUser: null,
+    checks: {
+      sheets: null,
+      driveWrite: null,
+      docsOpenModel: null,
+      docsCopyOpenExport: null,
+      gmailAliases: null,
+      formLink: null,
+      triggerInstallable: null
+    },
+    notes: [],
+    errors: []
+  };
+
+  // Qui exÃ©cute ?
+  try {
+    out.effectiveUser = Session.getEffectiveUser().getEmail();
+  } catch (e) {
+    out.errors.push('Session.getEffectiveUser: ' + e.message);
+  }
+
+  // 1) Sheets
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    out.checks.sheets = { ok: true, name: ss.getName() };
+  } catch (e) {
+    out.checks.sheets = { ok: false, error: e.message };
+    out.errors.push('Sheets: ' + e.message);
+  }
+
+  // 2) Drive (Ã©criture)
+  let tmpId = null;
+  try {
+    tmpId = DriveApp.createFile(Utilities.newBlob('ok', 'text/plain', 'audit_temp.txt')).getId();
+    out.checks.driveWrite = { ok: true, createdFileId: tmpId };
+  } catch (e) {
+    out.checks.driveWrite = { ok: false, error: e.message };
+    out.errors.push('Drive write: ' + e.message);
+  } finally {
+    if (tmpId) { try { DriveApp.getFileById(tmpId).setTrashed(true); } catch (_) {} }
+  }
+
+  // 3) Docs (ouvrir le modÃ¨le)
+  try {
+    const doc = DocumentApp.openById(DOC_MODELE_ID);
+    out.checks.docsOpenModel = { ok: true, title: doc.getName() };
+  } catch (e) {
+    out.checks.docsOpenModel = { ok: false, error: e.message };
+    out.errors.push('Docs open model: ' + e.message);
+  }
+
+  // 4) Docs + Drive (copie â†’ open â†’ export PDF â†’ poubelle)
+  let copyId = null;
+  try {
+    const src = DriveApp.getFileById(DOC_MODELE_ID);
+    const parent = src.getParents().hasNext() ? src.getParents().next() : DriveApp.getRootFolder();
+    const name = 'AUDIT_COPY_' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    copyId = src.makeCopy(name, parent).getId();
+
+    const newDoc = DocumentApp.openById(copyId);
+    newDoc.getBody().replaceText('{{AUDIT_PLACEHOLDER}}', new Date().toLocaleString('fr-FR'));
+    newDoc.saveAndClose();
+
+    const pdf = DriveApp.getFileById(copyId).getBlob().getAs('application/pdf');
+    out.checks.docsCopyOpenExport = { ok: true, pdfBytes: pdf.getBytes().length };
+  } catch (e) {
+    out.checks.docsCopyOpenExport = { ok: false, error: e.message };
+    out.errors.push('Docs copy/open/export: ' + e.message);
+  } finally {
+    if (copyId) { try { DriveApp.getFileById(copyId).setTrashed(true); } catch (_) {} }
+  }
+
+  // 5) Gmail (alias)
+  try {
+    const aliases = GmailApp.getAliases();
+    out.checks.gmailAliases = { ok: true, aliases: aliases };
+    if (!aliases || aliases.length === 0) out.notes.push('Aucun alias Gmail configurÃ© pour ce compte.');
+  } catch (e) {
+    out.checks.gmailAliases = { ok: false, error: e.message };
+    out.errors.push('Gmail aliases: ' + e.message);
+  }
+
+  // 6) Lien Form (si associÃ©)
+  try {
+    const url = SpreadsheetApp.getActiveSpreadsheet().getFormUrl();
+    out.checks.formLink = { ok: !!url, formUrl: url || null };
+    if (!url) out.notes.push('Aucun Form liÃ© dÃ©tectÃ© (getFormUrl() renvoie null).');
+  } catch (e) {
+    out.checks.formLink = { ok: false, error: e.message };
+    out.errors.push('Form link: ' + e.message);
+  }
+
+  // 7) DÃ©clencheur installable (handleFormSubmit)
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const list = ScriptApp.getUserTriggers(ss) || [];
+    const hasInstallable = list.some(t => t.getHandlerFunction && t.getHandlerFunction() === 'handleFormSubmit');
+    out.checks.triggerInstallable = { ok: hasInstallable, found: list.map(t => t.getHandlerFunction && t.getHandlerFunction()) };
+    if (!hasInstallable) out.notes.push('Aucun dÃ©clencheur installable "handleFormSubmit" dÃ©tectÃ©â€”relance le menu "Activer le traitement automatique".');
+  } catch (e) {
+    out.checks.triggerInstallable = { ok: false, error: e.message };
+    out.errors.push('Triggers: ' + e.message);
+  }
+
+  // Affichage
+  const summary =
+    '=== AUDIT KIT ===\n' +
+    'Effective user: ' + (out.effectiveUser || 'inconnu') + '\n' +
+    'Sheets: ' + JSON.stringify(out.checks.sheets) + '\n' +
+    'Drive write: ' + JSON.stringify(out.checks.driveWrite) + '\n' +
+    'Docs open model: ' + JSON.stringify(out.checks.docsOpenModel) + '\n' +
+    'Docs copy/open/export: ' + JSON.stringify(out.checks.docsCopyOpenExport) + '\n' +
+    'Gmail aliases: ' + JSON.stringify(out.checks.gmailAliases) + '\n' +
+    'Form link: ' + JSON.stringify(out.checks.formLink) + '\n' +
+    'Trigger installable: ' + JSON.stringify(out.checks.triggerInstallable) + '\n' +
+    (out.notes.length ? ('Notes: ' + out.notes.join(' | ') + '\n') : '') +
+    (out.errors.length ? ('Errors: ' + out.errors.join(' | ') + '\n') : '');
+
+  Logger.log(summary);
+  try { SpreadsheetApp.getUi().alert('Audit terminÃ©.\nConsulte le journal pour le dÃ©tail.'); } catch (_) {}
+
+  return out; // pratique si tu veux consommer le JSON ailleurs
+}
+
+```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
+* ... (18 de plus)
+
