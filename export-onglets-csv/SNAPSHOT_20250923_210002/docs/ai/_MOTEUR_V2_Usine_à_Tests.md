@@ -1,7 +1,10 @@
-﻿=== Projet: [MOTEUR]V2 Usine à Tests (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur) ===
+# _MOTEUR_V2_Usine_à_Tests
 
+> Généré automatiquement depuis **scripts__MOTEUR_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250923_210002**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -23,8 +26,11 @@
     "https://www.googleapis.com/auth/script.container.ui"
   ]
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\MigrationV1.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\MigrationV1.js
+
+```javascript
 
 // =================================================================================
 // FONCTION DE MIGRATION V1 -> V2 (JSON)
@@ -170,8 +176,11 @@ function convertirQuestionsEnJSON(sheet) {
     erreurs: erreurs
   };
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\Diagnostic.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\Diagnostic.js
+
+```javascript
 
 /**
  * Ce script est un outil de diagnostic Ã  usage unique.
@@ -212,9 +221,11 @@ function testCreationFormulaire() {
   }
   Logger.log("--- Fin du test de diagnostic ---");
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\EmailCompositionUtils.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\EmailCompositionUtils.js ---
+```javascript
 
 function normalizeAndDedupeCompositionEmails_(rows) {
   const seen = new Set();
@@ -238,9 +249,11 @@ function normalizeAndDedupeCompositionEmails_(rows) {
       return true;
     });
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\CodeV3.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\CodeV3.js ---
+```javascript
 
 // =================================================================================
 // == PROJET [MOTEUR] - FICHIER PRINCIPAL (POINTS D'ENTRÃ‰E)
@@ -313,10 +326,11 @@ function orchestrateurDeploiementComplet_UI() {
 Â  Â  ui.alert(`âŒ ERREUR : Le dÃ©ploiement a Ã©chouÃ© pour la ligne ${rowIndex}. Consultez les logs pour les dÃ©tails. Message : ${e.message}`);
 Â  }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\MoteurV3.js
 
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\MoteurV3.js ---
+```javascript
 
 // =================================================================================
 // == PROJET [MOTEUR] - LOGIQUE MÃ‰TIER
@@ -398,10 +412,8 @@ function lancerDeploiementComplet(rowIndex) {
 Â  Â  Â  if (metaSheet) {
 Â  Â  Â  Â  const metaData = metaSheet.getDataRange().getValues();
 Â  Â  Â  Â  const metaHeaders = metaData.shift();
-Â  
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js ---
-
- row) => { acc[row[idCol]] = row; return acc; }, {});
+Â  Â  Â  Â  const idCol = metaHeaders.indexOf('ID');
+Â  Â  Â  Â  const metaQuestionsMap = metaData.reduce((acc, row) => { acc[row[idCol]] = row; return acc; }, {});
 Â  Â  Â  Â  
 Â  Â  Â  Â  metaIds.forEach(id => {
 Â  Â  Â  Â  Â  if (metaQuestionsMap[id]) {
@@ -442,7 +454,11 @@ function lancerDeploiementComplet(rowIndex) {
 Â  Â  return null;
 Â  }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\UtilsV3.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : UtilsV3.gs
@@ -658,11 +674,16 @@ function getLangueFullName(code) {
   const map = { FR: 'FranÃ§ais', EN: 'English', ES: 'EspaÃ±ol', DE: 'Deutsch' };
   return map[String(code || '').toUpperCase()] || code;
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js
+
+```javascript
 
 function forcerAutorisation() {
   // Cette simple ligne est suffisante pour demander les autorisations Drive.
   DriveApp.getRootFolder(); 
   SpreadsheetApp.getUi().alert('Autorisation accordÃ©e ! Vous pouvez maintenant retourner Ã  votre feuille de calcul et relancer le dÃ©ploiement.');
 }
+```
+

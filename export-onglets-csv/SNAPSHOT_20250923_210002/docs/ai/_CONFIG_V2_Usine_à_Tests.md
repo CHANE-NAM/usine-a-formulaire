@@ -1,6 +1,6 @@
 # _CONFIG_V2_Usine_à_Tests
 
-> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250915_141520**.
+> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250923_210002**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json
 
@@ -128,14 +128,10 @@ function getQuestionCountForTestType(typeTest) {
   }
 }
 
-f
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js
-
-```javascript
-
-= ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+function processNewTestConfiguration(formObject) {
+  try {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
     if (!paramsSheet) { throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable."); }
     
     let headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
@@ -335,6 +331,12 @@ function getSystemIds() {
   });
   return ids;
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js
+
+```javascript
+
 // Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine Ã  Tests.
 // const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
 

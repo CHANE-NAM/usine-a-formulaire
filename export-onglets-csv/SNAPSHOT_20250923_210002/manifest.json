@@ -1,0 +1,71 @@
+﻿{
+    "summary":  {
+                    "snapshotDir":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm\\export-onglets-csv\\SNAPSHOT_20250923_210002",
+                    "repoRoot":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm",
+                    "generatedAt":  "2025-09-23T21:00:35Z",
+                    "counts":  {
+                                   "total":  5,
+                                   "byType":  {
+                                                  "concat":  5
+                                              }
+                               },
+                    "totalSize":  326494
+                },
+    "files":  [
+                  {
+                      "FullPath":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm\\export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__MOTEUR_V2_Usine_à_Tests.txt",
+                      "RelToSnapshot":  "scripts__MOTEUR_V2_Usine_à_Tests.txt",
+                      "RelToRepo":  "export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__MOTEUR_V2_Usine_à_Tests.txt",
+                      "Name":  "scripts__MOTEUR_V2_Usine_à_Tests.txt",
+                      "Extension":  ".txt",
+                      "Type":  "concat",
+                      "Length":  29174,
+                      "LastWriteUtc":  "2025-09-23T17:00:27Z",
+                      "Sha1":  "e3a276be6aa541ae79a609fb4bb85efd1e3d1e8b"
+                  },
+                  {
+                      "FullPath":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm\\export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__CONFIG_V2_Usine_à_Tests.txt",
+                      "RelToSnapshot":  "scripts__CONFIG_V2_Usine_à_Tests.txt",
+                      "RelToRepo":  "export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__CONFIG_V2_Usine_à_Tests.txt",
+                      "Name":  "scripts__CONFIG_V2_Usine_à_Tests.txt",
+                      "Extension":  ".txt",
+                      "Type":  "concat",
+                      "Length":  25441,
+                      "LastWriteUtc":  "2025-09-23T17:00:27Z",
+                      "Sha1":  "e7f4e0c916e97f0d9594741d60d167fca9c6939a"
+                  },
+                  {
+                      "FullPath":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm\\export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__BDD_V2_Tests_Profils.txt",
+                      "RelToSnapshot":  "scripts__BDD_V2_Tests_Profils.txt",
+                      "RelToRepo":  "export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__BDD_V2_Tests_Profils.txt",
+                      "Name":  "scripts__BDD_V2_Tests_Profils.txt",
+                      "Extension":  ".txt",
+                      "Type":  "concat",
+                      "Length":  4782,
+                      "LastWriteUtc":  "2025-09-23T17:00:27Z",
+                      "Sha1":  "878dc047ca40ab5fe7b7c50460f1e3d8432b525c"
+                  },
+                  {
+                      "FullPath":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm\\export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__TEMPLATE_V2_Kit_de_Traitement.txt",
+                      "RelToSnapshot":  "scripts__TEMPLATE_V2_Kit_de_Traitement.txt",
+                      "RelToRepo":  "export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__TEMPLATE_V2_Kit_de_Traitement.txt",
+                      "Name":  "scripts__TEMPLATE_V2_Kit_de_Traitement.txt",
+                      "Extension":  ".txt",
+                      "Type":  "concat",
+                      "Length":  158863,
+                      "LastWriteUtc":  "2025-09-23T17:00:27Z",
+                      "Sha1":  "42f81f64b088fa2bec861d610996bda96e4e28b5"
+                  },
+                  {
+                      "FullPath":  "G:\\Mon Drive\\APPLI TEST Personnalité Drive\\Projet USINE à FORMULAIRE GoogleForm\\export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__BIBLIOTHEQUE_TEMPLATE.txt",
+                      "RelToSnapshot":  "scripts__BIBLIOTHEQUE_TEMPLATE.txt",
+                      "RelToRepo":  "export-onglets-csv\\SNAPSHOT_20250923_210002\\scripts__BIBLIOTHEQUE_TEMPLATE.txt",
+                      "Name":  "scripts__BIBLIOTHEQUE_TEMPLATE.txt",
+                      "Extension":  ".txt",
+                      "Type":  "concat",
+                      "Length":  108234,
+                      "LastWriteUtc":  "2025-09-23T17:00:28Z",
+                      "Sha1":  "acfff328667b464c4c10870d4bcd75633b4754c3"
+                  }
+              ]
+}
