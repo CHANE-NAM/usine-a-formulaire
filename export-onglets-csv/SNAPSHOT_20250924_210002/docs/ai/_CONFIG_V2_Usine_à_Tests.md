@@ -1,7 +1,10 @@
-﻿=== Projet: [CONFIG]V2 Usine à Tests (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration) ===
+# _CONFIG_V2_Usine_à_Tests
 
+> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250924_210002**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -10,8 +13,11 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8"
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\Menu.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Menu.gs
@@ -122,10 +128,10 @@ function getQuestionCountForTestType(typeTest) {
   }
 }
 
-f
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
-
-= ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+function processNewTestConfiguration(formObject) {
+  try {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
     if (!paramsSheet) { throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable."); }
     
     let headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
@@ -325,6 +331,12 @@ function getSystemIds() {
   });
   return ids;
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js
+
+```javascript
+
 // Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine Ã  Tests.
 // const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
 
@@ -382,8 +394,11 @@ function convertirLiensExistantsEnCourts() {
     SpreadsheetApp.getUi().alert(`Une erreur est survenue : ${e.message}`);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ValidationRunner.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ValidationRunner.js
+
+```javascript
 
 /** ValidationRunner.gs â€” Runner de validation des en-tÃªtes (CONFIG â†’ BDD â†’ TEMPLATE)
  * Ajoute un menu "Validation" dans le classeur CONFIG pour vÃ©rifier les onglets requis
@@ -591,4 +606,6 @@ function validateAllHeaders() {
   SpreadsheetApp.getUi().showSidebar(out);
 }
 
+
+```
 
