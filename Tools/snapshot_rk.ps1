@@ -284,6 +284,7 @@ Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 # 10) RÉTENTION DES SNAPSHOTS (garder les N derniers)
 # ------------------------------------------------------------------------------------
 $RetentionCount = 12
+
 try {
   $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory |
               Where-Object { $_.Name -like 'SNAPSHOT_*' } |
