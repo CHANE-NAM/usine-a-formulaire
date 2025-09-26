@@ -85,6 +85,94 @@
         <input type="email" id="emailDev" name="emailDev" placeholder="Défaut : chanenam@gmail.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
       </div>
 
+
+      <!-- ===== Bloc Paiement & Accès ===== -->
+        <hr class="my-6">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Paiement & Accès</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="paymentProvider" class="block text-sm font-medium text-gray-700">Payment Provider</label>
+          <select id="paymentProvider" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="bypassPayment" class="block text-sm font-medium text-gray-700">Bypass Payment</label>
+          <select id="bypassPayment" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="requirePassword" class="block text-sm font-medium text-gray-700">Require Password (Form 2)</label>
+          <select id="requirePassword" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="form2Password" class="block text-sm font-medium text-gray-700">Form 2 Password</label>
+          <select id="form2Password" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="accessMode" class="block text-sm font-medium text-gray-700">Access Mode</label>
+          <select id="accessMode" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="deliverableType" class="block text-sm font-medium text-gray-700">Deliverable Type</label>
+          <select id="deliverableType" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="deliverableTtlMin" class="block text-sm font-medium text-gray-700">Deliverable TTL (minutes)</label>
+          <select id="deliverableTtlMin" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="ctxAskRole" class="block text-sm font-medium text-gray-700">Ask Role</label>
+          <select id="ctxAskRole" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="ctxAskDepartment" class="block text-sm font-medium text-gray-700">Ask Department</label>
+          <select id="ctxAskDepartment" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="ctxAskRgpd" class="block text-sm font-medium text-gray-700">Ask RGPD</label>
+          <select id="ctxAskRgpd" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="ctxCountrySource" class="block text-sm font-medium text-gray-700">Country Source</label>
+          <select id="ctxCountrySource" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+      </div>
+      <!-- ===== FIN Bloc Paiement & Accès ===== -->
+
+
       <button id="submit-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
         Créer la Configuration
       </button>
@@ -142,6 +230,31 @@
         populateEmailOptions('detailsRepondant', 'Repondant', data.options || {});
         populateEmailOptions('detailsPatron', 'Patron', data.options || {});
         populateEmailOptions('detailsFormateur', 'Formateur', data.options || {});
+
+        // Paiement & Accès — listes depuis data.options
+        const opt = data.options || {};
+        function fillList(selectId, arr) {
+          const el = document.getElementById(selectId);
+          if (!el) return;
+          const items = (arr || [])
+            .map(v => String(v ?? '').trim())
+            .filter((v, i, a) => v && a.indexOf(v) === i);
+          el.innerHTML = '<option value="">-- Choisir --</option>' +
+                        items.map(v => `<option value="${v}">${v}</option>`).join('');
+        }
+
+        fillList('paymentProvider',     opt.PAYMENT_PROVIDER);
+        fillList('bypassPayment',       opt.BYPASS_PAYMENT);
+        fillList('requirePassword',     opt.REQUIRE_PASSWORD);
+        fillList('form2Password',       opt.FORM2_PASSWORD);
+        fillList('accessMode',          opt.ACCESS_MODE);
+        fillList('deliverableType',     opt.DELIVERABLE_TYPE);
+        fillList('deliverableTtlMin',   opt.DELIVERABLE_TTL_MIN);
+        fillList('ctxAskRole',          opt.CTX_ASK_ROLE);
+        fillList('ctxAskDepartment',    opt.CTX_ASK_DEPARTMENT);
+        fillList('ctxAskRgpd',          opt.CTX_ASK_RGPD);
+        fillList('ctxCountrySource',    opt.CTX_COUNTRY_SOURCE);
+
       }
 
       function setupEventListeners() {
