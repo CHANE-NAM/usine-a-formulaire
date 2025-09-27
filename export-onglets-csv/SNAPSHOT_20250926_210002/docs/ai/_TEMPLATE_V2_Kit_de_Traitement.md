@@ -1,7 +1,10 @@
-﻿=== Projet: [TEMPLATE]V2 Kit de Traitement (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates) ===
+# _TEMPLATE_V2_Kit_de_Traitement
 
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250926_210002**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -27,9 +30,11 @@
   ],
   "exceptionLogging": "STACKDRIVER"
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -117,10 +122,10 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibleNorm);
     resultats = { ...resultats, ...profilEtReco };
     const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
-    const infosProfilComplet = profilsMap[resulta
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+    const infosProfilComplet = profilsMap[resultats.profilFinal];
 
-:', `"${resultats.profilFinal}"`);
+    // --- ESPIONS POUR LE BUG DE CORRESPONDANCE ---
+    _log(DEBUG_DATA_LOADING, 'PROFIL RECHERCHÃ‰ :', `"${resultats.profilFinal}"`);
     _log(DEBUG_DATA_LOADING, 'PROFILS DISPONIBLES :', Object.keys(profilsMap));
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
     // --- FIN DES ESPIONS ---
@@ -353,6 +358,12 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js
+
+```javascript
+
 // =================================================================================
 // == FICHIER : Menu.gs
 // == VERSION : 2.6  (onInstall + onOpen unique, titre harmonisÃ©)
@@ -568,9 +579,11 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -1071,8 +1084,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Utilities.gs
@@ -1472,9 +1488,11 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
+```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -1593,8 +1611,11 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js
+
+```javascript
 
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
@@ -1632,9 +1653,11 @@ function testFusionRapportFull() {
   const pdf = genererPdfDepuisModele(templateId, vars, 'Test_Rapport_Expert_FULL');
   DriveApp.createFile(pdf).setName('Test_Rapport_Expert_FULL.pdf');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js ---
+```javascript
 
 /**********************************************
  * Injecteur de scÃ©narios â€” r&K_Environnement
@@ -1912,11 +1935,11 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -2071,8 +2094,11 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2262,8 +2288,11 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2326,8 +2355,11 @@ function creerGraphiqueRadar(axesData) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js
+
+```javascript
 
 const fs = require('fs');
 const path = require('path');
@@ -2397,8 +2429,11 @@ try {
 } catch (error) {
     console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js
+
+```javascript
 
 /**
  * T_Main.gs
@@ -2624,8 +2659,11 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js
+
+```javascript
 
 /**
  * T_Mail.gs
@@ -2825,8 +2863,11 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js
+
+```javascript
 
 /**
  * T_Data.gs
@@ -3029,8 +3070,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js
+
+```javascript
 
 /**
  * T_PDF.gs
@@ -3079,8 +3123,11 @@ function genererPdfDepuisModele(templateId, variables, nomFichier) {
     return null;
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -3264,10 +3311,11 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js
 
-
+```javascript
 
 // ===============================================================
 // == DÃ‰CLENCHEURS ET MENUS
@@ -3398,8 +3446,11 @@ function testAuthDocs() {
     Logger.log('La demande d\'autorisation pour Google Docs a Ã©tÃ© dÃ©clenchÃ©e.');
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js
+
+```javascript
 
 /*******************************
  * AUDIT RAPIDE DU KIT (V1)
@@ -3536,4 +3587,41 @@ function auditKit() {
 
   return out; // pratique si tu veux consommer le JSON ailleurs
 }
+
+```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
+* ... (21 de plus)
 
