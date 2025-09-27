@@ -1,6 +1,6 @@
 # _TEMPLATE_V2_Kit_de_Traitement
 
-> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250918_210002**.
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250927_122300**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
 
@@ -1594,8 +1594,14 @@ function envoyerEmailProgramme(e) {
     Logger.log(`Nettoyage de la propriÃ©tÃ© ${proprieteId} terminÃ©.`);
 
   } catch (err) {
-    Logger.log(`ERREUR FATALE lors de l'exÃ©cution de l'envoi programmÃ© (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
-    // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
+    L
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js
+
+```javascript
+
+  // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
     properties.deleteProperty(proprieteId);
   } finally {
     // Nettoyage : supprimer le dÃ©clencheur qui vient de s'exÃ©cuter
@@ -1611,12 +1617,6 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js
-
-```javascript
-
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
 
@@ -3423,9 +3423,14 @@ function lancerRetraitementDepuisUI(options) {
   return TEMPLATE.lancerRetraitementDepuisUI(options);
 }
 
-// ===============================================================
-// == FONCTIONS DE TEST D'AUTORISATION
-// ===============================================================
+// 
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js
+
+```javascript
+
+==================================
 
 /**
  * Fonction temporaire pour forcer la demande d'autorisation pour lire les alias Gmail.
@@ -3446,12 +3451,6 @@ function testAuthDocs() {
     Logger.log('La demande d\'autorisation pour Google Docs a Ã©tÃ© dÃ©clenchÃ©e.');
   }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js
-
-```javascript
-
 /*******************************
  * AUDIT RAPIDE DU KIT (V1)
  * Ã€ coller dans le projet du KIT (Sheet de rÃ©ponses)
@@ -3623,5 +3622,5 @@ function auditKit() {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (20 de plus)
+* ... (21 de plus)
 

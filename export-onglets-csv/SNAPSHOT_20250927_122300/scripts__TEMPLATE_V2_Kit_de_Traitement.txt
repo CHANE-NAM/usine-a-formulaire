@@ -1579,8 +1579,10 @@ function envoyerEmailProgramme(e) {
     Logger.log(`Nettoyage de la propriÃ©tÃ© ${proprieteId} terminÃ©.`);
 
   } catch (err) {
-    Logger.log(`ERREUR FATALE lors de l'exÃ©cution de l'envoi programmÃ© (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
-    // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
+    L
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+
+  // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
     properties.deleteProperty(proprieteId);
   } finally {
     // Nettoyage : supprimer le dÃ©clencheur qui vient de s'exÃ©cuter
@@ -1596,9 +1598,6 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
-
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
 
@@ -3378,9 +3377,10 @@ function lancerRetraitementDepuisUI(options) {
   return TEMPLATE.lancerRetraitementDepuisUI(options);
 }
 
-// ===============================================================
-// == FONCTIONS DE TEST D'AUTORISATION
-// ===============================================================
+// 
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
+
+==================================
 
 /**
  * Fonction temporaire pour forcer la demande d'autorisation pour lire les alias Gmail.
@@ -3401,9 +3401,6 @@ function testAuthDocs() {
     Logger.log('La demande d\'autorisation pour Google Docs a Ã©tÃ© dÃ©clenchÃ©e.');
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
-
 /*******************************
  * AUDIT RAPIDE DU KIT (V1)
  * Ã€ coller dans le projet du KIT (Sheet de rÃ©ponses)
