@@ -1,0 +1,23 @@
+vérifie et apporte les modifications qui manquent, “Rends moi le fichier complet, sans texte hors code, sans placeholders , pas de TODO, pas de sections omises.”
+
+Voici l'ensemble du script, redonne le-moi corrigé, complété avec les espions désactivables si nécessaire, en entier “Rends moi le fichier complet, sans texte hors code, sans placeholders , pas de TODO, pas de sections omises.”
+
+
+
+voici le script, vérifie et apporte les modifications qui manquent, Rends moi le fichier complet,  sans placeholders , pas de TODO, pas de sections omises, sans formule/commentaire "la fonction ... reste la même".
+
+
+
+ fait un document de synthèse  qui retrace la chronologie des problèmes soulevés dans cette cession et des solutions qui ont été apporté. fait un état des lieux de la situation à cet instant, des démarches encours pour résoudre les problèmes, des points importants à noter qui pourrait  lors de la reprise de l'échange à la prochaine session
+
+
+
+
+voici le script, vérifie et apporte les modifications qui manquent, Rends moi le fichier complet,  sans placeholders , pas de TODO, pas de sections omises, pas de commentaire du type "la fonction ... reste la même".
+
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1"
+
+
+prends connaissance de l'état d'avancement pour que nous reprenions le développement
+

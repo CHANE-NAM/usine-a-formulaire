@@ -1,7 +1,10 @@
-﻿=== Projet: [CONFIG]V2 Usine à Tests (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration) ===
+# _CONFIG_V2_Usine_à_Tests
 
+> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250927_210002**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -10,8 +13,11 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8"
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\Menu.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Menu.gs
@@ -325,8 +331,11 @@ function getSystemIds() {
   });
   return ids;
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js
+
+```javascript
 
 // Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine Ã  Tests.
 // const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
@@ -385,8 +394,11 @@ function convertirLiensExistantsEnCourts() {
     SpreadsheetApp.getUi().alert(`Une erreur est survenue : ${e.message}`);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ValidationRunner.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ValidationRunner.js
+
+```javascript
 
 /** ValidationRunner.gs â€” Runner de validation des en-tÃªtes (CONFIG â†’ BDD â†’ TEMPLATE)
  * Ajoute un menu "Validation" dans le classeur CONFIG pour vÃ©rifier les onglets requis
@@ -594,4 +606,41 @@ function validateAllHeaders() {
   SpreadsheetApp.getUi().showSidebar(out);
 }
 
+
+```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
+* ... (21 de plus)
 

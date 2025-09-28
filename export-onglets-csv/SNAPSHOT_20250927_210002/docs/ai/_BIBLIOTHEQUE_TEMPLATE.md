@@ -1,6 +1,6 @@
 # _BIBLIOTHEQUE_TEMPLATE
 
-> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250920_210002**.
+> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250927_210002**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_GestionTriggers.js
 
@@ -142,6 +142,7 @@ function envoyerEmailProgramme(e) {
 ```javascript
 
 function myFunction() {
+  
   
 }
 ```
@@ -963,11 +964,13 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames, kitSprea
       if (formIdMatch) {
         const formId = formIdMatch[0];
         targetRow = data.slice(1).find(r => String(r[idx['ID_Formulaire_Cible']] || '') === formId);
-      }
-    }
+```
 
-    // ANCIENNE STRATÃ‰GIE (pour la compatibilitÃ©) : Si non trouvÃ©, on cherche par l'ID du Sheet.
-Â  Â  if (!targetRow && idx['ID_Sheet_Cible'] != null) {
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js
+
+```javascript
+
+['ID_Sheet_Cible'] != null) {
 Â  Â  Â  targetRow = data.slice(1).find(r => String(r[idx['ID_Sheet_Cible']] || '') === kitId);
 Â  Â  }
 
@@ -1179,12 +1182,6 @@ function findAttachments(config, profilCode, niveauPJ, langueCode) {
 Â  Â  return [];
 Â  }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js
-
-```javascript
-
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Creativite.js
@@ -2452,5 +2449,5 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (18 de plus)
+* ... (21 de plus)
 
