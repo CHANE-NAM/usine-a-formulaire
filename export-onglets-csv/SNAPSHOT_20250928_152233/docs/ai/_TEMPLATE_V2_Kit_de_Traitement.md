@@ -1,6 +1,6 @@
 # _TEMPLATE_V2_Kit_de_Traitement
 
-> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250921_210002**.
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250928_152233**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
 
@@ -671,8 +671,14 @@ function _getReponsesSheet_(config, options) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
-    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.repon
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
+
+```javascript
+
+ config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
     ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
@@ -1084,12 +1090,6 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
-
-```javascript
-
 // =================================================================================
 // == FICHIER : Utilities.gs
 // == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clÃ©â†’valeur)
@@ -1176,8 +1176,14 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRow[0].toLowerCase();
-    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
+    const header0 = headersRo
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
+
+```javascript
+
+s('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1488,11 +1494,6 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
-
-```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -3623,5 +3624,5 @@ function auditKit() {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (20 de plus)
+* ... (21 de plus)
 

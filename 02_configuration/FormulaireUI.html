@@ -86,94 +86,90 @@
       </div>
 
 
-      <!-- ===== Bloc Paiement & Accès ===== -->
-        <hr class="my-6">
+      <hr class="my-6">
       <div class="mb-4">
         <h2 class="text-lg font-semibold text-gray-800">Paiement & Accès</h2>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="paymentProvider" class="block text-sm font-medium text-gray-700">Payment Provider</label>
-          <select id="paymentProvider" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="PAYMENT_PROVIDER" class="block text-sm font-medium text-gray-700">Payment Provider</label>
+          <select id="PAYMENT_PROVIDER" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="bypassPayment" class="block text-sm font-medium text-gray-700">Bypass Payment</label>
-          <select id="bypassPayment" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="BYPASS_PAYMENT" class="block text-sm font-medium text-gray-700">Bypass Payment</label>
+          <select id="BYPASS_PAYMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="requirePassword" class="block text-sm font-medium text-gray-700">Require Password (Form 2)</label>
-          <select id="requirePassword" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="REQUIRE_PASSWORD" class="block text-sm font-medium text-gray-700">Require Password (Form 2)</label>
+          <select id="REQUIRE_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="form2Password" class="block text-sm font-medium text-gray-700">Form 2 Password</label>
-          <select id="form2Password" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="FORM2_PASSWORD" class="block text-sm font-medium text-gray-700">Form 2 Password</label>
+          <select id="FORM2_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="accessMode" class="block text-sm font-medium text-gray-700">Access Mode</label>
-          <select id="accessMode" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="DELIVERABLE_TYPE" class="block text-sm font-medium text-gray-700">Deliverable Type</label>
+          <select id="DELIVERABLE_TYPE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="deliverableType" class="block text-sm font-medium text-gray-700">Deliverable Type</label>
-          <select id="deliverableType" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="DELIVERABLE_TTL_MIN" class="block text-sm font-medium text-gray-700">Deliverable TTL (minutes)</label>
+          <select id="DELIVERABLE_TTL_MIN" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="deliverableTtlMin" class="block text-sm font-medium text-gray-700">Deliverable TTL (minutes)</label>
-          <select id="deliverableTtlMin" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="CTX_ASK_ROLE" class="block text-sm font-medium text-gray-700">Ask Role</label>
+          <select id="CTX_ASK_ROLE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="ctxAskRole" class="block text-sm font-medium text-gray-700">Ask Role</label>
-          <select id="ctxAskRole" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="CTX_ASK_DEPARTMENT" class="block text-sm font-medium text-gray-700">Ask Department</label>
+          <select id="CTX_ASK_DEPARTMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="ctxAskDepartment" class="block text-sm font-medium text-gray-700">Ask Department</label>
-          <select id="ctxAskDepartment" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="CTX_ASK_RGPD" class="block text-sm font-medium text-gray-700">Ask RGPD</label>
+          <select id="CTX_ASK_RGPD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
 
         <div>
-          <label for="ctxAskRgpd" class="block text-sm font-medium text-gray-700">Ask RGPD</label>
-          <select id="ctxAskRgpd" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="CTX_COUNTRY_SOURCE" class="block text-sm font-medium text-gray-700">Country Source</label>
+          <select id="CTX_COUNTRY_SOURCE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
-
+        
         <div>
-          <label for="ctxCountrySource" class="block text-sm font-medium text-gray-700">Country Source</label>
-          <select id="ctxCountrySource" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
+          <label for="Mode_Acces_Test" class="block text-sm font-medium text-gray-700">Mode Accès Test</label>
+          <select id="Mode_Acces_Test" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
             <option value="">Chargement...</option>
           </select>
         </div>
       </div>
-      <!-- ===== FIN Bloc Paiement & Accès ===== -->
-
-
-      <button id="submit-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
+      <button id="submit-button" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
         Créer la Configuration
       </button>
     </div>
@@ -183,32 +179,48 @@
     </div>
 
     <script>
-      // --- INITIALISATION & GESTION DYNAMIQUE ---
       document.addEventListener('DOMContentLoaded', function() {
-        google.script.run.withSuccessHandler(populateInitialData).getInitialData();
+        google.script.run
+          .withSuccessHandler(populateInitialData)
+          .withFailureHandler(onFailure)
+          .getInitialData();
         setupEventListeners();
       });
+      
+      function onFailure(error) {
+        alert("ERREUR CRITIQUE : Impossible de charger les données de configuration.\n\nMessage : " + error.message);
+        console.error(error);
+      }
 
       function populateInitialData(data) {
-        // Type de test
-        const typeTestSelect = document.getElementById('typeTest');
-        typeTestSelect.innerHTML = '<option value="">-- Choisissez un type --</option>';
-        (data.typesDeTest || []).forEach(type => {
-          const option = document.createElement('option');
-          option.value = type; option.textContent = type;
-          typeTestSelect.appendChild(option);
-        });
+        function fillList(selectId, optionsArray) {
+          const selectElement = document.getElementById(selectId);
+          if (!selectElement) return;
+          const options = (optionsArray || []).map(v => String(v ?? '').trim()).filter((v, i, a) => v && a.indexOf(v) === i);
+          selectElement.innerHTML = `<option value="">-- Choisir --</option>`;
+          options.forEach(opt => {
+              const optionElement = document.createElement('option');
+              optionElement.value = opt;
+              optionElement.textContent = opt;
+              selectElement.appendChild(optionElement);
+          });
+        }
         
-        // MODIFICATION : Populage de la liste des moteurs
-        const typeMoteurSelect = document.getElementById('typeMoteur');
-        typeMoteurSelect.innerHTML = '<option value="">-- Choisissez un moteur --</option>';
-        (data.typesDeMoteur || []).forEach(type => {
-          const option = document.createElement('option');
-          option.value = type; option.textContent = type;
-          typeMoteurSelect.appendChild(option);
-        });
+        fillList('typeTest', data.Type_Test);
+        fillList('typeMoteur', data.Type_Moteur);
         
-        // Blocs méta
+        fillList('PAYMENT_PROVIDER', data.PAYMENT_PROVIDER);
+        fillList('BYPASS_PAYMENT', data.BYPASS_PAYMENT);
+        fillList('REQUIRE_PASSWORD', data.REQUIRE_PASSWORD);
+        fillList('FORM2_PASSWORD', data.FORM2_PASSWORD);
+        fillList('DELIVERABLE_TYPE', data.DELIVERABLE_TYPE);
+        fillList('DELIVERABLE_TTL_MIN', data.DELIVERABLE_TTL_MIN);
+        fillList('CTX_ASK_ROLE', data.CTX_ASK_ROLE);
+        fillList('CTX_ASK_DEPARTMENT', data.CTX_ASK_DEPARTMENT);
+        fillList('CTX_ASK_RGPD', data.CTX_ASK_RGPD);
+        fillList('CTX_COUNTRY_SOURCE', data.CTX_COUNTRY_SOURCE);
+        fillList('Mode_Acces_Test', data.Mode_Acces_Test);
+        
         const metaContainer = document.getElementById('meta-blocks-container');
         if (data.availableMetaBlocks && data.availableMetaBlocks.length > 0) {
           metaContainer.innerHTML = '';
@@ -216,45 +228,16 @@
             const isChecked = (block.id === 'META_EMAIL' || block.id === 'META_NOM_COMPLET');
             const label = document.createElement('label');
             label.className = 'flex items-center text-sm text-gray-800';
-            label.innerHTML = `
-              <input type="checkbox" value="${block.id}" class="meta-block-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" ${isChecked ? 'checked' : ''}>
-              <span class="ml-2">${block.title}</span>
-            `;
+            label.innerHTML = `<input type="checkbox" value="${block.id}" class="meta-block-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" ${isChecked ? 'checked' : ''}> <span class="ml-2">${block.title}</span>`;
             metaContainer.appendChild(label);
           });
         } else {
           metaContainer.innerHTML = '<p class="text-xs text-gray-500">Aucun bloc méta trouvé dans la BDD.</p>';
         }
 
-        // Zones emails
-        populateEmailOptions('detailsRepondant', 'Repondant', data.options || {});
-        populateEmailOptions('detailsPatron', 'Patron', data.options || {});
-        populateEmailOptions('detailsFormateur', 'Formateur', data.options || {});
-
-        // Paiement & Accès — listes depuis data.options
-        const opt = data.options || {};
-        function fillList(selectId, arr) {
-          const el = document.getElementById(selectId);
-          if (!el) return;
-          const items = (arr || [])
-            .map(v => String(v ?? '').trim())
-            .filter((v, i, a) => v && a.indexOf(v) === i);
-          el.innerHTML = '<option value="">-- Choisir --</option>' +
-                        items.map(v => `<option value="${v}">${v}</option>`).join('');
-        }
-
-        fillList('paymentProvider',     opt.PAYMENT_PROVIDER);
-        fillList('bypassPayment',       opt.BYPASS_PAYMENT);
-        fillList('requirePassword',     opt.REQUIRE_PASSWORD);
-        fillList('form2Password',       opt.FORM2_PASSWORD);
-        fillList('accessMode',          opt.ACCESS_MODE);
-        fillList('deliverableType',     opt.DELIVERABLE_TYPE);
-        fillList('deliverableTtlMin',   opt.DELIVERABLE_TTL_MIN);
-        fillList('ctxAskRole',          opt.CTX_ASK_ROLE);
-        fillList('ctxAskDepartment',    opt.CTX_ASK_DEPARTMENT);
-        fillList('ctxAskRgpd',          opt.CTX_ASK_RGPD);
-        fillList('ctxCountrySource',    opt.CTX_COUNTRY_SOURCE);
-
+        populateEmailOptions('detailsRepondant', 'Repondant', data);
+        populateEmailOptions('detailsPatron', 'Patron', data);
+        populateEmailOptions('detailsFormateur', 'Formateur', data);
       }
 
       function setupEventListeners() {
@@ -281,38 +264,32 @@
 
       function submitForm(e) {
         e.preventDefault();
-        // MODIFICATION : Ajout de la validation pour le typeMoteur
+        
         if (!document.getElementById('titreTest').value || !document.getElementById('typeTest').value || !document.getElementById('nbQuestions').value || !document.getElementById('typeMoteur').value) {
           alert('Veuillez remplir tous les champs obligatoires (Titre, Type de Test, Type de Moteur, Nombre de questions).');
           return;
         }
         
         const selectedMetaBlocks = [];
-        document.querySelectorAll('.meta-block-checkbox:checked').forEach(checkbox => {
-          selectedMetaBlocks.push(checkbox.value);
-        });
+        document.querySelectorAll('.meta-block-checkbox:checked').forEach(checkbox => selectedMetaBlocks.push(checkbox.value));
 
         const formObject = {
           titre: document.getElementById('titreTest').value,
           type: document.getElementById('typeTest').value,
-          moteur: document.getElementById('typeMoteur').value, // MODIFICATION : Ajout du moteur à l'objet envoyé
+          moteur: document.getElementById('typeMoteur').value,
           blocsMeta: selectedMetaBlocks,
           nbQuestions: document.getElementById('nbQuestions').value,
-
           repondantActif: document.getElementById('sendEmailRepondant').checked,
           repondantQuand: document.getElementById('sendEmailRepondant').checked ? document.getElementById('quandRepondant').value : '',
           repondantContenu: document.getElementById('sendEmailRepondant').checked ? document.getElementById('contenuRepondant').value : '',
-
           patronActif: document.getElementById('sendEmailPatron').checked,
           patronEmail: document.getElementById('sendEmailPatron').checked ? document.getElementById('emailPatron').value : '',
           patronQuand: document.getElementById('sendEmailPatron').checked ? document.getElementById('quandPatron').value : '',
           patronContenu: document.getElementById('sendEmailPatron').checked ? document.getElementById('contenuPatron').value : '',
-
           formateurActif: document.getElementById('sendEmailFormateur').checked,
           formateurEmail: document.getElementById('sendEmailFormateur').checked ? document.getElementById('emailFormateur').value : '',
           formateurQuand: document.getElementById('sendEmailFormateur').checked ? document.getElementById('quandFormateur').value : '',
           formateurContenu: document.getElementById('sendEmailFormateur').checked ? document.getElementById('contenuFormateur').value : '',
-
           devEmail: document.getElementById('emailDev').value,
           emailAlias: document.getElementById('emailAlias').value.trim()
         };
@@ -325,35 +302,18 @@
           .processNewTestConfiguration(formObject);
       }
       
-      // --- FONCTIONS UTILITAIRES ---
       function populateEmailOptions(containerId, prefix, options) {
         const container = document.getElementById(containerId);
         let html = '';
 
         if (prefix === 'Patron' || prefix === 'Formateur') {
-          html += `
-            <div class="mt-2 mb-3">
-              <label for="email${prefix}" class="block text-sm font-medium text-gray-600">Adresse e-mail du ${prefix}</label>
-              <input type="email" id="email${prefix}" class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-            </div>`;
+          html += `<div class="mt-2 mb-3"><label for="email${prefix}" class="block text-sm font-medium text-gray-600">Adresse e-mail du ${prefix}</label><input type="email" id="email${prefix}" class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>`;
         }
-
+        
         const arrQuand = options[`${prefix}_Quand`] || [];
         const arrContenu = options[`${prefix}_Contenu`] || [];
 
-        html += `
-          <div class="mt-2 mb-3">
-            <label for="quand${prefix}" class="block text-sm font-medium text-gray-600">Quand envoyer l'email ?</label>
-            <select id="quand${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              ${arrQuand.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-            </select>
-          </div>
-          <div class="mt-2 mb-3">
-            <label for="contenu${prefix}" class="block text-sm font-medium text-gray-600">Quel niveau de contenu ?</label>
-            <select id="contenu${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              ${arrContenu.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-            </select>
-          </div>`;
+        html += `<div class="mt-2 mb-3"><label for="quand${prefix}" class="block text-sm font-medium text-gray-600">Quand envoyer l'email ?</label><select id="quand${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">${arrQuand.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div><div class="mt-2 mb-3"><label for="contenu${prefix}" class="block text-sm font-medium text-gray-600">Quel niveau de contenu ?</label><select id="contenu${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">${arrContenu.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
 
         container.innerHTML = html;
       }
@@ -377,9 +337,7 @@
 
       function onSaveSuccess(message) {
         showFeedbackScreen(message);
-        setTimeout(function() {
-          google.script.host.close();
-        }, 2000);
+        setTimeout(() => google.script.host.close(), 2000);
       }
 
       function onSaveFailure(error) {
