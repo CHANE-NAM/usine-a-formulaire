@@ -1,6 +1,6 @@
 # _CONFIG_V2_Usine_à_Tests
 
-> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250923_210002**.
+> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250928_163854**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json
 
@@ -21,93 +21,64 @@
 
 // =================================================================================
 // == FICHIER : Menu.gs
-// == VERSION : 4.3 - Ajout de la gestion du Type de Moteur dans le formulaire.
+// == VERSION : 4.6 - Sauvegarde des nouveaux champs de configuration.
 // == RÃ”LE  : Logique cÃ´tÃ© serveur pour l'application web de configuration.
 // =================================================================================
 
 const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
-// ID du modÃ¨le pour la fiche de test (catalogue)
 const ID_MODELE_FICHE_TEST = "1W_amKwp5kyyGWmg5LTaIQe5K8Gzxf_qvcjGskRy1Sq8";
-
-
-// --- SECTION 1 : INTERFACE UTILISATEUR (MENU) ---
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-
-  const main = ui.createMenu('ðŸ­ Usine');
-  const conf = ui.createMenu('Configuration')
-    .addItem('Configurer un nouveau test...', 'showConfigurationSidebar')
-    .addItem('Modifier un test existant...', 'showEditSidebar_UI')
-    .addItem('Dupliquer un test existant...', 'showDuplicateUI');
-
-  const val = ui.createMenu('Validation')
-    .addItem('VÃ©rifier les en-tÃªtes (CONFIG, BDD, TEMPLATE)', 'validateAllHeaders');
-    
-  // --- NOUVEAU MENU ---
-  const docs = ui.createMenu('Documents')
-    .addItem('GÃ©nÃ©rer la fiche de test (imprimable)...', 'showPrintableSheetUI');
-
-  main.addSubMenu(conf);
-  main.addSubMenu(val);
-  main.addSeparator();
-  main.addSubMenu(docs);
-  main.addToUi();
+  ui.createMenu('ðŸ­ Usine')
+    .addSubMenu(ui.createMenu('Configuration')
+      .addItem('Configurer un nouveau test...', 'showConfigurationSidebar')
+      .addItem('Modifier un test existant...', 'showEditSidebar_UI')
+      .addItem('Dupliquer un test existant...', 'showDuplicateUI'))
+    .addSubMenu(ui.createMenu('Validation')
+      .addItem('VÃ©rifier les en-tÃªtes (CONFIG, BDD, TEMPLATE)', 'validateAllHeaders'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('Documents')
+      .addItem('GÃ©nÃ©rer la fiche de test (imprimable)...', 'showPrintableSheetUI'))
+    .addToUi();
 }
 
-
-// --- SECTION 2 : FONCTIONS POUR LA CRÃ‰ATION D'UN NOUVEAU TEST ---
-
 function showConfigurationSidebar() {
-  const html = HtmlService.createHtmlOutputFromFile('FormulaireUI')
-      .setTitle('Configuration Usine Ã  Tests')
-      .setWidth(600);
+  const html = HtmlService.createHtmlOutputFromFile('FormulaireUI').setTitle('Configuration Usine Ã  Tests').setWidth(600);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
 function getInitialData() {
-  const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
-  const optionsSheet = ss.getSheetByName("sys_Options_Parametres");
-  if (!optionsSheet) {
-    throw new Error("L'onglet 'sys_Options_Parametres' est introuvable.");
-  }
-
-  const optionsData = optionsSheet.getDataRange().getValues();
-  const headers = optionsData.shift().map(h => String(h || '').trim());
-  const optionsMap = {};
-
-  headers.forEach((header, i) => {
-    const options = optionsData.map(row => row[i]).filter(String);
-    optionsMap[header] = options;
-  });
-
-  let availableMetaBlocks = [];
   try {
-    const systemIds = getSystemIds();
-    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
-    const metaSheet = bdd.getSheetByName('Questions_META_FR');
-    if (metaSheet) {
-        const metaData = metaSheet.getRange(2, 1, metaSheet.getLastRow() - 1, 3).getValues();
-        availableMetaBlocks = metaData.map(row => ({ id: row[0], title: row[2] })).filter(block => block.id && block.title);
-    }
-  } catch(e) {
-    console.error("Impossible de charger les blocs mÃ©ta depuis la BDD : " + e.message);
-  }
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const optionsSheet = ss.getSheetByName("sys_Options_Parametres");
+    if (!optionsSheet) throw new Error("L'onglet 'sys_Options_Parametres' est introuvable.");
+    
+    const optionsData = optionsSheet.getDataRange().getValues();
+    const headers = optionsData.shift().map(h => String(h || '').trim());
+    const optionsMap = {};
+    headers.forEach((header, i) => {
+      if (header) optionsMap[header] = optionsData.map(row => row[i]).filter(String);
+    });
 
-  return {
-    typesDeTest: optionsMap['Type_Test'] || [],
-    // MODIFICATION : On ajoute la liste des types de moteur
-    typesDeMoteur: optionsMap['Type_Moteur'] || [],
-    availableMetaBlocks: availableMetaBlocks,
-    options: {
-      Repondant_Quand: optionsMap['Repondant_Quand'] || [],
-      Repondant_Contenu: optionsMap['Repondant_Contenu'] || [],
-      Patron_Quand: optionsMap['Patron_Quand'] || [],
-      Patron_Contenu: optionsMap['Patron_Contenu'] || [],
-      Formateur_Quand: optionsMap['Formateur_Quand'] || [],
-      Formateur_Contenu: optionsMap['Formateur_Contenu'] || []
+    let availableMetaBlocks = [];
+    try {
+      const systemIds = getSystemIds();
+      const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+      const metaSheet = bdd.getSheetByName('Questions_META_FR');
+      if (metaSheet) {
+          const metaData = metaSheet.getRange(2, 1, metaSheet.getLastRow() - 1, 3).getValues();
+          availableMetaBlocks = metaData.map(row => ({ id: row[0], title: row[2] })).filter(block => block.id && block.title);
+      }
+    } catch(e) {
+      console.error("Impossible de charger les blocs mÃ©ta : " + e.message);
     }
-  };
+    optionsMap.availableMetaBlocks = availableMetaBlocks;
+    return optionsMap;
+  } catch (err) {
+    Logger.log("ERREUR FATALE dans getInitialData: " + err.stack);
+    throw new Error("Erreur cÃ´tÃ© serveur : " + err.message);
+  }
 }
 
 function getQuestionCountForTestType(typeTest) {
@@ -117,13 +88,11 @@ function getQuestionCountForTestType(typeTest) {
     if (systemIds && systemIds.ID_BDD) {
       const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
       const questionSheet = bdd.getSheets().find(s => s.getName().startsWith('Questions_' + typeTest));
-      if (questionSheet) {
-        return questionSheet.getLastRow() - 1;
-      }
+      return questionSheet ? questionSheet.getLastRow() - 1 : 0;
     }
     return 0;
   } catch (err) {
-    Logger.log('Erreur lors du calcul du nombre de questions pour ' + typeTest + ': ' + err.message);
+    Logger.log('Erreur getQuestionCountForTestType pour ' + typeTest + ': ' + err.message);
     return 0;
   }
 }
@@ -132,58 +101,62 @@ function processNewTestConfiguration(formObject) {
   try {
     const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
     const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
-    if (!paramsSheet) { throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable."); }
+    if (!paramsSheet) throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable.");
     
     let headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
-    const requiredHeaders = ['Blocs_Meta_A_Inclure', 'ID_Gabarit_Email_Repondant', 'Email_Alias', 'Moteur_Calcul'];
-
+    
+    // Assure la prÃ©sence des nouvelles colonnes
+    const requiredHeaders = [
+        'Blocs_Meta_A_Inclure', 'ID_Gabarit_Email_Repondant', 'Email_Alias', 'Moteur_Calcul',
+        'PAYMENT_PROVIDER', 'BYPASS_PAYMENT', 'REQUIRE_PASSWORD', 'FORM2_PASSWORD',
+        'DELIVERABLE_TYPE', 'DELIVERABLE_TTL_MIN', 'CTX_ASK_ROLE', 'CTX_ASK_DEPARTMENT',
+        'CTX_ASK_RGPD', 'CTX_COUNTRY_SOURCE', 'Mode_Acces_Test'
+    ];
+    let newHeadersAdded = false;
     requiredHeaders.forEach(headerName => {
         if (headers.indexOf(headerName) === -1) {
             paramsSheet.getRange(1, paramsSheet.getLastColumn() + 1).setValue(headerName);
+            newHeadersAdded = true;
         }
     });
-    headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
+    if(newHeadersAdded) headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
     
-    let emailDev = formObject.devEmail;
-    if (!emailDev || emailDev.trim() === "") { emailDev = "chanenam@gmail.com"; }
-
+    let emailDev = formObject.devEmail || "chanenam@gmail.com";
     const limiteLignes = getQuestionCountForTestType(formObject.type);
     const blocsMetaString = formObject.blocsMeta.join(',');
 
     let idGabaritRepondant = '';
-    if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau1')) {
-        idGabaritRepondant = 'RESULTATS_N1';
-    } else if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau2')) {
-        idGabaritRepondant = 'RESULTATS_N2';
-    } else if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau3')) {
-        idGabaritRepondant = 'RESULTATS_N3';
-    }
+    if (String(formObject.repondantContenu).includes('Niveau1')) idGabaritRepondant = 'RESULTATS_N1';
+    else if (String(formObject.repondantContenu).includes('Niveau2')) idGabaritRepondant = 'RESULTATS_N2';
+    else if (String(formObject.repondantContenu).includes('Niveau3')) idGabaritRepondant = 'RESULTATS_N3';
 
-    const dataRow = {
+    // Fusionne les anciennes et nouvelles donnÃ©es
+    const dataRow = { ...formObject }; // Commence avec toutes les nouvelles donnÃ©es
+    
+    // Ajoute ou Ã©crase avec les donnÃ©es traitÃ©es
+    Object.assign(dataRow, {
       'Id_Unique': '', 'Titre_Formulaire_Utilisateur': formObject.titre, 'Nom_Fichier_Complet': '',
       'Statut': 'En construction', 'Type_Test': formObject.type, 
-      // MODIFICATION : On utilise la valeur du formulaire au lieu de "Universel" en dur
       'Moteur_Calcul': formObject.moteur,
       'Blocs_Meta_A_Inclure': blocsMetaString, 'ID_Gabarit_Email_Repondant': idGabaritRepondant,
       'ID_Dossier_Cible': '', 'Limite_Lignes_A_Traiter': limiteLignes, 'nbQuestions': formObject.nbQuestions,
-      'Repondant_Email_Actif': formObject.repondantActif ? "Oui" : "Non", 'Repondant_Quand': formObject.repondantQuand,
-      'Repondant_Contenu': formObject.repondantContenu, 'Patron_Email_Mode': formObject.patronActif ? "Oui" : "Non",
-      'Patron_Quand': formObject.patronQuand, 'Patron_Contenu': formObject.patronContenu, 'Patron_Email': formObject.patronEmail,
-      'Formateur_Email_Actif': formObject.formateurActif ? "Oui" : "Non", 'Formateur_Quand': formObject.formateurQuand,
-      'Formateur_Contenu': formObject.formateurContenu, 'Formateur_Email': formObject.formateurEmail,
-      'Developpeur_Email': emailDev, 'ID_Formulaire_Cible': '', 'ID_Sheet_Cible': '', 'Email_Alias': formObject.emailAlias
-    };
+      'Repondant_Email_Actif': formObject.repondantActif ? "Oui" : "Non",
+      'Patron_Email_Mode': formObject.patronActif ? "Oui" : "Non",
+      'Formateur_Email_Actif': formObject.formateurActif ? "Oui" : "Non",
+      'Developpeur_Email': emailDev, 'ID_Formulaire_Cible': '', 'ID_Sheet_Cible': ''
+    });
 
     const nouvelleLigne = headers.map(header => dataRow[header] !== undefined ? dataRow[header] : '');
     paramsSheet.appendRow(nouvelleLigne);
     return "Configuration enregistrÃ©e avec succÃ¨s !";
   } catch (e) {
-    Logger.log("ERREUR lors de la sauvegarde de la configuration: " + e.toString());
-    throw new Error("Une erreur interne est survenue lors de la sauvegarde. " + e.message);
+    Logger.log("ERREUR processNewTestConfiguration: " + e.stack);
+    throw new Error("Erreur interne lors de la sauvegarde : " + e.message);
   }
 }
 
-// --- SECTION 3 : FONCTIONS POUR L'Ã‰DITION D'UN TEST EXISTANT ---
+
+// --- SECTIONS 3, 4, 5, 6 (Ã‰dition, Duplication, Documents, Utilitaires) restent inchangÃ©es ---
 
 function showEditSidebar_UI() {
   const ui = SpreadsheetApp.getUi();
@@ -224,8 +197,6 @@ function updateTestData(rowIndex, updatedData) {
   }
   return "Modifications enregistrÃ©es avec succÃ¨s !";
 }
-
-// --- SECTION 4 : FONCTIONS POUR LA DUPLICATION D'UN TEST ---
 
 function showDuplicateUI() {
   const ui = SpreadsheetApp.getUi();
@@ -269,21 +240,19 @@ function duplicateTestConfiguration(rowIndex) {
   return newRowIndex;
 }
 
-// --- SECTION 5 : FONCTIONS POUR LA GÃ‰NÃ‰RATION DE DOCUMENTS ---
-
 function showPrintableSheetUI() {
   if (ID_MODELE_FICHE_TEST === "METTEZ_ICI_L_ID_DE_VOTRE_MODELE_GOOGLE_DOC") {
-    SpreadsheetApp.getUi().alert("Configuration requise", "Veuillez d'abord renseigner l'ID de votre modÃ¨le Google Doc dans le script Menu.gs (variable ID_MODELE_FICHE_TEST).", SpreadsheetApp.getUi().ButtonSet.OK);
+    SpreadsheetApp.getUi().alert("Configuration requise", "Veuillez d'abord renseigner l'ID de votre modÃ¨le Google Doc.", SpreadsheetApp.getUi().ButtonSet.OK);
     return;
   }
   const ui = SpreadsheetApp.getUi();
-  const response = ui.prompt('GÃ©nÃ©rer une Fiche de Test', 'Veuillez entrer le numÃ©ro de la ligne Ã  utiliser pour gÃ©nÃ©rer le document :', ui.ButtonSet.OK_CANCEL);
+  const response = ui.prompt('GÃ©nÃ©rer une Fiche de Test', 'Veuillez entrer le numÃ©ro de la ligne :', ui.ButtonSet.OK_CANCEL);
   if (response.getSelectedButton() == ui.Button.OK) {
     const rowIndex = parseInt(response.getResponseText());
     if (!isNaN(rowIndex) && rowIndex > 1) {
       try {
         const fileUrl = generatePrintableSheet(rowIndex);
-        const htmlOutput = HtmlService.createHtmlOutput(`<p>La fiche de test a Ã©tÃ© gÃ©nÃ©rÃ©e avec succÃ¨s.</p><a href="${fileUrl}" target="_blank">Cliquez ici pour ouvrir le document</a>`).setWidth(300).setHeight(100);
+        const htmlOutput = HtmlService.createHtmlOutput(`<p>La fiche de test a Ã©tÃ© gÃ©nÃ©rÃ©e.</p><a href="${fileUrl}" target="_blank">Ouvrir le document</a>`).setWidth(300).setHeight(100);
         ui.showModalDialog(htmlOutput, 'Document CrÃ©Ã©');
       } catch (e) {
         ui.alert('Erreur', e.message, ui.ButtonSet.OK);
@@ -296,7 +265,7 @@ function showPrintableSheetUI() {
 
 function generatePrintableSheet(rowIndex) {
   const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
-  if (rowIndex > sheet.getLastRow()) throw new Error("La ligne spÃ©cifiÃ©e n'existe pas.");
+  if (rowIndex > sheet.getLastRow()) throw new Error("La ligne n'existe pas.");
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const values = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
   const dataForFusion = {};
@@ -317,8 +286,6 @@ function generatePrintableSheet(rowIndex) {
   Logger.log(`Document gÃ©nÃ©rÃ© : ${newFile.getName()} (ID: ${newFile.getId()})`);
   return newFile.getUrl();
 }
-
-// --- SECTION 6 : FONCTIONS UTILITAIRES ---
 
 function getSystemIds() {
   const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
@@ -608,4 +575,39 @@ function validateAllHeaders() {
 
 
 ```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
+* ... (21 de plus)
 
