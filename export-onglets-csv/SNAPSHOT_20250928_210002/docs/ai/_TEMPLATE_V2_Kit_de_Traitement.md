@@ -1,6 +1,6 @@
 # _TEMPLATE_V2_Kit_de_Traitement
 
-> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250926_121527**.
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250928_210002**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
 
@@ -1739,12 +1739,14 @@ function _injectScenario(opts) {
         }
         // Fallback : prendre le profil Ã  l'index courant
         if (!profil) {
-          profil = profilSequence[scaleIndex] || 'ENV_STABILITE';
-        }
+          profil = profilSequence[scaleIndex] || 'ENV
+```
 
-        const min = scale.getLowerBound();
-        const max = scale.getUpperBound();
-        const val = _valueForScenario(profil, min, max, scenario, scaleIndex);
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
+
+```javascript
+
+enario(profil, min, max, scenario, scaleIndex);
         resp.withItemResponse(scale.createResponse(val));
 
         scaleIndex++;
@@ -1935,11 +1937,8 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
-```
 
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
-```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -3589,4 +3588,39 @@ function auditKit() {
 }
 
 ```
+
+---
+
+### Fichiers CSV exportés (aperçu)
+* BDD_V2_Tests_Profils_1m2MGB\Liste_Fichiers_Drive.csv
+* BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Resilience_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Adaptabilite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Creativite_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_r_K_Environnement_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\ex_sys_PiecesJointes.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_VALEURS2_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_CouleursV6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_Couleurs_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_FR.csv
+* BDD_V2_Tests_Profils_1m2MGB\Questions_ANCRES_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
+* BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
+* ... (21 de plus)
 

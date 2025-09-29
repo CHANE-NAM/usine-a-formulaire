@@ -5,37 +5,36 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       .hidden-section { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out, opacity 0.3s ease-out; opacity: 0; }
-      .visible-section { max-height: 500px; opacity: 1; transition: max-height 0.5s ease-in, opacity 0.5s ease-in; }
+      .visible-section { max-height: 600px; opacity: 1; transition: max-height 0.5s ease-in, opacity 0.5s ease-in; }
     </style>
   </head>
   <body class="bg-gray-100 p-4 font-sans">
-    <div id="main-form">
+    <form id="main-form" onsubmit="submitForm(event)">
       <h1 class="text-xl font-bold text-gray-800 mb-4">Configurer un Nouveau Test</h1>
 
       <div class="mb-4">
         <label for="titreTest" class="block text-sm font-medium text-gray-700">Titre du Test (pour l'utilisateur)</label>
-        <input type="text" id="titreTest" name="titreTest" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        <input type="text" id="titreTest" name="titre" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+      
+      <div class="mb-4">
+        <label for="sousTitreTest" class="block text-sm font-medium text-gray-700">Sous-Titre (optionnel)</label>
+        <input type="text" id="sousTitreTest" name="sousTitre" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
       </div>
 
       <div class="mb-4">
         <label for="typeTest" class="block text-sm font-medium text-gray-700">Type de Test</label>
-        <select id="typeTest" name="typeTest" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-          <option value="">Chargement...</option>
-        </select>
+        <select id="typeTest" name="type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"></select>
       </div>
       
       <div class="mb-4">
-        <label for="typeMoteur" class="block text-sm font-medium text-gray-700">Type de Moteur</label>
-        <select id="typeMoteur" name="typeMoteur" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-          <option value="">Chargement...</option>
-        </select>
+        <label for="Moteur_Calcul" class="block text-sm font-medium text-gray-700">Type de Moteur</label>
+        <select id="Moteur_Calcul" name="Moteur_Calcul" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"></select>
       </div>
       
       <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700">Questions Standards (Blocs Méta)</label>
-        <div id="meta-blocks-container" class="mt-2 p-3 bg-white border border-gray-300 rounded-md space-y-2">
-          <p class="text-xs text-gray-500">Chargement des options...</p>
-        </div>
+        <div id="meta-blocks-container" class="mt-2 p-3 bg-white border border-gray-300 rounded-md space-y-2"></div>
       </div>
 
       <div id="questions-info" class="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-md hidden">
@@ -74,105 +73,82 @@
       <div id="detailsFormateur" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
 
       <hr class="my-6">
-
+      
       <div class="mb-4">
         <label for="emailAlias" class="block text-sm font-medium text-gray-700">Alias d'expédition (optionnel)</label>
-        <input type="email" id="emailAlias" name="emailAlias" placeholder="contact@mon-entreprise.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        <input type="email" id="emailAlias" name="Email_Alias" placeholder="contact@mon-entreprise.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
       </div>
 
       <div class="mb-4">
         <label for="emailDev" class="block text-sm font-medium text-gray-700">Email du Développeur (notifications)</label>
-        <input type="email" id="emailDev" name="emailDev" placeholder="Défaut : chanenam@gmail.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        <input type="email" id="emailDev" name="devEmail" placeholder="Défaut : chanenam@gmail.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
       </div>
 
-
       <hr class="my-6">
+      
       <div class="mb-4">
         <h2 class="text-lg font-semibold text-gray-800">Paiement & Accès</h2>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="PAYMENT_PROVIDER" class="block text-sm font-medium text-gray-700">Payment Provider</label>
-          <select id="PAYMENT_PROVIDER" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
+          <label for="PAYMENT_PROVIDER" class="block text-sm font-medium text-gray-700">Fournisseur de Paiement</label>
+          <select id="PAYMENT_PROVIDER" name="PAYMENT_PROVIDER" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
         </div>
-
         <div>
-          <label for="BYPASS_PAYMENT" class="block text-sm font-medium text-gray-700">Bypass Payment</label>
-          <select id="BYPASS_PAYMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
+          <label for="BYPASS_PAYMENT" class="block text-sm font-medium text-gray-700">Contourner le Paiement</label>
+          <select id="BYPASS_PAYMENT" name="BYPASS_PAYMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
         </div>
-
         <div>
-          <label for="REQUIRE_PASSWORD" class="block text-sm font-medium text-gray-700">Require Password (Form 2)</label>
-          <select id="REQUIRE_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
+          <label for="REQUIRE_PASSWORD" class="block text-sm font-medium text-gray-700">Exiger un Mot de Passe</label>
+          <select id="REQUIRE_PASSWORD" name="REQUIRE_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
         </div>
-
         <div>
-          <label for="FORM2_PASSWORD" class="block text-sm font-medium text-gray-700">Form 2 Password</label>
-          <select id="FORM2_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
+          <label for="FORM2_PASSWORD" class="block text-sm font-medium text-gray-700">Mot de Passe du Test</label>
+          <select id="FORM2_PASSWORD" name="FORM2_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
         </div>
-
-        <div>
-          <label for="DELIVERABLE_TYPE" class="block text-sm font-medium text-gray-700">Deliverable Type</label>
-          <select id="DELIVERABLE_TYPE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="DELIVERABLE_TTL_MIN" class="block text-sm font-medium text-gray-700">Deliverable TTL (minutes)</label>
-          <select id="DELIVERABLE_TTL_MIN" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="CTX_ASK_ROLE" class="block text-sm font-medium text-gray-700">Ask Role</label>
-          <select id="CTX_ASK_ROLE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="CTX_ASK_DEPARTMENT" class="block text-sm font-medium text-gray-700">Ask Department</label>
-          <select id="CTX_ASK_DEPARTMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="CTX_ASK_RGPD" class="block text-sm font-medium text-gray-700">Ask RGPD</label>
-          <select id="CTX_ASK_RGPD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="CTX_COUNTRY_SOURCE" class="block text-sm font-medium text-gray-700">Country Source</label>
-          <select id="CTX_COUNTRY_SOURCE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
-        </div>
-        
         <div>
           <label for="Mode_Acces_Test" class="block text-sm font-medium text-gray-700">Mode Accès Test</label>
-          <select id="Mode_Acces_Test" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md">
-            <option value="">Chargement...</option>
-          </select>
+          <select id="Mode_Acces_Test" name="Mode_Acces_Test" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
         </div>
       </div>
-      <button id="submit-button" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
+      
+      <hr class="my-6">
+      
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Livrables & Contexte</h2>
+      </div>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="DELIVERABLE_TYPE" class="block text-sm font-medium text-gray-700">Type de Livrable</label>
+          <select id="DELIVERABLE_TYPE" name="DELIVERABLE_TYPE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="DELIVERABLE_TTL_MIN" class="block text-sm font-medium text-gray-700">Durée de vie du lien (minutes)</label>
+          <select id="DELIVERABLE_TTL_MIN" name="DELIVERABLE_TTL_MIN" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_ASK_ROLE" class="block text-sm font-medium text-gray-700">Demander le Rôle/Fonction</label>
+          <select id="CTX_ASK_ROLE" name="CTX_ASK_ROLE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_ASK_DEPARTMENT" class="block text-sm font-medium text-gray-700">Demander le Département</label>
+          <select id="CTX_ASK_DEPARTMENT" name="CTX_ASK_DEPARTMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_ASK_RGPD" class="block text-sm font-medium text-gray-700">Demander Consentement RGPD</label>
+          <select id="CTX_ASK_RGPD" name="CTX_ASK_RGPD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_COUNTRY_SOURCE" class="block text-sm font-medium text-gray-700">Demander le Pays</label>
+          <select id="CTX_COUNTRY_SOURCE" name="CTX_COUNTRY_SOURCE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+      </div>
+      
+      <button type="submit" id="submit-button" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
         Créer la Configuration
       </button>
-    </div>
+    </form>
 
     <div id="feedback-screen" class="hidden text-center py-10">
       <p id="feedback-message" class="text-lg text-gray-700"></p>
@@ -196,8 +172,8 @@
         function fillList(selectId, optionsArray) {
           const selectElement = document.getElementById(selectId);
           if (!selectElement) return;
-          const options = (optionsArray || []).map(v => String(v ?? '').trim()).filter((v, i, a) => v && a.indexOf(v) === i);
           selectElement.innerHTML = `<option value="">-- Choisir --</option>`;
+          const options = (optionsArray || []).map(v => String(v ?? '').trim()).filter((v, i, a) => v && a.indexOf(v) === i);
           options.forEach(opt => {
               const optionElement = document.createElement('option');
               optionElement.value = opt;
@@ -207,7 +183,7 @@
         }
         
         fillList('typeTest', data.Type_Test);
-        fillList('typeMoteur', data.Type_Moteur);
+        fillList('Moteur_Calcul', data.Moteur_Calcul);
         
         fillList('PAYMENT_PROVIDER', data.PAYMENT_PROVIDER);
         fillList('BYPASS_PAYMENT', data.BYPASS_PAYMENT);
@@ -228,7 +204,7 @@
             const isChecked = (block.id === 'META_EMAIL' || block.id === 'META_NOM_COMPLET');
             const label = document.createElement('label');
             label.className = 'flex items-center text-sm text-gray-800';
-            label.innerHTML = `<input type="checkbox" value="${block.id}" class="meta-block-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" ${isChecked ? 'checked' : ''}> <span class="ml-2">${block.title}</span>`;
+            label.innerHTML = `<input type="checkbox" value="${block.id}" name="blocsMeta" class="meta-block-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" ${isChecked ? 'checked' : ''}> <span class="ml-2">${block.title}</span>`;
             metaContainer.appendChild(label);
           });
         } else {
@@ -258,62 +234,61 @@
         setupEmailSectionToggle('sendEmailRepondant', 'detailsRepondant');
         setupEmailSectionToggle('sendEmailPatron', 'detailsPatron');
         setupEmailSectionToggle('sendEmailFormateur', 'detailsFormateur');
-
-        document.getElementById('submit-button').addEventListener('click', submitForm);
       }
 
-      function submitForm(e) {
-        e.preventDefault();
-        
-        if (!document.getElementById('titreTest').value || !document.getElementById('typeTest').value || !document.getElementById('nbQuestions').value || !document.getElementById('typeMoteur').value) {
-          alert('Veuillez remplir tous les champs obligatoires (Titre, Type de Test, Type de Moteur, Nombre de questions).');
-          return;
-        }
-        
-        const selectedMetaBlocks = [];
-        document.querySelectorAll('.meta-block-checkbox:checked').forEach(checkbox => selectedMetaBlocks.push(checkbox.value));
+      function submitForm(event) {
+          event.preventDefault();
+          const form = event.target;
+          
+          if (!form.titre.value || !form.type.value || !form.Moteur_Calcul.value || !form.nbQuestions.value) {
+              alert('Veuillez remplir tous les champs obligatoires (Titre, Type de Test, Type de Moteur, Nombre de questions).');
+              return;
+          }
 
-        const formObject = {
-          titre: document.getElementById('titreTest').value,
-          type: document.getElementById('typeTest').value,
-          moteur: document.getElementById('typeMoteur').value,
-          blocsMeta: selectedMetaBlocks,
-          nbQuestions: document.getElementById('nbQuestions').value,
-          repondantActif: document.getElementById('sendEmailRepondant').checked,
-          repondantQuand: document.getElementById('sendEmailRepondant').checked ? document.getElementById('quandRepondant').value : '',
-          repondantContenu: document.getElementById('sendEmailRepondant').checked ? document.getElementById('contenuRepondant').value : '',
-          patronActif: document.getElementById('sendEmailPatron').checked,
-          patronEmail: document.getElementById('sendEmailPatron').checked ? document.getElementById('emailPatron').value : '',
-          patronQuand: document.getElementById('sendEmailPatron').checked ? document.getElementById('quandPatron').value : '',
-          patronContenu: document.getElementById('sendEmailPatron').checked ? document.getElementById('contenuPatron').value : '',
-          formateurActif: document.getElementById('sendEmailFormateur').checked,
-          formateurEmail: document.getElementById('sendEmailFormateur').checked ? document.getElementById('emailFormateur').value : '',
-          formateurQuand: document.getElementById('sendEmailFormateur').checked ? document.getElementById('quandFormateur').value : '',
-          formateurContenu: document.getElementById('sendEmailFormateur').checked ? document.getElementById('contenuFormateur').value : '',
-          devEmail: document.getElementById('emailDev').value,
-          emailAlias: document.getElementById('emailAlias').value.trim()
-        };
+          const formObject = {};
+          const formData = new FormData(form);
+          for (let [key, value] of formData.entries()) {
+              if (formObject.hasOwnProperty(key)) {
+                  if (!Array.isArray(formObject[key])) {
+                      formObject[key] = [formObject[key]];
+                  }
+                  formObject[key].push(value);
+              } else {
+                  formObject[key] = value;
+              }
+          }
+          
+          // Gérer les cases à cocher qui ne sont pas soumises si non cochées
+          formObject.repondantActif = document.getElementById('sendEmailRepondant').checked;
+          formObject.patronActif = document.getElementById('sendEmailPatron').checked;
+          formObject.formateurActif = document.getElementById('sendEmailFormateur').checked;
 
-        showFeedbackScreen('Enregistrement en cours...');
-        document.getElementById('submit-button').disabled = true;
-        google.script.run
-          .withSuccessHandler(onSaveSuccess)
-          .withFailureHandler(onSaveFailure)
-          .processNewTestConfiguration(formObject);
+          showFeedbackScreen('Enregistrement en cours...');
+          document.getElementById('submit-button').disabled = true;
+
+          google.script.run
+            .withSuccessHandler(onSaveSuccess)
+            .withFailureHandler(onSaveFailure)
+            .processNewTestConfiguration(formObject);
       }
       
       function populateEmailOptions(containerId, prefix, options) {
         const container = document.getElementById(containerId);
         let html = '';
-
+        
+        if (prefix === 'Formateur') {
+          html += `<div class="mt-2 mb-3"><label for="nom${prefix}" class="block text-sm font-medium text-gray-600">Nom du ${prefix}</label><input type="text" id="nom${prefix}" name="formateurNom" class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm"></div>`;
+        }
+        
         if (prefix === 'Patron' || prefix === 'Formateur') {
-          html += `<div class="mt-2 mb-3"><label for="email${prefix}" class="block text-sm font-medium text-gray-600">Adresse e-mail du ${prefix}</label><input type="email" id="email${prefix}" class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>`;
+          html += `<div class="mt-2 mb-3"><label for="email${prefix}" class="block text-sm font-medium text-gray-600">Adresse e-mail du ${prefix}</label><input type="email" id="email${prefix}" name="${prefix.toLowerCase()}Email" class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm"></div>`;
         }
         
         const arrQuand = options[`${prefix}_Quand`] || [];
         const arrContenu = options[`${prefix}_Contenu`] || [];
 
-        html += `<div class="mt-2 mb-3"><label for="quand${prefix}" class="block text-sm font-medium text-gray-600">Quand envoyer l'email ?</label><select id="quand${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">${arrQuand.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div><div class="mt-2 mb-3"><label for="contenu${prefix}" class="block text-sm font-medium text-gray-600">Quel niveau de contenu ?</label><select id="contenu${prefix}" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">${arrContenu.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
+        html += `<div class="mt-2 mb-3"><label for="quand${prefix}" class="block text-sm font-medium text-gray-600">Quand envoyer l'email ?</label><select id="quand${prefix}" name="${prefix.toLowerCase()}Quand" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 rounded-md">${arrQuand.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
+        html += `<div class="mt-2 mb-3"><label for="contenu${prefix}" class="block text-sm font-medium text-gray-600">Quel niveau de contenu ?</label><select id="contenu${prefix}" name="${prefix.toLowerCase()}Contenu" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 rounded-md">${arrContenu.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
 
         container.innerHTML = html;
       }
@@ -346,7 +321,8 @@
       }
 
       function showFeedbackScreen(message) {
-        document.getElementById('main-form').classList.add('hidden');
+        const mainForm = document.getElementById('main-form');
+        if(mainForm) mainForm.classList.add('hidden');
         const feedbackScreen = document.getElementById('feedback-screen');
         document.getElementById('feedback-message').textContent = message;
         feedbackScreen.classList.remove('hidden');
