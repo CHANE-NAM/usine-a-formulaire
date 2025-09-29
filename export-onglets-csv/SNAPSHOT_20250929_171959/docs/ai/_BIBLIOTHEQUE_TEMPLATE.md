@@ -1,6 +1,6 @@
 # _BIBLIOTHEQUE_TEMPLATE
 
-> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250926_165250**.
+> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250929_171959**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_GestionTriggers.js
 
@@ -236,16 +236,20 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
 
     if (infosProfilComplet) {
-      resultats = { 
+      resultats = { ...resultats, ...infosProfilComplet };
+    }
+    resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
+  }
+
+  _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
+  return resultats;
+}
 ```
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js
 
 ```javascript
 
-culerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
-  return resultats;
-}
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
@@ -1451,9 +1455,14 @@ function ui_DryRunLigneSelection(kitId) {
 Â  Â  Â  niveau: niveau,
 Â  Â  Â  destinataires: { test: Session.getActiveUser().getEmail() }
 Â  Â  });
-Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + '. Voir les journaux de la bibliothÃ¨que.');
-Â  } catch (e) {
-Â  Â  SpreadsheetApp.getUi().alert('Erreur Dry-run (ligne sÃ©lectionnÃ©e) : ' + e.message);
+Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + 
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
+
+```javascript
+
+tionnÃ©e) : ' + e.message);
 Â  }
 }
 
@@ -1591,12 +1600,6 @@ function retraitementTestSansEnvoi(rowIndex, kitSpreadsheet, options) {
 Â  Â  throw new Error(e.message);
 Â  }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
-
-```javascript
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_Mail.gs
