@@ -1,30 +1,30 @@
-# État du projet — SNAPSHOT_20250927_122300
+# État du projet — SNAPSHOT_20250930_060457
 
-- **Généré** : 2025-09-27 12:24:05
-- **Snapshot** : SNAPSHOT_20250927_122300
-- **CSV exportés** : 51
+- **Généré** : 2025-09-30 06:06:24
+- **Snapshot** : SNAPSHOT_20250930_060457
+- **CSV exportés** : 50
 - **Racine repo** : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm
 
 ## Résumé (manifest)
-- **fichiersTotal** : 56
-- **tailleTotale** : 679418 octets
+- **fichiersTotal** : 55
+- **tailleTotale** : 682138 octets
 - **par type** :
-  - **csv** : 51
+  - **csv** : 50
   - **concat** : 5
 
 ## Derniers commits
+* 31b5628 Backup auto 2025-09-30 06:05:20
+* 72e0b2b Backup auto 2025-09-29 21:00:22
+* 7fe504f Backup auto 2025-09-29 17:20:17
+* 17e95da Backup auto 2025-09-29 09:12:19
+* 4738e90 Backup auto 2025-09-28 21:00:43
+* 9a4d433 Backup auto 2025-09-28 16:39:36
+* 7580aeb Backup auto 2025-09-28 15:23:10
+* e69c76f Backup auto 2025-09-28 11:55:37
+* db16d7d Backup auto 2025-09-27 21:00:20
 * f8f4c42 Backup auto 2025-09-27 12:23:19
 * 3fede32 Backup auto 2025-09-26 21:00:20
 * f336a87 Backup auto 2025-09-26 16:53:08
-* 72788af Backup auto 2025-09-26 12:20:30
-* a9c38b3 Backup auto 2025-09-26 12:15:47
-* 7200cd5 Backup auto 2025-09-25 21:00:23
-* 2d7ba24 Backup auto 2025-09-24 21:00:23
-* a12a36c Backup auto 2025-09-23 21:00:23
-* e1ddc9f Backup auto 2025-09-22 21:00:23
-* 2011366 Backup auto 2025-09-21 21:00:35
-* e2e63ce Backup auto 2025-09-20 21:00:25
-* bdf2215 Backup auto 2025-09-19 21:00:27
 
 ## Index documents AI-friendly
 * [_BDD_V2_Tests_Profils](_BDD_V2_Tests_Profils.md)

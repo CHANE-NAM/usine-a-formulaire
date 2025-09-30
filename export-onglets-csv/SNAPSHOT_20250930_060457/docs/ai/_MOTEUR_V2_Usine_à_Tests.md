@@ -1,6 +1,6 @@
 # _MOTEUR_V2_Usine_à_Tests
 
-> Généré automatiquement depuis **scripts__MOTEUR_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250927_122300**.
+> Généré automatiquement depuis **scripts__MOTEUR_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250930_060457**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\appsscript.json
 
@@ -556,8 +556,14 @@ function _construireQuestionsFormulaire(form, languesAInclure, nbQuestionsConfig
         const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
         const choices = [];
         languesAInclure.forEach(langue => {
-            const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
-            choices.push(itemLangue.createChoice(langue.nomComplet, page));
+            const page = form.addPa
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js
+
+```javascript
+
+page));
             
             _ajouterQuestionsDepuisFeuille(form, langue.feuille, nbQuestionsConfig);
             
@@ -674,12 +680,6 @@ function getLangueFullName(code) {
   const map = { FR: 'FranÃ§ais', EN: 'English', ES: 'EspaÃ±ol', DE: 'Deutsch' };
   return map[String(code || '').toUpperCase()] || code;
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\forcerAutorisation.js
-
-```javascript
-
 function forcerAutorisation() {
   // Cette simple ligne est suffisante pour demander les autorisations Drive.
   DriveApp.getRootFolder(); 
@@ -720,5 +720,5 @@ function forcerAutorisation() {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (21 de plus)
+* ... (20 de plus)
 
