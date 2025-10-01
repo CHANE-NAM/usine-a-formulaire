@@ -1,6 +1,6 @@
 # _BIBLIOTHEQUE_TEMPLATE
 
-> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250928_152233**.
+> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20251001_171558**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_GestionTriggers.js
 
@@ -1455,9 +1455,14 @@ function ui_DryRunLigneSelection(kitId) {
 Â  Â  Â  niveau: niveau,
 Â  Â  Â  destinataires: { test: Session.getActiveUser().getEmail() }
 Â  Â  });
-Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + '. Voir les journaux de la bibliothÃ¨que.');
-Â  } catch (e) {
-Â  Â  SpreadsheetApp.getUi().alert('Erreur Dry-run (ligne sÃ©lectionnÃ©e) : ' + e.message);
+Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + 
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
+
+```javascript
+
+tionnÃ©e) : ' + e.message);
 Â  }
 }
 
@@ -1595,12 +1600,6 @@ function retraitementTestSansEnvoi(rowIndex, kitSpreadsheet, options) {
 Â  Â  throw new Error(e.message);
 Â  }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
-
-```javascript
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_Mail.gs
@@ -2453,5 +2452,5 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (21 de plus)
+* ... (22 de plus)
 

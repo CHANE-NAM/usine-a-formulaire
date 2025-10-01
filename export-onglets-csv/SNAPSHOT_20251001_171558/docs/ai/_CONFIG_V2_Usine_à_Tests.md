@@ -1,6 +1,6 @@
 # _CONFIG_V2_Usine_à_Tests
 
-> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250928_152233**.
+> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20251001_171558**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json
 
@@ -20,96 +20,82 @@
 ```javascript
 
 // =================================================================================
-// == FICHIER : Menu.gs
-// == VERSION : 4.3 - Ajout de la gestion du Type de Moteur dans le formulaire.
+// == FICHIER : Menu.js
+// == VERSION : 4.7 - Finalisation de la sauvegarde de tous les champs.
 // == RÃ”LE  : Logique cÃ´tÃ© serveur pour l'application web de configuration.
 // =================================================================================
 
 const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
-// ID du modÃ¨le pour la fiche de test (catalogue)
 const ID_MODELE_FICHE_TEST = "1W_amKwp5kyyGWmg5LTaIQe5K8Gzxf_qvcjGskRy1Sq8";
 
-
-// --- SECTION 1 : INTERFACE UTILISATEUR (MENU) ---
-
+/**
+ * CrÃ©e le menu de l'application Ã  l'ouverture de la feuille de calcul.
+ */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-
-  const main = ui.createMenu('ðŸ­ Usine');
-  const conf = ui.createMenu('Configuration')
-    .addItem('Configurer un nouveau test...', 'showConfigurationSidebar')
-    .addItem('Modifier un test existant...', 'showEditSidebar_UI')
-    .addItem('Dupliquer un test existant...', 'showDuplicateUI');
-
-  const val = ui.createMenu('Validation')
-    .addItem('VÃ©rifier les en-tÃªtes (CONFIG, BDD, TEMPLATE)', 'validateAllHeaders');
-    
-  // --- NOUVEAU MENU ---
-  const docs = ui.createMenu('Documents')
-    .addItem('GÃ©nÃ©rer la fiche de test (imprimable)...', 'showPrintableSheetUI');
-
-  main.addSubMenu(conf);
-  main.addSubMenu(val);
-  main.addSeparator();
-  main.addSubMenu(docs);
-  main.addToUi();
+  ui.createMenu('ðŸ­ Usine')
+    .addSubMenu(ui.createMenu('Configuration')
+      .addItem('Configurer un nouveau test...', 'showConfigurationSidebar')
+      .addItem('Modifier un test existant...', 'showEditSidebar_UI')
+      .addItem('Dupliquer un test existant...', 'showDuplicateUI'))
+    .addSubMenu(ui.createMenu('Validation')
+      .addItem('VÃ©rifier les en-tÃªtes (CONFIG, BDD, TEMPLATE)', 'validateAllHeaders'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('Documents')
+      .addItem('GÃ©nÃ©rer la fiche de test (imprimable)...', 'showPrintableSheetUI'))
+    .addToUi();
 }
 
-
-// --- SECTION 2 : FONCTIONS POUR LA CRÃ‰ATION D'UN NOUVEAU TEST ---
-
+/**
+ * Affiche la barre latÃ©rale de configuration (FormulaireUI.html).
+ */
 function showConfigurationSidebar() {
-  const html = HtmlService.createHtmlOutputFromFile('FormulaireUI')
-      .setTitle('Configuration Usine Ã  Tests')
-      .setWidth(600);
+  const html = HtmlService.createHtmlOutputFromFile('FormulaireUI').setTitle('Configuration Usine Ã  Tests').setWidth(600);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
+/**
+ * RÃ©cupÃ¨re les donnÃ©es initiales pour peupler les listes dÃ©roulantes de la barre latÃ©rale.
+ * @returns {Object} Un objet contenant les listes d'options.
+ */
 function getInitialData() {
-  const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
-  const optionsSheet = ss.getSheetByName("sys_Options_Parametres");
-  if (!optionsSheet) {
-    throw new Error("L'onglet 'sys_Options_Parametres' est introuvable.");
-  }
-
-  const optionsData = optionsSheet.getDataRange().getValues();
-  const headers = optionsData.shift().map(h => String(h || '').trim());
-  const optionsMap = {};
-
-  headers.forEach((header, i) => {
-    const options = optionsData.map(row => row[i]).filter(String);
-    optionsMap[header] = options;
-  });
-
-  let availableMetaBlocks = [];
   try {
-    const systemIds = getSystemIds();
-    const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
-    const metaSheet = bdd.getSheetByName('Questions_META_FR');
-    if (metaSheet) {
-        const metaData = metaSheet.getRange(2, 1, metaSheet.getLastRow() - 1, 3).getValues();
-        availableMetaBlocks = metaData.map(row => ({ id: row[0], title: row[2] })).filter(block => block.id && block.title);
-    }
-  } catch(e) {
-    console.error("Impossible de charger les blocs mÃ©ta depuis la BDD : " + e.message);
-  }
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const optionsSheet = ss.getSheetByName("sys_Options_Parametres");
+    if (!optionsSheet) throw new Error("L'onglet 'sys_Options_Parametres' est introuvable.");
+    
+    const optionsData = optionsSheet.getDataRange().getValues();
+    const headers = optionsData.shift().map(h => String(h || '').trim());
+    const optionsMap = {};
+    headers.forEach((header, i) => {
+      if (header) optionsMap[header] = optionsData.map(row => row[i]).filter(String);
+    });
 
-  return {
-    typesDeTest: optionsMap['Type_Test'] || [],
-    // MODIFICATION : On ajoute la liste des types de moteur
-    typesDeMoteur: optionsMap['Type_Moteur'] || [],
-    availableMetaBlocks: availableMetaBlocks,
-    options: {
-      Repondant_Quand: optionsMap['Repondant_Quand'] || [],
-      Repondant_Contenu: optionsMap['Repondant_Contenu'] || [],
-      Patron_Quand: optionsMap['Patron_Quand'] || [],
-      Patron_Contenu: optionsMap['Patron_Contenu'] || [],
-      Formateur_Quand: optionsMap['Formateur_Quand'] || [],
-      Formateur_Contenu: optionsMap['Formateur_Contenu'] || []
+    let availableMetaBlocks = [];
+    try {
+      const systemIds = getSystemIds();
+      const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+      const metaSheet = bdd.getSheetByName('Questions_META_FR');
+      if (metaSheet) {
+          const metaData = metaSheet.getRange(2, 1, metaSheet.getLastRow() - 1, 3).getValues();
+          availableMetaBlocks = metaData.map(row => ({ id: row[0], title: row[2] })).filter(block => block.id && block.title);
+      }
+    } catch(e) {
+      console.error("Impossible de charger les blocs mÃ©ta : " + e.message);
     }
-  };
+    optionsMap.availableMetaBlocks = availableMetaBlocks;
+    return optionsMap;
+  } catch (err) {
+    Logger.log("ERREUR FATALE dans getInitialData: " + err.stack);
+    throw new Error("Erreur cÃ´tÃ© serveur : " + err.message);
+  }
 }
 
+/**
+ * RÃ©cupÃ¨re le nombre de questions disponibles pour un type de test donnÃ© depuis la BDD.
+ * @param {string} typeTest Le type de test (ex: 'CouleursV6').
+ * @returns {number} Le nombre de questions.
+ */
 function getQuestionCountForTestType(typeTest) {
   if (!typeTest) return 0;
   try {
@@ -117,74 +103,93 @@ function getQuestionCountForTestType(typeTest) {
     if (systemIds && systemIds.ID_BDD) {
       const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
       const questionSheet = bdd.getSheets().find(s => s.getName().startsWith('Questions_' + typeTest));
-      if (questionSheet) {
-        return questionSheet.getLastRow() - 1;
-      }
+      return questionSheet ? questionSheet.getLastRow() - 1 : 0;
     }
     return 0;
   } catch (err) {
-    Logger.log('Erreur lors du calcul du nombre de questions pour ' + typeTest + ': ' + err.message);
+    Logger.log('Erreur getQuestionCountForTestType pour ' + typeTest + ': ' + err.message);
     return 0;
   }
 }
 
+/**
+ * Traite les donnÃ©es soumises depuis la barre latÃ©rale et crÃ©e une nouvelle ligne de configuration.
+ * @param {Object} formObject L'objet contenant les donnÃ©es du formulaire.
+ * @returns {string} Un message de succÃ¨s.
+ */
 function processNewTestConfiguration(formObject) {
   try {
     const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
     const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
-    if (!paramsSheet) { throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable."); }
+    if (!paramsSheet) throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable.");
+
+    const headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
     
-    let headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
-    const requiredHeaders = ['Blocs_Meta_A_Inclure', 'ID_Gabarit_Email_Repondant', 'Email_Alias', 'Moteur_Calcul'];
-
-    requiredHeaders.forEach(headerName => {
-        if (headers.indexOf(headerName) === -1) {
-            paramsSheet.getRange(1, paramsSheet.getLastColumn() + 1).setValue(headerName);
-        }
-    });
-    headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
+    const dataRow = {};
     
-    let emailDev = formObject.devEmail;
-    if (!emailDev || emailDev.trim() === "") { emailDev = "chanenam@gmail.com"; }
+    // Cartographie complÃ¨te des donnÃ©es du formulaire vers les colonnes de la feuille
+    dataRow['Titre_Formulaire_Utilisateur'] = formObject.titre;
+    dataRow['Sous-Titre_Formulaire'] = formObject.sousTitre;
+    dataRow['Type_Test'] = formObject.type;
+    dataRow['nbQuestions'] = formObject.nbQuestions;
+    dataRow['Limite_Lignes_A_Traiter'] = getQuestionCountForTestType(formObject.type);
+    dataRow['Blocs_Meta_A_Inclure'] = formObject.blocsMeta ? formObject.blocsMeta.join(',') : '';
+    
+    if (String(formObject.repondantContenu).includes('Niveau1')) dataRow['ID_Gabarit_Email_Repondant'] = 'RESULTATS_N1';
+    else if (String(formObject.repondantContenu).includes('Niveau2')) dataRow['ID_Gabarit_Email_Repondant'] = 'RESULTATS_N2';
+    else if (String(formObject.repondantContenu).includes('Niveau3')) dataRow['ID_Gabarit_Email_Repondant'] = 'RESULTATS_N3';
 
-    const limiteLignes = getQuestionCountForTestType(formObject.type);
-    const blocsMetaString = formObject.blocsMeta.join(',');
+    // Emails
+    dataRow['Repondant_Email_Actif'] = formObject.repondantActif ? "Oui" : "Non";
+    dataRow['Repondant_Quand'] = formObject.repondantQuand;
+    dataRow['Repondant_Contenu'] = formObject.repondantContenu;
+    dataRow['Patron_Email_Mode'] = formObject.patronActif ? "Oui" : "Non";
+    dataRow['Patron_Email'] = formObject.patronEmail;
+    dataRow['Patron_Quand'] = formObject.patronQuand;
+    dataRow['Patron_Contenu'] = formObject.patronContenu;
+    dataRow['Formateur_Email_Actif'] = formObject.formateurActif ? "Oui" : "Non";
+    dataRow['Formateur_Nom'] = formObject.formateurNom;
+    dataRow['Formateur_Email'] = formObject.formateurEmail;
+    dataRow['Formateur_Quand'] = formObject.formateurQuand;
+    dataRow['Formateur_Contenu'] = formObject.formateurContenu;
+    dataRow['Developpeur_Email'] = formObject.devEmail || "chanenam@gmail.com";
+    dataRow['Email_Alias'] = formObject.Email_Alias;
 
-    let idGabaritRepondant = '';
-    if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau1')) {
-        idGabaritRepondant = 'RESULTATS_N1';
-    } else if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau2')) {
-        idGabaritRepondant = 'RESULTATS_N2';
-    } else if (formObject.repondantContenu && formObject.repondantContenu.includes('Niveau3')) {
-        idGabaritRepondant = 'RESULTATS_N3';
-    }
+    // Moteur & AccÃ¨s
+    dataRow['Moteur_Calcul'] = formObject.Moteur_Calcul;
+    dataRow['Mode_Acces_Test'] = formObject.Mode_Acces_Test;
+    
+    // Paiement
+    dataRow['PAYMENT_PROVIDER'] = formObject.PAYMENT_PROVIDER;
+    dataRow['BYPASS_PAYMENT'] = formObject.BYPASS_PAYMENT;
+    dataRow['REQUIRE_PASSWORD'] = formObject.REQUIRE_PASSWORD;
+    dataRow['FORM2_PASSWORD'] = formObject.FORM2_PASSWORD;
+    
+    // Livrables
+    dataRow['DELIVERABLE_TYPE'] = formObject.DELIVERABLE_TYPE;
+    dataRow['DELIVERABLE_TTL_MIN'] = formObject.DELIVERABLE_TTL_MIN;
 
-    const dataRow = {
-      'Id_Unique': '', 'Titre_Formulaire_Utilisateur': formObject.titre, 'Nom_Fichier_Complet': '',
-      'Statut': 'En construction', 'Type_Test': formObject.type, 
-      // MODIFICATION : On utilise la valeur du formulaire au lieu de "Universel" en dur
-      'Moteur_Calcul': formObject.moteur,
-      'Blocs_Meta_A_Inclure': blocsMetaString, 'ID_Gabarit_Email_Repondant': idGabaritRepondant,
-      'ID_Dossier_Cible': '', 'Limite_Lignes_A_Traiter': limiteLignes, 'nbQuestions': formObject.nbQuestions,
-      'Repondant_Email_Actif': formObject.repondantActif ? "Oui" : "Non", 'Repondant_Quand': formObject.repondantQuand,
-      'Repondant_Contenu': formObject.repondantContenu, 'Patron_Email_Mode': formObject.patronActif ? "Oui" : "Non",
-      'Patron_Quand': formObject.patronQuand, 'Patron_Contenu': formObject.patronContenu, 'Patron_Email': formObject.patronEmail,
-      'Formateur_Email_Actif': formObject.formateurActif ? "Oui" : "Non", 'Formateur_Quand': formObject.formateurQuand,
-      'Formateur_Contenu': formObject.formateurContenu, 'Formateur_Email': formObject.formateurEmail,
-      'Developpeur_Email': emailDev, 'ID_Formulaire_Cible': '', 'ID_Sheet_Cible': '', 'Email_Alias': formObject.emailAlias
-    };
+    // Contexte & RGPD
+    dataRow['CTX_ASK_ROLE'] = formObject.CTX_ASK_ROLE;
+    dataRow['CTX_ASK_DEPARTMENT'] = formObject.CTX_ASK_DEPARTMENT;
+    dataRow['CTX_ASK_RGPD'] = formObject.CTX_ASK_RGPD;
+    dataRow['CTX_COUNTRY_SOURCE'] = formObject.CTX_COUNTRY_SOURCE;
 
+    dataRow['Statut'] = 'En construction';
+    
     const nouvelleLigne = headers.map(header => dataRow[header] !== undefined ? dataRow[header] : '');
+    
     paramsSheet.appendRow(nouvelleLigne);
     return "Configuration enregistrÃ©e avec succÃ¨s !";
   } catch (e) {
-    Logger.log("ERREUR lors de la sauvegarde de la configuration: " + e.toString());
-    throw new Error("Une erreur interne est survenue lors de la sauvegarde. " + e.message);
+    Logger.log("ERREUR processNewTestConfiguration: " + e.stack);
+    throw new Error("Erreur interne lors de la sauvegarde : " + e.message);
   }
 }
 
-// --- SECTION 3 : FONCTIONS POUR L'Ã‰DITION D'UN TEST EXISTANT ---
-
+/**
+ * Affiche une UI pour demander la ligne Ã  modifier.
+ */
 function showEditSidebar_UI() {
   const ui = SpreadsheetApp.getUi();
   const response = ui.prompt('Modifier un Test', 'Veuillez entrer le numÃ©ro de la ligne Ã  modifier :', ui.ButtonSet.OK_CANCEL);
@@ -198,6 +203,10 @@ function showEditSidebar_UI() {
   }
 }
 
+/**
+ * Affiche la barre latÃ©rale d'Ã©dition pour une ligne donnÃ©e.
+ * @param {number} rowIndex Le numÃ©ro de la ligne Ã  Ã©diter.
+ */
 function showEditSidebar(rowIndex) {
   const template = HtmlService.createTemplateFromFile('ModifierTestUI');
   template.rowIndex = rowIndex;
@@ -205,6 +214,11 @@ function showEditSidebar(rowIndex) {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
+/**
+ * RÃ©cupÃ¨re les donnÃ©es d'une ligne de configuration pour l'Ã©dition.
+ * @param {number} rowIndex Le numÃ©ro de la ligne.
+ * @returns {Object} Un objet avec les en-tÃªtes et les valeurs de la ligne.
+ */
 function getTestDataForEdit(rowIndex) {
   const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -212,6 +226,12 @@ function getTestDataForEdit(rowIndex) {
   return { headers: headers, values: values };
 }
 
+/**
+ * Met Ã  jour les donnÃ©es d'une ligne de configuration.
+ * @param {number} rowIndex Le numÃ©ro de la ligne Ã  mettre Ã  jour.
+ * @param {Object} updatedData Un objet contenant les nouvelles donnÃ©es.
+ * @returns {string} Un message de succÃ¨s.
+ */
 function updateTestData(rowIndex, updatedData) {
   const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -225,8 +245,9 @@ function updateTestData(rowIndex, updatedData) {
   return "Modifications enregistrÃ©es avec succÃ¨s !";
 }
 
-// --- SECTION 4 : FONCTIONS POUR LA DUPLICATION D'UN TEST ---
-
+/**
+ * Affiche une UI pour demander la ligne Ã  dupliquer.
+ */
 function showDuplicateUI() {
   const ui = SpreadsheetApp.getUi();
   const response = ui.prompt('Dupliquer une Configuration de Test', 'Veuillez entrer le numÃ©ro de la ligne Ã  dupliquer :', ui.ButtonSet.OK_CANCEL);
@@ -245,6 +266,11 @@ function showDuplicateUI() {
   }
 }
 
+/**
+ * Duplique une ligne de configuration.
+ * @param {number} rowIndex Le numÃ©ro de la ligne Ã  dupliquer.
+ * @returns {number} Le numÃ©ro de la nouvelle ligne crÃ©Ã©e.
+ */
 function duplicateTestConfiguration(rowIndex) {
   const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
   if (rowIndex > sheet.getLastRow()) {
@@ -255,6 +281,7 @@ function duplicateTestConfiguration(rowIndex) {
   const fieldsToClear = ['Id_Unique', 'Nom_Fichier_Complet', 'Lien_Formulaire_Public', 'ID_Formulaire_Cible', 'ID_Sheet_Cible', 'AccÃ¨s Direct Formulaire'];
   const shortUrlHeader = headers.find(h => h && h.toLowerCase().includes('raccourci'));
   if (shortUrlHeader) fieldsToClear.push(shortUrlHeader);
+  
   const newValues = headers.map(header => {
     const colIndex = headers.indexOf(header);
     const sourceValue = sourceValues[colIndex];
@@ -263,27 +290,29 @@ function duplicateTestConfiguration(rowIndex) {
     if (header === 'Titre_Formulaire_Utilisateur') return sourceValue + ' (Copie)';
     return sourceValue;
   });
+  
   sheet.appendRow(newValues);
   const newRowIndex = sheet.getLastRow();
   sheet.getRange(newRowIndex, 1).activate();
   return newRowIndex;
 }
 
-// --- SECTION 5 : FONCTIONS POUR LA GÃ‰NÃ‰RATION DE DOCUMENTS ---
-
+/**
+ * Affiche une UI pour gÃ©nÃ©rer une fiche de test imprimable.
+ */
 function showPrintableSheetUI() {
   if (ID_MODELE_FICHE_TEST === "METTEZ_ICI_L_ID_DE_VOTRE_MODELE_GOOGLE_DOC") {
-    SpreadsheetApp.getUi().alert("Configuration requise", "Veuillez d'abord renseigner l'ID de votre modÃ¨le Google Doc dans le script Menu.gs (variable ID_MODELE_FICHE_TEST).", SpreadsheetApp.getUi().ButtonSet.OK);
+    SpreadsheetApp.getUi().alert("Configuration requise", "Veuillez d'abord renseigner l'ID de votre modÃ¨le Google Doc.", SpreadsheetApp.getUi().ButtonSet.OK);
     return;
   }
   const ui = SpreadsheetApp.getUi();
-  const response = ui.prompt('GÃ©nÃ©rer une Fiche de Test', 'Veuillez entrer le numÃ©ro de la ligne Ã  utiliser pour gÃ©nÃ©rer le document :', ui.ButtonSet.OK_CANCEL);
+  const response = ui.prompt('GÃ©nÃ©rer une Fiche de Test', 'Veuillez entrer le numÃ©ro de la ligne :', ui.ButtonSet.OK_CANCEL);
   if (response.getSelectedButton() == ui.Button.OK) {
     const rowIndex = parseInt(response.getResponseText());
     if (!isNaN(rowIndex) && rowIndex > 1) {
       try {
         const fileUrl = generatePrintableSheet(rowIndex);
-        const htmlOutput = HtmlService.createHtmlOutput(`<p>La fiche de test a Ã©tÃ© gÃ©nÃ©rÃ©e avec succÃ¨s.</p><a href="${fileUrl}" target="_blank">Cliquez ici pour ouvrir le document</a>`).setWidth(300).setHeight(100);
+        const htmlOutput = HtmlService.createHtmlOutput(`<p>La fiche de test a Ã©tÃ© gÃ©nÃ©rÃ©e.</p><a href="${fileUrl}" target="_blank">Ouvrir le document</a>`).setWidth(300).setHeight(100);
         ui.showModalDialog(htmlOutput, 'Document CrÃ©Ã©');
       } catch (e) {
         ui.alert('Erreur', e.message, ui.ButtonSet.OK);
@@ -294,15 +323,22 @@ function showPrintableSheetUI() {
   }
 }
 
+/**
+ * GÃ©nÃ¨re une fiche de test Ã  partir d'un modÃ¨le Google Doc.
+ * @param {number} rowIndex Le numÃ©ro de la ligne de configuration Ã  utiliser.
+ * @returns {string} L'URL du document gÃ©nÃ©rÃ©.
+ */
 function generatePrintableSheet(rowIndex) {
   const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
-  if (rowIndex > sheet.getLastRow()) throw new Error("La ligne spÃ©cifiÃ©e n'existe pas.");
+  if (rowIndex > sheet.getLastRow()) throw new Error("La ligne n'existe pas.");
+  
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const values = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
   const dataForFusion = {};
   headers.forEach((header, i) => {
     dataForFusion[header] = values[i];
   });
+
   const templateFile = DriveApp.getFileById(ID_MODELE_FICHE_TEST);
   const destinationFolder = DriveApp.getRootFolder();
   const testTitle = dataForFusion['Titre_Formulaire_Utilisateur'] || 'Fiche de Test';
@@ -310,20 +346,25 @@ function generatePrintableSheet(rowIndex) {
   const newFile = templateFile.makeCopy(newFileName, destinationFolder);
   const doc = DocumentApp.openById(newFile.getId());
   const body = doc.getBody();
+  
   for (const key in dataForFusion) {
     body.replaceText(`{{${key}}}`, dataForFusion[key]);
   }
+  
   doc.saveAndClose();
   Logger.log(`Document gÃ©nÃ©rÃ© : ${newFile.getName()} (ID: ${newFile.getId()})`);
   return newFile.getUrl();
 }
 
-// --- SECTION 6 : FONCTIONS UTILITAIRES ---
-
+/**
+ * RÃ©cupÃ¨re les IDs des fichiers systÃ¨me (BDD, etc.) depuis l'onglet sys_ID_Fichiers.
+ * @returns {Object} Un dictionnaire des IDs.
+ */
 function getSystemIds() {
   const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
   const idSheet = configSS.getSheetByName('sys_ID_Fichiers');
   if (!idSheet) { throw new Error("L'onglet 'sys_ID_Fichiers' est introuvable."); }
+  
   const data = idSheet.getDataRange().getValues();
   const ids = {};
   data.slice(1).forEach(row => {
@@ -642,5 +683,5 @@ function validateAllHeaders() {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (21 de plus)
+* ... (22 de plus)
 
