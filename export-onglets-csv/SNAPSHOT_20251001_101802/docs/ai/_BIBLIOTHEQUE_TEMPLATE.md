@@ -1,6 +1,6 @@
 # _BIBLIOTHEQUE_TEMPLATE
 
-> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250928_115454**.
+> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20251001_101802**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_GestionTriggers.js
 
@@ -964,11 +964,13 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames, kitSprea
       if (formIdMatch) {
         const formId = formIdMatch[0];
         targetRow = data.slice(1).find(r => String(r[idx['ID_Formulaire_Cible']] || '') === formId);
-      }
-    }
+```
 
-    // ANCIENNE STRATÃ‰GIE (pour la compatibilitÃ©) : Si non trouvÃ©, on cherche par l'ID du Sheet.
-Â  Â  if (!targetRow && idx['ID_Sheet_Cible'] != null) {
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js
+
+```javascript
+
+['ID_Sheet_Cible'] != null) {
 Â  Â  Â  targetRow = data.slice(1).find(r => String(r[idx['ID_Sheet_Cible']] || '') === kitId);
 Â  Â  }
 
@@ -1180,12 +1182,6 @@ function findAttachments(config, profilCode, niveauPJ, langueCode) {
 Â  Â  return [];
 Â  }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js
-
-```javascript
-
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Creativite.js
@@ -1455,9 +1451,14 @@ function ui_DryRunLigneSelection(kitId) {
 Â  Â  Â  niveau: niveau,
 Â  Â  Â  destinataires: { test: Session.getActiveUser().getEmail() }
 Â  Â  });
-Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + '. Voir les journaux de la bibliothÃ¨que.');
-Â  } catch (e) {
-Â  Â  SpreadsheetApp.getUi().alert('Erreur Dry-run (ligne sÃ©lectionnÃ©e) : ' + e.message);
+Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + 
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
+
+```javascript
+
+tionnÃ©e) : ' + e.message);
 Â  }
 }
 
@@ -1595,12 +1596,6 @@ function retraitementTestSansEnvoi(rowIndex, kitSpreadsheet, options) {
 Â  Â  throw new Error(e.message);
 Â  }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
-
-```javascript
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_Mail.gs
@@ -2453,5 +2448,5 @@ function _traiterECHELLE_NOTE(reponseUtilisateur, parametres, resultats) {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (21 de plus)
+* ... (22 de plus)
 
