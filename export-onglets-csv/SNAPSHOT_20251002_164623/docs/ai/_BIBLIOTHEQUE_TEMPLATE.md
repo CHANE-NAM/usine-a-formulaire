@@ -1,6 +1,6 @@
 # _BIBLIOTHEQUE_TEMPLATE
 
-> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20250929_091157**.
+> Généré automatiquement depuis **scripts__BIBLIOTHEQUE_TEMPLATE.txt** — snapshot: **SNAPSHOT_20251002_164623**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_GestionTriggers.js
 
@@ -1455,9 +1455,14 @@ function ui_DryRunLigneSelection(kitId) {
 Â  Â  Â  niveau: niveau,
 Â  Â  Â  destinataires: { test: Session.getActiveUser().getEmail() }
 Â  Â  });
-Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + '. Voir les journaux de la bibliothÃ¨que.');
-Â  } catch (e) {
-Â  Â  SpreadsheetApp.getUi().alert('Erreur Dry-run (ligne sÃ©lectionnÃ©e) : ' + e.message);
+Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + 
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
+
+```javascript
+
+tionnÃ©e) : ' + e.message);
 Â  }
 }
 
@@ -1595,12 +1600,6 @@ function retraitementTestSansEnvoi(rowIndex, kitSpreadsheet, options) {
 Â  Â  throw new Error(e.message);
 Â  }
 }
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js
-
-```javascript
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_Mail.gs
@@ -1677,14 +1676,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
     const compoData = compoSheet.getDataRange().getValues();
     const compoHeaders = compoData.shift().map(h => String(h || '').trim());
-    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: com
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js
-
-```javascript
-
-mpoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
+    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
     
     let briquesDeContenu = compoData.filter((row) => {
         const typeLigne = (row[idx.typeTest] || '').toString().trim();
@@ -1844,6 +1836,12 @@ mpoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Documen
       _log_mail(true, '--- FIN ASSEMBLAGE EMAIL ---');
   }
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js
+
+```javascript
+
 /**
 Â * =================================================================================
 Â * == FICHIER : TEMPLATE_T_Data.gs (POUR LA BIBLIOTHÃˆQUE)
