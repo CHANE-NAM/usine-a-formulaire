@@ -1,6 +1,6 @@
 # BRIEF SESSION — à coller au début de la conversation
 
-> **Snapshot** : SNAPSHOT_20250930_060457  **Généré** : 2025-09-30 06:06
+> **Snapshot** : SNAPSHOT_20251002_192734  **Généré** : 2025-10-02 19:28
 > **Chemins utiles** :
 > - docs/etat/etat_projet.md
 > - diff.md
@@ -8,33 +8,31 @@
 > - scripts_*.txt
 
 ## Résumé rapide
-- **Fichiers total** : 55
-- **Taille totale (octets)** : 682138
+- **Fichiers total** : 57
+- **Taille totale (octets)** : 745939
 - **Par type** :
   - **concat** : 5
-  - **csv** : 50
+  - **csv** : 52
 
 ## Commits récents
+* fa06e29 Backup auto 2025-10-02 19:27:54
+* 5880e32 Backup auto 2025-10-02 17:34:37
+* bd3c0e8 Backup auto 2025-10-02 16:46:41
+* 8878f94 Backup auto 2025-10-01 21:00:21
+* be14fff Backup auto 2025-10-01 17:16:19
+* 115b6ff Backup auto 2025-10-01 10:18:24
+* cb07951 Backup auto 2025-09-30 21:00:25
 * 31b5628 Backup auto 2025-09-30 06:05:20
-* 72e0b2b Backup auto 2025-09-29 21:00:22
-* 7fe504f Backup auto 2025-09-29 17:20:17
-* 17e95da Backup auto 2025-09-29 09:12:19
-* 4738e90 Backup auto 2025-09-28 21:00:43
-* 9a4d433 Backup auto 2025-09-28 16:39:36
-* 7580aeb Backup auto 2025-09-28 15:23:10
-* e69c76f Backup auto 2025-09-28 11:55:37
 
 ## Changements clés (diff condensé)
 **Ajouts**
 * (aucun)
 
 **Suppressions**
-* - MOTEUR_V2_ancien_Usine_Tests_1hrcds\Feuille_1.csv (0 KB)
+* (aucune)
 
 **Modifications**
-* CONFIG_V2_Usine_Tests_1kLBqI\Param_tres_G_n_raux.csv : 11.7 KB -> 12.1 KB
-* scripts__MOTEUR_V2_Usine_à_Tests.txt : 28.5 KB -> 28.4 KB
-* scripts__TEMPLATE_V2_Kit_de_Traitement.txt : 155.1 KB -> 155.1 KB
+* scripts__MOTEUR_V2_Usine_à_Tests.txt : 87.9 KB -> 87.8 KB
 
 ## Docs à me demander au besoin (pointeurs)
 - _BDD_V2_Tests_Profils.md
