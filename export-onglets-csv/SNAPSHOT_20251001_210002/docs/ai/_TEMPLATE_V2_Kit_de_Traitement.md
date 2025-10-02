@@ -1,6 +1,6 @@
 # _TEMPLATE_V2_Kit_de_Traitement
 
-> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250928_210002**.
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20251001_210002**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
 
@@ -1739,14 +1739,12 @@ function _injectScenario(opts) {
         }
         // Fallback : prendre le profil Ã  l'index courant
         if (!profil) {
-          profil = profilSequence[scaleIndex] || 'ENV
-```
+          profil = profilSequence[scaleIndex] || 'ENV_STABILITE';
+        }
 
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
-
-```javascript
-
-enario(profil, min, max, scenario, scaleIndex);
+        const min = scale.getLowerBound();
+        const max = scale.getUpperBound();
+        const val = _valueForScenario(profil, min, max, scenario, scaleIndex);
         resp.withItemResponse(scale.createResponse(val));
 
         scaleIndex++;
@@ -1937,8 +1935,11 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -3622,5 +3623,5 @@ function auditKit() {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (21 de plus)
+* ... (22 de plus)
 
