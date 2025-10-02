@@ -1,6 +1,6 @@
 # _TEMPLATE_V2_Kit_de_Traitement
 
-> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20250929_171959**.
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20251002_173419**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
 
@@ -1176,14 +1176,8 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRo
-```
-
-## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
-
-```javascript
-
-s('key'));
+    const header0 = headersRow[0].toLowerCase();
+    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1494,6 +1488,11 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -3624,5 +3623,5 @@ function auditKit() {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (21 de plus)
+* ... (22 de plus)
 

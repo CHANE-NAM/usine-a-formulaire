@@ -1,6 +1,6 @@
 # _CONFIG_V2_Usine_à_Tests
 
-> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20250929_171959**.
+> Généré automatiquement depuis **scripts__CONFIG_V2_Usine_à_Tests.txt** — snapshot: **SNAPSHOT_20251002_173419**.
 
 ## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json
 
@@ -683,5 +683,5 @@ function validateAllHeaders() {
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Profils_MBTI_V6_EN.csv
 * BDD_V2_Tests_Profils_1m2MGB\Traductions.csv
-* ... (21 de plus)
+* ... (22 de plus)
 
