@@ -1,7 +1,10 @@
-﻿=== Projet: [TEMPLATE]V2 Kit de Traitement (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates) ===
+# _TEMPLATE_V2_Kit_de_Traitement
 
+> Généré automatiquement depuis **scripts__TEMPLATE_V2_Kit_de_Traitement.txt** — snapshot: **SNAPSHOT_20251003_171109**.
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\appsscript.json
+
+```json
 
 {
   "timeZone": "Indian/Mauritius",
@@ -27,9 +30,11 @@
   ],
   "exceptionLogging": "STACKDRIVER"
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Logique_Universel.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -353,8 +358,11 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Menu.gs
@@ -571,9 +579,11 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
+```javascript
 
 /**
  * =================================================================================
@@ -1074,8 +1084,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js
+
+```javascript
 
 // =================================================================================
 // == FICHIER : Utilities.gs
@@ -1163,8 +1176,14 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRow[0].toLowerCase();
-    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
+    const header0 = headersRo
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js
+
+```javascript
+
+s('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1476,9 +1495,6 @@ function mapQuestionsById(bdd, nomFeuille) {
   return mapById;
 }
 
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
-
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
 // == VERSION : 1.0 (CrÃ©ation initiale)
@@ -1596,8 +1612,11 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js
+
+```javascript
 
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
@@ -1635,9 +1654,11 @@ function testFusionRapportFull() {
   const pdf = genererPdfDepuisModele(templateId, vars, 'Test_Rapport_Expert_FULL');
   DriveApp.createFile(pdf).setName('Test_Rapport_Expert_FULL.pdf');
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\InjecteurScenarios.js ---
+```javascript
 
 /**********************************************
  * Injecteur de scÃ©narios â€” r&K_Environnement
@@ -1915,11 +1936,11 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
       return mid();
   }
 }
+```
 
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js
 
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
+```javascript
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -2074,8 +2095,11 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2265,8 +2289,11 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -2329,8 +2356,11 @@ function creerGraphiqueRadar(axesData) {
     }
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\concat_scripts_repvic.js
+
+```javascript
 
 const fs = require('fs');
 const path = require('path');
@@ -2400,8 +2430,11 @@ try {
 } catch (error) {
     console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Main.js
+
+```javascript
 
 /**
  * T_Main.gs
@@ -2627,8 +2660,11 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js
+
+```javascript
 
 /**
  * T_Mail.gs
@@ -2828,8 +2864,11 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js
+
+```javascript
 
 /**
  * T_Data.gs
@@ -3032,8 +3071,11 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js
+
+```javascript
 
 /**
  * T_PDF.gs
@@ -3082,8 +3124,11 @@ function genererPdfDepuisModele(templateId, variables, nomFichier) {
     return null;
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Creativite.js
+
+```javascript
 
 /**
  * =================================================================================
@@ -3267,10 +3312,11 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js
 
-
+```javascript
 
 // ===============================================================
 // == DÃ‰CLENCHEURS ET MENUS
@@ -3401,8 +3447,11 @@ function testAuthDocs() {
     Logger.log('La demande d\'autorisation pour Google Docs a Ã©tÃ© dÃ©clenchÃ©e.');
   }
 }
+```
 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js
+
+```javascript
 
 /*******************************
  * AUDIT RAPIDE DU KIT (V1)
@@ -3539,4 +3588,73 @@ function auditKit() {
 
   return out; // pratique si tu veux consommer le JSON ailleurs
 }
+```
+
+## G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TriggerHandler.js
+
+```javascript
+
+/**
+ * @OnlyCurrentDoc
+ * Fichier : TriggerHandler.gs
+ * RÃ´le : GÃ©rer la rÃ©ception des donnÃ©es du formulaire via un dÃ©clencheur onFormSubmit.
+ */
+
+/**
+ * Fonction appelÃ©e par le dÃ©clencheur onFormSubmit crÃ©Ã© par le [MOTEUR].
+ * Ã‰crit les rÃ©ponses dans la feuille, puis lance le traitement complet.
+ * @param {Object} e L'objet Ã©vÃ©nement de la soumission du formulaire.
+ */
+function onFormSubmitTrigger(e) {
+  try {
+    if (!e || !e.response) {
+      Logger.log("DÃ©clencheur reÃ§u sans Ã©vÃ©nement de rÃ©ponse valide.");
+      return;
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // On assume que les rÃ©ponses doivent Ãªtre Ã©crites dans la premiÃ¨re feuille du classeur.
+    const sheet = ss.getSheets()[0]; 
+    
+    const itemResponses = e.response.getItemResponses();
+    
+    // Si la feuille est vide (premiÃ¨re rÃ©ponse), on Ã©crit les en-tÃªtes.
+    if (sheet.getLastRow() === 0) {
+      const headers = ["Timestamp"];
+      itemResponses.forEach(itemResponse => {
+        headers.push(itemResponse.getItem().getTitle());
+      });
+      sheet.appendRow(headers);
+    }
+    
+    // On construit la nouvelle ligne avec les donnÃ©es de la rÃ©ponse.
+    const newRow = [e.response.getTimestamp()];
+    itemResponses.forEach(itemResponse => {
+      // GÃ¨re les rÃ©ponses multiples (cases Ã  cocher) en les joignant.
+      const response = itemResponse.getResponse();
+      if (Array.isArray(response)) {
+        newRow.push(response.join(', '));
+      } else {
+        newRow.push(response);
+      }
+    });
+
+    // On Ã©crit la ligne dans la feuille.
+    sheet.appendRow(newRow);
+    const newRowIndex = sheet.getLastRow();
+    Logger.log(`Nouvelle rÃ©ponse Ã©crite sur la ligne ${newRowIndex}.`);
+
+    // On lance la logique de traitement principale (calculs, email, etc.).
+    if (typeof traiterLigne === "function") {
+      Logger.log(`Lancement du traitement complet pour la ligne ${newRowIndex}...`);
+      traiterLigne(newRowIndex);
+    } else {
+      Logger.log("ERREUR : La fonction 'traiterLigne' est introuvable pour lancer le traitement des rÃ©sultats.");
+    }
+
+  } catch (error) {
+    Logger.log(`ERREUR critique dans onFormSubmitTrigger : ${error.toString()}\n${error.stack}`);
+  }
+}
+```
 
