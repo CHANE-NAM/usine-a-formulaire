@@ -42,7 +42,7 @@ function onFormSubmitTrigger(e) {
         newRow.push(response);
       }
     });
-    
+
     // On écrit la ligne dans la feuille.
     sheet.appendRow(newRow);
     const newRowIndex = sheet.getLastRow();

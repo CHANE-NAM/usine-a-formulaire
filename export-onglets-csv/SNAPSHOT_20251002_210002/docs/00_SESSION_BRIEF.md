@@ -1,6 +1,6 @@
 # BRIEF SESSION — à coller au début de la conversation
 
-> **Snapshot** : SNAPSHOT_20250930_210002  **Généré** : 2025-09-30 21:01
+> **Snapshot** : SNAPSHOT_20251002_210002  **Généré** : 2025-10-02 21:01
 > **Chemins utiles** :
 > - docs/etat/etat_projet.md
 > - diff.md
@@ -8,32 +8,31 @@
 > - scripts_*.txt
 
 ## Résumé rapide
-- **Fichiers total** : 56
-- **Taille totale (octets)** : 682006
+- **Fichiers total** : 57
+- **Taille totale (octets)** : 745939
 - **Par type** :
   - **concat** : 5
-  - **csv** : 51
+  - **csv** : 52
 
 ## Commits récents
+* ac65805 Backup auto 2025-10-02 21:00:21
+* fa06e29 Backup auto 2025-10-02 19:27:54
+* 5880e32 Backup auto 2025-10-02 17:34:37
+* bd3c0e8 Backup auto 2025-10-02 16:46:41
+* 8878f94 Backup auto 2025-10-01 21:00:21
+* be14fff Backup auto 2025-10-01 17:16:19
+* 115b6ff Backup auto 2025-10-01 10:18:24
 * cb07951 Backup auto 2025-09-30 21:00:25
-* 31b5628 Backup auto 2025-09-30 06:05:20
-* 72e0b2b Backup auto 2025-09-29 21:00:22
-* 7fe504f Backup auto 2025-09-29 17:20:17
-* 17e95da Backup auto 2025-09-29 09:12:19
-* 4738e90 Backup auto 2025-09-28 21:00:43
-* 9a4d433 Backup auto 2025-09-28 16:39:36
-* 7580aeb Backup auto 2025-09-28 15:23:10
 
 ## Changements clés (diff condensé)
 **Ajouts**
-* + MOTEUR_V2_ancien_Usine_Tests_1hrcds\Feuille_1.csv (0 KB)
+* (aucun)
 
 **Suppressions**
 * (aucune)
 
 **Modifications**
-* scripts__BIBLIOTHEQUE_TEMPLATE.txt : 105.7 KB -> 105.6 KB
-* scripts__TEMPLATE_V2_Kit_de_Traitement.txt : 155.1 KB -> 155.1 KB
+* (aucune)
 
 ## Docs à me demander au besoin (pointeurs)
 - _BDD_V2_Tests_Profils.md
