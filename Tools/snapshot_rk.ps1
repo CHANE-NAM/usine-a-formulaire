@@ -15,6 +15,44 @@ function Write-Section($text) {
   Write-Host $text -ForegroundColor Cyan
 }
 
+# --- Helpers NTP légers -------------------------------------------------------
+function Test-IsAdmin {
+  try {
+    $wi = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $wp = New-Object Security.Principal.WindowsPrincipal($wi)
+    return $wp.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  } catch { return $false }
+}
+
+function Get-LastNtpSyncAgeMinutes {
+  try {
+    $raw = (w32tm /query /status) -join "`n"
+    # FR: "Heure de la dernière synchronisation réussie : 04/10/2025 04:07:26"
+    # EN: "Last Successful Sync Time: 10/04/2025 04:07:26"
+    $dt = $null
+    if ($raw -match 'Heure de la derni[eè]re synchronisation r[eé]ussie\s*:\s*([0-9/\-]+\s+[0-9:]+)') {
+      $dt = [datetime]::Parse($matches[1], [System.Globalization.CultureInfo]::CurrentCulture)
+    } elseif ($raw -match 'Last Successful Sync Time\s*:\s*([0-9/\-]+\s+[0-9:]+)') {
+      $dt = [datetime]::Parse($matches[1], [System.Globalization.CultureInfo]::InvariantCulture)
+    }
+    if ($null -eq $dt) { return $null }
+    return ([datetime]::UtcNow - $dt.ToUniversalTime()).TotalMinutes
+  } catch { return $null }
+}
+
+function Try-ResyncNtp {
+  try {
+    if (-not (Test-IsAdmin)) {
+      Write-Host "[NTP] Pas de privilèges administrateur -> resync ignorée (ce n'est pas bloquant)."
+      return
+    }
+    w32tm /resync | Out-Null
+    Write-Host "[NTP] Resynchronisation demandée."
+  } catch {
+    Write-Warning ("[NTP] Resynchronisation a échoué : {0}" -f $_.Exception.Message)
+  }
+}
+
 # ------------------------------------------------------------------------------------
 # 0) DIAGNOSTIC "ESPION" (peut être désactivé) + base chemins + transcript de log
 # ------------------------------------------------------------------------------------
@@ -59,6 +97,23 @@ if ($EnableSpy) {
   } catch {
     Write-Warning ("[SPY] Échec diagnostic: {0}" -f $_.Exception.Message)
   }
+}
+
+# --- 0bis) Vérification souple de l’horloge système / NTP ---------------------
+Write-Section "[0bis] Vérification de l'heure système / NTP ..."
+try {
+  $ageMin = Get-LastNtpSyncAgeMinutes
+  if ($null -eq $ageMin) {
+    Write-Host "[NTP] Impossible de déterminer la dernière sync (w32tm)."
+    Try-ResyncNtp
+  } elseif ($ageMin -gt 720) { # > 12 h
+    Write-Host ("[NTP] Dernière sync > {0} min -> tentative de resync." -f [math]::Round($ageMin))
+    Try-ResyncNtp
+  } else {
+    Write-Host ("[NTP] OK (dernière sync il y a ~{0} min)" -f [math]::Round($ageMin))
+  }
+} catch {
+  Write-Warning ("[NTP] Vérification NTP non concluante : {0}" -f $_.Exception.Message)
 }
 
 # ------------------------------------------------------------------------------------
@@ -309,5 +364,35 @@ try {
 
 Write-Host ""
 Write-Host ("[DONE] Snapshot: {0}" -f $SnapDir)
+
+# --- [11] Commit & Push auto si changements détectés ---------------------------
+
+try {
+  Set-Location -LiteralPath $Repo
+  git remote -v | Out-Null   # vérifie que le dépôt est lié à GitHub
+
+  git add -A
+  & git diff --cached --quiet | Out-Null
+  $exit = $LASTEXITCODE
+
+  if ($exit -eq 1) {
+    # 1 = des différences sont présentes
+    $stamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+    git commit -m "Snapshot auto $stamp"
+    git push
+    Write-Host ("[GIT] Changements poussés à {0}" -f $stamp)
+
+  } elseif ($exit -eq 0) {
+    # 0 = aucune différence (index vide)
+    Write-Host "[GIT] Aucun changement à committer."
+
+  } else {
+    throw "git diff --cached --quiet a échoué (exit=$exit)."
+  }
+
+} catch {
+  Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message)
+}
+
 
 try { Stop-Transcript | Out-Null } catch {}

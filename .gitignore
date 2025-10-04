@@ -31,3 +31,8 @@ token.json
 export-onglets-csv/token.json
 export-onglets-csv/credentials.json
 credentials.json
+export-onglets-csv/**/*.zip
+export-onglets-csv/**/logs/
+export-onglets-csv/**/docs/
+node_modules/
+
