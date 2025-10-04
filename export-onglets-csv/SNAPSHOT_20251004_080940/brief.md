@@ -1,18 +1,19 @@
-﻿# Rapport du dernier snapshot : $(SNAPSHOT_20251004_080940)"
-     += "
-     += 
-- **Nom du snapshot** : SNAPSHOT_20251004_080940
-- **Date de génération** : 10/04/2025 12:10:19
-- **Taille totale** : 0.7 MB
-- **Nombre de fichiers** : 57
+﻿# Snapshot brief
 
-### Répartition par type
+Informations
+- Snapshot : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20251004_080940
+- Genere   : 2025-10-04T08:10:19Z
+- Fichiers : 57  -  Taille totale : 0.7 MB
+
+## Repartition par type
+
 | Type | Nb |
 |------|----|
 | concat | 5 |
 | csv | 52 |
 
-## 2. Top 10 fichiers par taille
+## Top 10 par taille
+
 | Chemin | Taille |
 |--------|--------|
 | scripts__TEMPLATE_V2_Kit_de_Traitement.txt | 157.3 KB |
@@ -25,8 +26,3 @@
 | BDD_V2_Tests_Profils_1m2MGB\Questions_MBTI_EN.csv | 14.4 KB |
 | BDD_V2_Tests_Profils_1m2MGB\Questions_CouleursV6_FR.csv | 14.3 KB |
 | BDD_V2_Tests_Profils_1m2MGB\Questions_Couleurs_FR.csv | 14 KB |
-
----
-
-_Généré automatiquement par **snapshot_rk.ps1** depuis manifest.json_
-

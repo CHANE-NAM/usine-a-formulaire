@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
+      .container { max-width: 600px; margin: 40px auto; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      h1 { color: #333; }
+      h2 { color: #666; font-weight: normal; margin-top: -10px; margin-bottom: 25px;}
+      .form-group { margin-bottom: 15px; }
+      label { display: block; margin-bottom: 5px; font-weight: bold; }
+      input[type="text"], input[type="email"] { width: 95%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+      button { background-color: #4285F4; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+      button:hover { background-color: #357ae8; }
+      button:disabled { background-color: #ccc; cursor: not-allowed; }
+      #status { margin-top: 20px; color: #555; font-style: italic; }
+      .radio-group label { display: inline-block; margin-right: 20px; font-weight: normal;}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      
+      <h1><?= config.Titre_Formulaire_Utilisateur ?></h1>
+      <h2><?= config['Sous-Titre_Formulaire'] ?></h2>   
+
+
+      <form id="identificationForm">
+        <input type="hidden" name="encryptedCode" value="<?= encryptedCode ?>">
+        <input type="hidden" name="targetFormId" value="<?= config['ID_Formulaire_Cible'] ?>">
+
+        <div class="form-group">
+          <label for="nom">Nom complet</label>
+          <input type="text" id="nom" name="nom" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group radio-group">
+          <label>Langue préférée</label>
+          <label><input type="radio" name="langue" value="FR" checked> Français</label>
+          <label><input type="radio" name="langue" value="EN"> English</label>
+        </div>
+
+        <div class="form-group">
+          <label for="pays">Pays *</label>
+          <input type="text" id="pays" name="pays" required>
+        </div>
+
+        <button type="submit" id="submitButton">Valider et continuer</button>
+      </form>
+
+      <div id="status"></div>
+    </div>
+
+    <script>
+      // On intercepte la soumission du formulaire
+      document.getElementById('identificationForm').addEventListener('submit', function(e) {
+        e.preventDefault(); // Empêche la page de se recharger
+        
+        const button = document.getElementById('submitButton');
+        const statusDiv = document.getElementById('status');
+        button.disabled = true;
+        statusDiv.innerText = 'Vérification en cours...';
+        
+        // On appelle notre fonction côté serveur (dans Code.gs) en lui passant les données du formulaire
+        google.script.run
+          .withSuccessHandler(function(responseHtml) {
+            // Si le serveur répond avec succès, on remplace le contenu de la page par la réponse
+            document.body.innerHTML = responseHtml;
+          })
+          .withFailureHandler(function(error) {
+            // En cas d'erreur, on l'affiche et on réactive le bouton
+            statusDiv.innerHTML = '<strong>Erreur :</strong> ' + error.message;
+            button.disabled = false;
+          })
+          .processFormSubmission(this); // 'this' représente l'objet formulaire
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; text-align: center; }
+      .container { max-width: 600px; margin: 40px auto; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      h1 { color: #333; }
+      h2 { color: #666; font-weight: normal; }
+      p { font-style: italic; color: #888; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Identification</h1>
+      <h2><?= titreTest ?></h2>
+
+      <form method="POST">
+        <div style="margin-bottom: 20px;">
+          <label for="nom">Nom :</label><br>
+          <input type="text" id="nom" name="nom" required style="width: 80%; padding: 8px; margin-top: 5px;">
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label for="email">Adresse e-mail :</label><br>
+          <input type="email" id="email" name="email" required style="width: 80%; padding: 8px; margin-top: 5px;">
+        </div>
+        <button type="submit" style="padding: 10px 30px; font-size: 1.1em;">Continuer</button>
+      <input type="hidden" name="encryptedCode" value="<?= encryptedCode ?>">
+      <input type="hidden" name="formType" value="paiement">
+    
+    </form>
+    </div>
+  </body>
+</html>

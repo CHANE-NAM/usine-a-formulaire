@@ -2,10 +2,14 @@
 # === Snapshot complet : GAS + CSV + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
 [CmdletBinding()]
 param(
-  [switch]$NoDocs,     # ne pas appeler gen_docs.ps1
-  [switch]$NoCsv,      # sauter l’export CSV
-  [bool]$Spy = $true   # activer/désactiver le diagnostic "espion"
+  [switch]$NoDocs,       # ne pas appeler gen_docs.ps1
+  [switch]$NoCsv,        # sauter l’export CSV
+  [bool]$Spy = $true,    # activer/désactiver le diagnostic "espion"
+  [switch]$StrictAlerts  # purge auto des alertes si succès CSV confirmé (ON par défaut)
 )
+
+# Valeur par défaut pour StrictAlerts si non fourni
+if (-not $PSBoundParameters.ContainsKey('StrictAlerts')) { $StrictAlerts = $true }
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
@@ -277,6 +281,62 @@ if (-not $NoCsv) {
 }
 
 # ------------------------------------------------------------------------------------
+# 6bis) Nettoyage des alertes si succès CSV confirmé (StrictAlerts)
+# ------------------------------------------------------------------------------------
+# Motifs succès CSV (regex). Surchargables via env RK_CSV_OK_REGEX (séparateur ;)
+$CSVSuccessPatterns = @(
+  '\[CSV\]\s*Export\s+termin',         # "[CSV] Export terminé"
+  'CSV déposés dans',                  # "CSV déposés dans : ..."
+  '^OK \[.+?\].+?\.csv$'               # "OK [BDD] ... -> ... .csv"
+)
+if ($env:RK_CSV_OK_REGEX) {
+  $CSVSuccessPatterns = $env:RK_CSV_OK_REGEX.Split(';') | Where-Object { $_ -and $_.Trim() }
+}
+
+function Confirm-CsvSuccessInLog {
+  param(
+    [Parameter(Mandatory=$true)][string]$LogPath,
+    [Parameter(Mandatory=$true)][string[]]$Patterns
+  )
+  if (-not (Test-Path -LiteralPath $LogPath)) { return $false }
+  foreach ($pat in $Patterns) {
+    $hit = Select-String -Path $LogPath -Pattern $pat -AllMatches -ErrorAction SilentlyContinue
+    if ($hit) { return $true }
+  }
+  return $false
+}
+
+function Clear-AlertIfCsvOk {
+  param(
+    [Parameter(Mandatory=$true)][string]$ExportDir,
+    [Parameter(Mandatory=$true)][string]$Ts,
+    [Parameter(Mandatory=$true)][string[]]$Patterns
+  )
+  try {
+    $alertDir  = Join-Path $ExportDir "_alerts"
+    $alertFile = Join-Path $alertDir ("alert_{0}.txt" -f $Ts)
+    if (-not (Test-Path -LiteralPath $alertFile)) {
+      Write-Host "[ALERT] Aucune alerte à nettoyer pour ce snapshot."
+      return
+    }
+    $m = Select-String -Path $alertFile -Pattern '^\s*Log:\s*(.+)$' -ErrorAction SilentlyContinue
+    $logPath = $null
+    if ($m) { $logPath = $m.Matches[0].Groups[1].Value.Trim() }
+
+    if ($logPath -and (Confirm-CsvSuccessInLog -LogPath $logPath -Patterns $Patterns)) {
+      Remove-Item -LiteralPath $alertFile -Force
+      Write-Host "✅ [ALERT] Export CSV confirmé — alerte supprimée : $alertFile"
+    } else {
+      Write-Host "⚠️ [ALERT] Export CSV non confirmé — alerte conservée : $alertFile"
+      if (-not $logPath) { Write-Host "    (indice : ligne 'Log: ...' introuvable dans l’alerte)" }
+    }
+  } catch {
+    Write-Warning ("[ALERT] Nettoyage auto a échoué : {0}" -f $_.Exception.Message)
+  }
+}
+
+# On place le nettoyage APRÈS la génération des docs (les alertes peuvent être créées juste avant)
+# ------------------------------------------------------------------------------------
 # 7) Manifest / Brief / Diff (si helpers chargés)
 # ------------------------------------------------------------------------------------
 if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinue)) {
@@ -306,62 +366,6 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
 } else {
   Write-Host "[META] Helpers indisponibles — étape manifest/brief/diff ignorée."
 }
-# --- [7bis] README_SNAPSHOT.md (résumé lisible du dernier snapshot) ------------
-try {
-  $manifestPath = Join-Path $SnapDir 'manifest.json'
-  if (Test-Path -LiteralPath $manifestPath) {
-    $m = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-    $sum = $m.summary
-    $files = $m.files
-
-    # Top 10 par taille (KB)
-    $top = $files |
-      Sort-Object { [int64]$_.Length } -Descending |
-      Select-Object -First 10 |
-      ForEach-Object {
-        '| ' + $_.RelToSnapshot + ' | ' + ([math]::Round([double]$_.Length/1KB,1)) + ' KB |'
-      }
-
-    # Répartition par type
-    $byTypeRows = @()
-    if ($sum.counts.byType) {
-      $byTypeRows = $sum.counts.byType.PSObject.Properties |
-        Sort-Object Name |
-        ForEach-Object { '| ' + $_.Name + ' | ' + $_.Value + ' |' }
-    }
-
-    $readme = @()
-    $readme += "# Rapport du dernier snapshot : `$($SNAPSHOT_NAME)`"
-    $readme += ""
-    $readme += "## 1. Contexte général"
-    $readme += "- **Nom du snapshot** : $SNAPSHOT_NAME"
-    $readme += "- **Date de génération** : $([datetime]::Parse($sum.generatedAt))"
-    $readme += "- **Taille totale** : $([math]::Round([double]$sum.totalSize/1MB,2)) MB"
-    $readme += "- **Nombre de fichiers** : $($sum.counts.total)"
-    $readme += ""
-    $readme += "### Répartition par type"
-    $readme += "| Type | Nb |"
-    $readme += "|------|----|"
-    if ($byTypeRows.Count) { $readme += $byTypeRows } else { $readme += "| (aucun) | 0 |" }
-    $readme += ""
-    $readme += "## 2. Top 10 fichiers par taille"
-    $readme += "| Chemin | Taille |"
-    $readme += "|--------|--------|"
-    if ($top.Count) { $readme += $top } else { $readme += "| (aucun) | 0 |" }
-    $readme += ""
-    $readme += "---"
-    $readme += ""
-    $readme += "_Généré automatiquement par **snapshot_rk.ps1** depuis `manifest.json`_"
-    $readme += ""
-    $outReadme = Join-Path $ExportDir 'README_SNAPSHOT.md'
-    ($readme -join "`n") | Set-Content -LiteralPath $outReadme -Encoding UTF8
-    Write-Host "[README] $outReadme"
-  } else {
-    Write-Host "[README] manifest.json introuvable -> README_SNAPSHOT.md non généré."
-  }
-} catch {
-  Write-Warning ("[README] Génération échouée : {0}" -f $_.Exception.Message)
-}
 
 # ------------------------------------------------------------------------------------
 # 8) HOOK optionnel : génération de documents “AI / État / Utilisateurs”
@@ -382,39 +386,10 @@ if (-not $NoDocs) {
   Write-Host "[DOCS] Génération de documents ignorée (NoDocs)."
 }
 
-# --- [ALERTE] Détection simple d’échecs avant ZIP --------------------------------
-try {
-  $alertDir = Join-Path $ExportDir "_alerts"
-  New-Item -ItemType Directory -Force -Path $alertDir | Out-Null
-
-  # Mots-clés “simples” à repérer dans le transcript
-  $patterns = @(
-    'Échec export CSV', 'Quota exceeded', 'rate limit',
-    'invalid_grant', 'OAuth', 'Access is denied',
-    '[CSV] Échec', 'ERREUR', 'EAI_AGAIN', 'ENOTFOUND'
-  )
-
-  $logText = if (Test-Path $TranscriptPath) { Get-Content -LiteralPath $TranscriptPath -Raw } else { '' }
-  $hits = @()
-  foreach ($p in $patterns) {
-    if ($logText -match [regex]::Escape($p)) { $hits += $p }
-  }
-
-  if ($hits.Count -gt 0) {
-    $alertTxt = Join-Path $alertDir ("alert_{0}.txt" -f $ts)
-    @(
-      "[ALERT] Snapshot $SNAPSHOT_NAME",
-      "Time: $(Get-Date -Format s)",
-      "Matches: " + ($hits -join ', '),
-      "Log: $TranscriptPath"
-    ) -join "`r`n" | Set-Content -LiteralPath $alertTxt -Encoding UTF8
-    Write-Warning ("[ALERT] Problèmes détectés -> {0}" -f $alertTxt)
-    exit 1   # <-- code de retour non nul = la tâche planifiée est marquée en échec
-  }
-} catch {
-  Write-Warning ("[ALERT] Vérification d'échec non concluante : {0}" -f $_.Exception.Message)
+# === Nettoyage auto des alertes (si activé) — se place AVANT le ZIP ==========
+if ($StrictAlerts) {
+  Clear-AlertIfCsvOk -ExportDir $ExportDir -Ts $ts -Patterns $CSVSuccessPatterns
 }
-
 
 # ------------------------------------------------------------------------------------
 # 9) ZIP du snapshot
@@ -456,7 +431,6 @@ Write-Host ""
 Write-Host ("[DONE] Snapshot: {0}" -f $SnapDir)
 
 # --- [11] Commit & Push auto si changements détectés ---------------------------
-
 try {
   Set-Location -LiteralPath $Repo
   git remote -v | Out-Null   # vérifie que le dépôt est lié à GitHub
@@ -483,6 +457,5 @@ try {
 } catch {
   Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message)
 }
-
 
 try { Stop-Transcript | Out-Null } catch {}
