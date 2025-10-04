@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Clé secrète pour le déchiffrement. DOIT être la même que dans le MOTEUR.
  */
 const SECRET_KEY = "FELIX QUI POTUIT RERUM COGNOCERE CAUSA VIC";
