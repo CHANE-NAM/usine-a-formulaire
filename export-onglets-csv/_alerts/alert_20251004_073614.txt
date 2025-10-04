@@ -1,0 +1,5 @@
+﻿[ALERT] Snapshot SNAPSHOT_20251004_073614
+Time: 2025-10-04T07:38:14
+Matches: 
+Échec export CSV, OAuth, [CSV] Échec
+Log: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\logs\snapshot_20251004_073614.log
