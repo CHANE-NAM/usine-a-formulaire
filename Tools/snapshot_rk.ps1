@@ -306,6 +306,62 @@ if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinu
 } else {
   Write-Host "[META] Helpers indisponibles — étape manifest/brief/diff ignorée."
 }
+# --- [7bis] README_SNAPSHOT.md (résumé lisible du dernier snapshot) ------------
+try {
+  $manifestPath = Join-Path $SnapDir 'manifest.json'
+  if (Test-Path -LiteralPath $manifestPath) {
+    $m = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $sum = $m.summary
+    $files = $m.files
+
+    # Top 10 par taille (KB)
+    $top = $files |
+      Sort-Object { [int64]$_.Length } -Descending |
+      Select-Object -First 10 |
+      ForEach-Object {
+        '| ' + $_.RelToSnapshot + ' | ' + ([math]::Round([double]$_.Length/1KB,1)) + ' KB |'
+      }
+
+    # Répartition par type
+    $byTypeRows = @()
+    if ($sum.counts.byType) {
+      $byTypeRows = $sum.counts.byType.PSObject.Properties |
+        Sort-Object Name |
+        ForEach-Object { '| ' + $_.Name + ' | ' + $_.Value + ' |' }
+    }
+
+    $readme = @()
+    $readme += "# Rapport du dernier snapshot : `$($SNAPSHOT_NAME)`"
+    $readme += ""
+    $readme += "## 1. Contexte général"
+    $readme += "- **Nom du snapshot** : $SNAPSHOT_NAME"
+    $readme += "- **Date de génération** : $([datetime]::Parse($sum.generatedAt))"
+    $readme += "- **Taille totale** : $([math]::Round([double]$sum.totalSize/1MB,2)) MB"
+    $readme += "- **Nombre de fichiers** : $($sum.counts.total)"
+    $readme += ""
+    $readme += "### Répartition par type"
+    $readme += "| Type | Nb |"
+    $readme += "|------|----|"
+    if ($byTypeRows.Count) { $readme += $byTypeRows } else { $readme += "| (aucun) | 0 |" }
+    $readme += ""
+    $readme += "## 2. Top 10 fichiers par taille"
+    $readme += "| Chemin | Taille |"
+    $readme += "|--------|--------|"
+    if ($top.Count) { $readme += $top } else { $readme += "| (aucun) | 0 |" }
+    $readme += ""
+    $readme += "---"
+    $readme += ""
+    $readme += "_Généré automatiquement par **snapshot_rk.ps1** depuis `manifest.json`_"
+    $readme += ""
+    $outReadme = Join-Path $ExportDir 'README_SNAPSHOT.md'
+    ($readme -join "`n") | Set-Content -LiteralPath $outReadme -Encoding UTF8
+    Write-Host "[README] $outReadme"
+  } else {
+    Write-Host "[README] manifest.json introuvable -> README_SNAPSHOT.md non généré."
+  }
+} catch {
+  Write-Warning ("[README] Génération échouée : {0}" -f $_.Exception.Message)
+}
 
 # ------------------------------------------------------------------------------------
 # 8) HOOK optionnel : génération de documents “AI / État / Utilisateurs”
