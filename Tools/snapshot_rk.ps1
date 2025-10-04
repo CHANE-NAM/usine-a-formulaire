@@ -382,6 +382,40 @@ if (-not $NoDocs) {
   Write-Host "[DOCS] Génération de documents ignorée (NoDocs)."
 }
 
+# --- [ALERTE] Détection simple d’échecs avant ZIP --------------------------------
+try {
+  $alertDir = Join-Path $ExportDir "_alerts"
+  New-Item -ItemType Directory -Force -Path $alertDir | Out-Null
+
+  # Mots-clés “simples” à repérer dans le transcript
+  $patterns = @(
+    'Échec export CSV', 'Quota exceeded', 'rate limit',
+    'invalid_grant', 'OAuth', 'Access is denied',
+    '[CSV] Échec', 'ERREUR', 'EAI_AGAIN', 'ENOTFOUND'
+  )
+
+  $logText = if (Test-Path $TranscriptPath) { Get-Content -LiteralPath $TranscriptPath -Raw } else { '' }
+  $hits = @()
+  foreach ($p in $patterns) {
+    if ($logText -match [regex]::Escape($p)) { $hits += $p }
+  }
+
+  if ($hits.Count -gt 0) {
+    $alertTxt = Join-Path $alertDir ("alert_{0}.txt" -f $ts)
+    @(
+      "[ALERT] Snapshot $SNAPSHOT_NAME",
+      "Time: $(Get-Date -Format s)",
+      "Matches: " + ($hits -join ', '),
+      "Log: $TranscriptPath"
+    ) -join "`r`n" | Set-Content -LiteralPath $alertTxt -Encoding UTF8
+    Write-Warning ("[ALERT] Problèmes détectés -> {0}" -f $alertTxt)
+    exit 1   # <-- code de retour non nul = la tâche planifiée est marquée en échec
+  }
+} catch {
+  Write-Warning ("[ALERT] Vérification d'échec non concluante : {0}" -f $_.Exception.Message)
+}
+
+
 # ------------------------------------------------------------------------------------
 # 9) ZIP du snapshot
 # ------------------------------------------------------------------------------------
