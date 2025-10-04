@@ -1,23 +1,66 @@
-// export-onglets-csv/index.js (version patchée: support --creds/--token + env vars + erreurs claires)
+// export-onglets-csv/index.js
+// Support OAuth --creds/--token + throttling anti-quota + batchGet pour réduire les appels
 
 const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 
+/* ===================== Throttle + Retry (anti-quota) ===================== */
+// Réduis si tu vois encore des quotas (ex: RK_SHEETS_RPM=30)
+const RPM = Number(process.env.RK_SHEETS_RPM || 50);         // requêtes/minute
+const MIN_INTERVAL = Math.ceil(60000 / RPM);                 // ms min entre 2 appels
+let _lastCall = 0;
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function callWithThrottle(fn, { retries = 5, baseDelay = 500 } = {}) {
+  // Espacement léger
+  const now = Date.now();
+  const wait = Math.max(0, _lastCall + MIN_INTERVAL - now);
+  if (wait > 0) await sleep(wait);
+  _lastCall = Date.now();
+
+  // Retry exponentiel pour 429 / 403 (rate limit)
+  let attempt = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      const status = err?.code || err?.response?.status;
+      const reason = err?.errors?.[0]?.reason || err?.response?.data?.error?.errors?.[0]?.reason;
+      const isRate =
+        status === 429 ||
+        (status === 403 && /rate|userRateLimitExceeded|quota/i.test(String(reason || '')));
+
+      if (!isRate || attempt >= retries) throw err;
+
+      const backoff = baseDelay * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
+      await sleep(backoff);
+      attempt++;
+    }
+  }
+}
+
+/* ============================ Constantes OAuth ============================ */
 const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets.readonly',
   'https://www.googleapis.com/auth/drive.readonly',
 ];
 
-/* ---------------------- Utils ---------------------- */
+/* ================================ Utils ================================== */
 function arrToCsv(rows) {
-  return (rows || []).map(r =>
-    (r || []).map(cell => {
-      if (cell == null) return '';
-      const s = String(cell).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(',')
-  ).join('\n');
+  return (rows || [])
+    .map(r =>
+      (r || [])
+        .map(cell => {
+          if (cell == null) return '';
+          const s = String(cell).replace(/"/g, '""');
+          return /[",\n]/.test(s) ? `"${s}"` : s;
+        })
+        .join(',')
+    )
+    .join('\n');
 }
 
 function safeName(s) {
@@ -25,12 +68,10 @@ function safeName(s) {
 }
 
 function ensureFileExists(p, hint) {
-  if (!fs.existsSync(p)) {
-    throw new Error(`${hint || 'Fichier manquant'} : ${p}`);
-  }
+  if (!fs.existsSync(p)) throw new Error(`${hint || 'Fichier manquant'} : ${p}`);
 }
 
-/* -------------------- Arguments -------------------- */
+/* ============================== Arguments ================================ */
 function parseArgs() {
   const args = process.argv.slice(2);
   const opts = { out: null, gsheet: [], url: [], id: [], creds: null, token: null };
@@ -48,7 +89,7 @@ function parseArgs() {
     throw new Error('Fournir au moins un classeur via --id "<ID>" OU --url "<lien>" OU --gsheet "<fichier.gsheet>".');
   }
 
-  // Fallback sur variables d’environnement si --creds/--token absents
+  // Fallback env vars
   if (!opts.creds && process.env.GOOGLE_CREDENTIALS_PATH) {
     opts.creds = process.env.GOOGLE_CREDENTIALS_PATH;
   }
@@ -56,7 +97,7 @@ function parseArgs() {
     opts.token = process.env.GOOGLE_TOKEN_PATH;
   }
 
-  // Dernier fallback: fichiers aux côtés de index.js (historique)
+  // Fallback fichiers locaux
   const defaultCreds = path.join(__dirname, 'credentials.json');
   const defaultToken = path.join(__dirname, 'token.json');
   if (!opts.creds && fs.existsSync(defaultCreds)) opts.creds = defaultCreds;
@@ -65,24 +106,25 @@ function parseArgs() {
   return opts;
 }
 
-/* ---------- ID depuis .gsheet, URL ou ID direct ----- */
+/* =================== ID depuis .gsheet, URL ou ID direct ================== */
 function spreadsheetIdFromAny(input) {
   // 1) ID direct
   if (/^[a-zA-Z0-9_-]{20,}$/.test(input) && !input.startsWith('http')) return input;
 
   // 2) URL
-  if (input.startsWith('http')) {
-    const m = input.match(/\/d\/([a-zA-Z0-9_-]+)\//);
+  if (String(input).startsWith('http')) {
+    const m = String(input).match(/\/d\/([a-zA-Z0-9_-]+)\//);
     if (m && m[1]) return m[1];
     throw new Error(`URL non reconnue : ${input}`);
   }
 
-  // 3) .gsheet local (attention : peut être "virtuel")
-  const stat = fs.lstatSync(input);
-  if (stat.isDirectory()) {
-    throw new Error(`Chemin détecté comme dossier, pas .gsheet : ${input}. Utilise plutôt --url ou --id.`);
+  // 3) .gsheet local
+  let raw;
+  try {
+    raw = fs.readFileSync(input, 'utf8');
+  } catch {
+    throw new Error(`Impossible de lire : ${input}`);
   }
-  const raw = fs.readFileSync(input, 'utf8');
   const json = JSON.parse(raw);
   const url = json.url || json.doc_id || '';
   const m = String(url).match(/\/d\/([a-zA-Z0-9_-]+)\//);
@@ -91,9 +133,10 @@ function spreadsheetIdFromAny(input) {
   throw new Error(`Impossible d'extraire l'ID depuis : ${input}`);
 }
 
-/* ------------------- Auth Google ------------------- */
+/* ============================== Auth Google ============================== */
 async function authorize(credsPath, tokenPath) {
   ensureFileExists(credsPath, 'credentials.json introuvable');
+
   const credentials = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
   const { client_secret, client_id, redirect_uris } = credentials.installed || credentials.web || {};
   if (!client_id || !client_secret) {
@@ -108,7 +151,7 @@ async function authorize(credsPath, tokenPath) {
     return oAuth2Client;
   }
 
-  // Génère l'URL d'autorisation
+  // Générer l'URL d'autorisation
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
@@ -121,7 +164,7 @@ async function authorize(credsPath, tokenPath) {
   try {
     const { exec } = require('child_process');
     if (process.platform === 'win32') exec(`start "" "${authUrl}"`);
-  } catch (_) {}
+  } catch {}
 
   // Demande le code d'autorisation
   const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
@@ -135,7 +178,6 @@ async function authorize(credsPath, tokenPath) {
     console.log('Token enregistré -> token.json');
     return oAuth2Client;
   } catch (e) {
-    // Rendre l'erreur plus parlante
     const msg = (e && e.response && e.response.data && e.response.data.error) || e.message || String(e);
     if (/invalid_grant/i.test(msg)) {
       console.error('ERREUR : invalid_grant (code expiré ou déjà utilisé). Relancez et collez un code tout frais.');
@@ -146,29 +188,43 @@ async function authorize(credsPath, tokenPath) {
   }
 }
 
-/* ---------------- Export d’un classeur -------------- */
+/* ========================= Export d’un classeur ========================== */
 async function exportSpreadsheet(auth, spreadsheetId, outDir) {
   const sheets = google.sheets({ version: 'v4', auth });
 
-  // Métadonnées du classeur
-  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  // 1) Métadonnées (noms d’onglets)
+  const meta = await callWithThrottle(() =>
+    sheets.spreadsheets.get({ spreadsheetId })
+  );
+
   const bookTitle = meta.data.properties?.title || spreadsheetId;
   const container = path.join(outDir, `${safeName(bookTitle)}_${spreadsheetId.slice(0, 6)}`);
   fs.mkdirSync(container, { recursive: true });
 
-  // Pour chaque onglet : values.get(range = 'NomOnglet')
-  for (const sh of (meta.data.sheets || [])) {
-    const tabName = sh.properties?.title || `Sheet_${sh.properties?.sheetId}`;
-    const range = `'${tabName.replace(/'/g, "''")}'`;
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    const csv = arrToCsv(res.data.values || []);
+  const tabs = (meta.data.sheets || []).map(sh => sh.properties?.title || `Sheet_${sh.properties?.sheetId}`);
+  if (!tabs.length) {
+    console.log(`(Info) Aucun onglet : ${bookTitle}`);
+    return;
+  }
+
+  // 2) Lecture en 1 requête : batchGet
+  const ranges = tabs.map(t => `'${String(t).replace(/'/g, "''")}'`);
+  const batch = await callWithThrottle(() =>
+    sheets.spreadsheets.values.batchGet({ spreadsheetId, ranges })
+  );
+
+  const valueRanges = batch.data.valueRanges || [];
+  for (let i = 0; i < tabs.length; i++) {
+    const tabName = tabs[i];
+    const values = valueRanges[i]?.values || [];
+    const csv = arrToCsv(values);
     const f = path.join(container, safeName(tabName) + '.csv');
     fs.writeFileSync(f, csv, 'utf8');
     console.log(`OK ${bookTitle} -> ${tabName}.csv`);
   }
 }
 
-/* ------------------- Programme main ---------------- */
+/* ============================== Programme main =========================== */
 (async () => {
   try {
     const opts = parseArgs();
@@ -181,14 +237,16 @@ async function exportSpreadsheet(auth, spreadsheetId, outDir) {
       ...opts.id.map(spreadsheetIdFromAny),
     ];
 
-    // Résolution finale des chemins creds/token
+    // Chemins OAuth
     const credsPath = opts.creds || path.join(__dirname, 'credentials.json');
     const tokenPath = opts.token || path.join(__dirname, 'token.json');
 
     const auth = await authorize(credsPath, tokenPath);
+
     for (const id of ids) {
       await exportSpreadsheet(auth, id, outDir);
     }
+
     console.log(`\nCSV déposés dans : ${outDir}`);
   } catch (e) {
     const msg = e?.message || String(e);
