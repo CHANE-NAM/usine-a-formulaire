@@ -41,7 +41,7 @@ export-onglets-csv/**/logs/
 export-onglets-csv/**/docs/
 export-onglets-csv/**/*.zip
 export-onglets-csv/scripts_*.txt
-export-onglets-csv/**/*.csv   # (optionnel: ignore les CSV pour éviter le bruit)
+export-onglets-csv/**/*.csv
 
 # Project logs
 Tools/logs/
