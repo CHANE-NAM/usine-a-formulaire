@@ -1,5 +1,5 @@
 ﻿# Tools\snapshot_helpers.ps1
-# Helpers robustes : Write-Manifest / Write-BriefMd / Write-DiffMd
+# Helpers robustes : Write-Manifest / Write-BriefMd / Write-DiffMd / Write-AlertIfNeeded
 # Garde-fou anti double-chargement
 if ($script:__SNAP_HELPERS_LOADED) { return }
 $script:__SNAP_HELPERS_LOADED = $true
@@ -154,7 +154,6 @@ function Write-BriefMd {
   return $out
 }
 
-
 function Write-DiffMd {
   [CmdletBinding()]
   param(
@@ -225,4 +224,56 @@ function Write-DiffMd {
   ($md -join "`n") | Set-Content -LiteralPath $OutPath -Encoding UTF8
   Write-Host "[DIFF] $OutPath"
   return $OutPath
+}
+
+# -------------------------- ALERTING (filtre strict) --------------------------
+function Get-AlertMatches {
+  param(
+    [Parameter(Mandatory=$true)][string]$LogPath
+  )
+  if (-not (Test-Path -LiteralPath $LogPath)) { return @() }
+
+  # 1) Si l’export CSV a réussi, on ne déclenche pas d’alerte.
+  $success = Select-String -Path $LogPath -SimpleMatch -Pattern "[CSV] Export terminé" -ErrorAction SilentlyContinue
+  if ($success) { return @() }
+
+  # 2) Motifs réellement bloquants
+  $strictPatterns = @(
+    "Quota exceeded",
+    "[CSV] Échec", "[CSV] Echec",
+    "invalid_grant",
+    "PERMISSION_DENIED", "insufficientPermissions",
+    "Access is denied",
+    "Aucun code saisi", "code d’autorisation",
+    "HTTP 429", "HTTP 403"
+  )
+
+  $hits = Select-String -Path $LogPath -SimpleMatch -Pattern $strictPatterns -ErrorAction SilentlyContinue
+  return $hits
+}
+
+function Write-AlertIfNeeded {
+  param(
+    [Parameter(Mandatory=$true)][string]$SnapshotDir,
+    [Parameter(Mandatory=$true)][string]$LogPath,
+    [Parameter(Mandatory=$true)][string]$Timestamp
+  )
+
+  $alertsDir = Join-Path (Split-Path $SnapshotDir -Parent) "_alerts"
+  New-Item -ItemType Directory -Force -Path $alertsDir | Out-Null
+
+  $matches = Get-AlertMatches -LogPath $LogPath
+  if ($matches -and $matches.Count -gt 0) {
+    $alertPath = Join-Path $alertsDir ("alert_{0}.txt" -f $Timestamp)
+    @(
+      "[ALERT] Snapshot $(Split-Path $SnapshotDir -Leaf)"
+      "Time: $(Get-Date -Format s)"
+      "Matches:"
+      ($matches | ForEach-Object { $_.Line })
+      "Log: $LogPath"
+    ) | Set-Content -Path $alertPath -Encoding UTF8
+    Write-Warning ("[ALERT] Problèmes détectés -> {0}" -f $alertPath)
+  } else {
+    Write-Host "[ALERT] Aucun problème critique détecté (filtre strict)."
+  }
 }
