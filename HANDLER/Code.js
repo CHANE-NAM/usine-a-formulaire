@@ -221,6 +221,7 @@ function processFormSubmission(formObject) {
   }
 }
 
+
 /**
  * Fonction de compatibilité, non utilisée dans le flux principal.
  */
