@@ -1,38 +1,47 @@
-﻿# VS / VS Code
+﻿# Editors / IDE
 .vs/
 .vscode/
 .history/
-*.log
-*.tmp
+
+# OS junk
 Thumbs.db
 .DS_Store
 
+# Logs & temp
+*.log
+*.tmp
+~$*
+
 # Python / Node
+.venv/
 venv/
-.env
-node_modules/
 __pycache__/
+node_modules/
+.env
+*.env
+*.local
 
 # Google / Apps Script
 .clasprc.json
 *.gsheet
 *.gdoc
 *.gslides
-
-# Fichiers temporaires Office
-~$*
 *.gform
-# Exports & token
 
-export-onglets-csv/**/*.csv
-export-onglets-csv/**/*.zip
-export-onglets-csv/scripts_*.txt
-token.json
-export-onglets-csv/token.json
-export-onglets-csv/credentials.json
+# Secrets (ne jamais committer)
 credentials.json
-export-onglets-csv/**/*.zip
+token.json
+export-onglets-csv/credentials.json
+export-onglets-csv/token.json
+C:/secrets/
+C:\secrets\
+
+# Snapshots / exports
 export-onglets-csv/**/logs/
 export-onglets-csv/**/docs/
-node_modules/
+export-onglets-csv/**/*.zip
+export-onglets-csv/scripts_*.txt
+export-onglets-csv/**/*.csv   # (optionnel: ignore les CSV pour éviter le bruit)
 
+# Project logs
+Tools/logs/
