@@ -150,7 +150,7 @@ if ($HelpersPath) {
 # ------------------------------------------------------------------------------------
 # 2) Dossiers
 # ------------------------------------------------------------------------------------
-$Repo      = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
+$Repo       = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
 $ExportDir = Join-Path $Repo "export-onglets-csv"
 New-Item -ItemType Directory -Force -Path $ExportDir | Out-Null
 
@@ -182,16 +182,20 @@ Write-Section "[2/4] Concat des scripts par projet ..."
 
 $bdd1 = Join-Path $Repo "03_BaseDeDonnées"
 $bdd2 = Join-Path $Repo "03_BaseDeDonnees"
-if     (Test-Path -LiteralPath $bdd1) { $bddDir = $bdd1 }
+if       (Test-Path -LiteralPath $bdd1) { $bddDir = $bdd1 }
 elseif (Test-Path -LiteralPath $bdd2) { $bddDir = $bdd2 }
 else { $bddDir = $null }
 
 $Projets = @()
-$Projets += ,@("[MOTEUR]V2 Usine à Tests",        (Join-Path $Repo "01_Moteur"))
-$Projets += ,@("[CONFIG]V2 Usine à Tests",        (Join-Path $Repo "02_configuration"))
+$Projets += ,@("[MOTEUR]V2 Usine à Tests",       (Join-Path $Repo "01_Moteur"))
+$Projets += ,@("[CONFIG]V2 Usine à Tests",       (Join-Path $Repo "02_configuration"))
 if ($bddDir) { $Projets += ,@("[BDD]V2 Tests & Profils", $bddDir) } else { Write-Warning "Dossier BDD introuvable (03_BaseDeDonnées / 03_BaseDeDonnees)." }
-$Projets += ,@("[TEMPLATE]V2 Kit de Traitement",  (Join-Path $Repo "04_Templates"))
+$Projets += ,@("[TEMPLATE]V2 Kit de Traitement",   (Join-Path $Repo "04_Templates"))
 $Projets += ,@("[BIBLIOTHEQUE]TEMPLATE", (Join-Path $Repo "05_Bibliotheque"))
+$Projets += ,@("[HANDLER]V2 Web App",       (Join-Path $Repo "08_handler"))
+# AJOUTS POUR UN SNAPSHOT COMPLET DES OUTILS
+$Projets += ,@("[TOOLS] Scripts de Snapshot",   (Join-Path $Repo "Tools"))
+$Projets += ,@("[TOOLING] Export CSV",         (Join-Path $Repo "export-onglets-csv"))
 
 foreach ($p in $Projets) {
   $pname = $p[0]
@@ -203,15 +207,15 @@ foreach ($p in $Projets) {
   $outTxt   = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
 
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
-           Where-Object { ($_.Extension -in ".gs",".js",".ts") -or ($_.Name -eq "appsscript.json") }
+           Where-Object { ($_.Extension -in ".gs",".js",".ts", ".html", ".ps1") -or ($_.Name -in "appsscript.json", "package.json") }
 
-  if (-not $files) { Write-Warning ("Aucun fichier GAS trouvé dans {0}" -f $pdir); continue }
+  if (-not $files) { Write-Warning ("Aucun fichier pertinent trouvé dans {0}" -f $pdir); continue }
 
   ("=== Projet: {0} ({1}) ==={2}" -f $pname, $pdir, [Environment]::NewLine) |
     Out-File -FilePath $outTxt -Encoding UTF8
 
   foreach ($f in $files) {
-    ("{0}--- FILE: {1} ---{0}" -f [Environment]::NewLine, $f.FullName) | Out-File -FilePath $outTxt -Encoding UTF8 -Append
+    ("`n--- FILE: {0} ---`n" -f $f.FullName) | Out-File -FilePath $outTxt -Encoding UTF8 -Append
     Get-Content -LiteralPath $f.FullName -Raw | Out-File -FilePath $outTxt -Encoding UTF8 -Append
   }
   Write-Host ("[OK] Concat: {0}" -f $outTxt)
@@ -228,7 +232,7 @@ if (-not $NoCsv) {
     "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8", # [BDD]V2 Tests & Profils
     "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ", # [CONFIG] Usine à Tests
     "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU", # [TEMPLATE]V2 Kit de Traitement
-    "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests
+    "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests (Ancien, à vérifier)
   ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 
   # Chemins (surchargables via variables d'environnement RK_CREDS / RK_TOKEN)
@@ -241,13 +245,13 @@ if (-not $NoCsv) {
 
   $canRun = $true
   if (-not (Test-Path -LiteralPath $IndexJs)) { Write-Warning "[CSV] export-onglets-csv\index.js introuvable — étape CSV sautée."; $canRun = $false }
-  if (-not $nodeCmd)                          { Write-Warning "[CSV] Node.js (commande 'node') introuvable — étape CSV sautée.";   $canRun = $false }
+  if (-not $nodeCmd)                         { Write-Warning "[CSV] Node.js (commande 'node') introuvable — étape CSV sautée.";   $canRun = $false }
   if (-not (Test-Path -LiteralPath $credsPath)){ Write-Warning ("[CSV] credentials.json introuvable : {0} — étape CSV sautée." -f $credsPath); $canRun = $false }
   # NOTE: on NE bloque PAS si token.json est absent -> l'exporteur déclenchera le flow OAuth
   if (-not (Test-Path -LiteralPath $tokenPath)) {
     Write-Warning ("[CSV] token.json absent : {0} — un nouveau consentement OAuth sera demandé." -f $tokenPath)
   }
-  if (-not $Ids -or $Ids.Count -eq 0)         { Write-Warning "[CSV] Aucun ID de classeur fourni — étape CSV sautée.";            $canRun = $false }
+  if (-not $Ids -or $Ids.Count -eq 0)         { Write-Warning "[CSV] Aucun ID de classeur fourni — étape CSV sautée.";         $canRun = $false }
 
   if ($canRun) {
     # Construction des arguments Node
@@ -285,9 +289,9 @@ if (-not $NoCsv) {
 # ------------------------------------------------------------------------------------
 # Motifs succès CSV (regex). Surchargables via env RK_CSV_OK_REGEX (séparateur ;)
 $CSVSuccessPatterns = @(
-  '\[CSV\]\s*Export\s+termin',         # "[CSV] Export terminé"
-  'CSV déposés dans',                  # "CSV déposés dans : ..."
-  '^OK \[.+?\].+?\.csv$'               # "OK [BDD] ... -> ... .csv"
+  '\[CSV\]\s*Export\s+termin',        # "[CSV] Export terminé"
+  'CSV déposés dans',                 # "CSV déposés dans : ..."
+  '^OK \[.+?\].+?\.csv$'              # "OK [BDD] ... -> ... .csv"
 )
 if ($env:RK_CSV_OK_REGEX) {
   $CSVSuccessPatterns = $env:RK_CSV_OK_REGEX.Split(';') | Where-Object { $_ -and $_.Trim() }
@@ -328,7 +332,7 @@ function Clear-AlertIfCsvOk {
       Write-Host "✅ [ALERT] Export CSV confirmé — alerte supprimée : $alertFile"
     } else {
       Write-Host "⚠️ [ALERT] Export CSV non confirmé — alerte conservée : $alertFile"
-      if (-not $logPath) { Write-Host "    (indice : ligne 'Log: ...' introuvable dans l’alerte)" }
+      if (-not $logPath) { Write-Host "     (indice : ligne 'Log: ...' introuvable dans l’alerte)" }
     }
   } catch {
     Write-Warning ("[ALERT] Nettoyage auto a échoué : {0}" -f $_.Exception.Message)
