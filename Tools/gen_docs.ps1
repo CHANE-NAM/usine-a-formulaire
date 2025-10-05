@@ -244,6 +244,26 @@ if ($aiIndexLines.Count) { foreach ($l in $aiIndexLines) { [void]$sbBrief.Append
 [void]$sbBrief.AppendLine('> Lis le brief ci-dessus. Propose-moi les points d''attention et liste les documents complémentaires qu''il te faudrait (nom exact dans ce snapshot). Dis-moi dans quel ordre les lire. Puis pose tes questions de clarification.')
 [void]$sbBrief.AppendLine('')
 Write-FileUtf8 $DocsBrief $sbBrief.ToString()
+# === Bloc correctif pour générer manifest.json, brief.md, diff.md ===
+. (Join-Path $ScriptRoot 'snapshot_helpers.ps1')
+
+$manifestPath = Write-Manifest -SnapshotDir $SnapshotDir -RepoRoot $RepoRoot
+$briefPath = Write-BriefMd -SnapshotDir $SnapshotDir -Manifest $manifestPath
+
+# Diff avec le snapshot précédent
+$snapDirs = Get-ChildItem -LiteralPath $ExportDir -Directory | Where-Object { $_.Name -like 'SNAPSHOT_*' } | Sort-Object Name
+$prevSnap = $null
+foreach ($d in $snapDirs) {
+  if ($d.FullName -eq $SnapshotDir) { break }
+  $prevSnap = $d
+}
+if ($prevSnap) {
+  $prevManifest = Join-Path $prevSnap.FullName 'manifest.json'
+  if (Test-Path $prevManifest) {
+    $diffPath = Join-Path $SnapshotDir 'diff.md'
+    Write-DiffMd -PrevManifestPath $prevManifest -CurrManifestPath $manifestPath -OutPath $diffPath
+  }
+}
 
 Write-Host '[DOCS] Génération terminée : ' $DocsRoot
 exit 0
