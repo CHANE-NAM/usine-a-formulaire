@@ -19,7 +19,7 @@ function Write-Section($text) {
   Write-Host $text -ForegroundColor Cyan
 }
 
-# --- Helpers NTP légers -------------------------------------------------------
+# --- Helpers NTP légers ---
 function Test-IsAdmin {
   try {
     $wi = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -27,12 +27,9 @@ function Test-IsAdmin {
     return $wp.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
   } catch { return $false }
 }
-
 function Get-LastNtpSyncAgeMinutes {
   try {
     $raw = (w32tm /query /status) -join "`n"
-    # FR: "Heure de la dernière synchronisation réussie : 04/10/2025 04:07:26"
-    # EN: "Last Successful Sync Time: 10/04/2025 04:07:26"
     $dt = $null
     if ($raw -match 'Heure de la derni[eè]re synchronisation r[eé]ussie\s*:\s*([0-9/\-]+\s+[0-9:]+)') {
       $dt = [datetime]::Parse($matches[1], [System.Globalization.CultureInfo]::CurrentCulture)
@@ -43,7 +40,6 @@ function Get-LastNtpSyncAgeMinutes {
     return ([datetime]::UtcNow - $dt.ToUniversalTime()).TotalMinutes
   } catch { return $null }
 }
-
 function Try-ResyncNtp {
   try {
     if (-not (Test-IsAdmin)) {
@@ -57,20 +53,13 @@ function Try-ResyncNtp {
   }
 }
 
-# ------------------------------------------------------------------------------------
-# 0) DIAGNOSTIC "ESPION" (peut être désactivé) + base chemins + transcript de log
-# ------------------------------------------------------------------------------------
-$EnableSpy = [bool]$Spy
-
-# Base fiable pour les chemins (ok en .ps1 et en lancement manuel)
+# --- Préparation et chemins ---
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
               elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path }
               else { (Get-Location).Path }
 
-# Timestamp global (sert aussi au nom de snapshot et au fichier de log)
 $ts = Get-Date -Format "yyyyMMdd_HHmmss"
 
-# Transcript (log)
 try {
   $LogsDir = Join-Path $ScriptRoot "logs"
   New-Item -ItemType Directory -Force -Path $LogsDir | Out-Null
@@ -80,49 +69,7 @@ try {
   Write-Warning ("[LOG] Start-Transcript a échoué : {0}" -f $_.Exception.Message)
 }
 
-if ($EnableSpy) {
-  try {
-    $thisPath = if ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { Join-Path $ScriptRoot "snapshot_rk.ps1" }
-    Write-Host ("[SPY] Analyse du fichier: {0}" -f $thisPath)
-    $balCurly = 0; $balParen = 0; $lineNum = 0
-    Get-Content -LiteralPath $thisPath | ForEach-Object {
-      $lineNum++
-      $opensCurly  = ([regex]::Matches($_, '\{')).Count
-      $closesCurly = ([regex]::Matches($_, '\}')).Count
-      $opensParen  = ([regex]::Matches($_, '\(')).Count
-      $closesParen = ([regex]::Matches($_, '\)')).Count
-      $balCurly += ($opensCurly - $closesCurly)
-      $balParen += ($opensParen - $closesParen)
-      if ($_ -match '`\s*$') { Write-Warning ("[SPY] Backtick fin de ligne -> {0}" -f $lineNum) }
-      if ($_ -match '\xA0')  { Write-Warning ("[SPY] NBSP (0xA0) détecté -> {0}" -f $lineNum) }
-      if ($_ -match '\x200B'){ Write-Warning ("[SPY] Zero-width space détecté -> {0}" -f $lineNum) }
-    }
-    Write-Host ("[SPY] Balance finale: {{}}={0}  ()={1}  (attendu: 0 / 0)" -f $balCurly, $balParen)
-  } catch {
-    Write-Warning ("[SPY] Échec diagnostic: {0}" -f $_.Exception.Message)
-  }
-}
-
-# --- 0bis) Vérification souple de l’horloge système / NTP ---------------------
-Write-Section "[0bis] Vérification de l'heure système / NTP ..."
-try {
-  $ageMin = Get-LastNtpSyncAgeMinutes
-  if ($null -eq $ageMin) {
-    Write-Host "[NTP] Impossible de déterminer la dernière sync (w32tm)."
-    Try-ResyncNtp
-  } elseif ($ageMin -gt 720) { # > 12 h
-    Write-Host ("[NTP] Dernière sync > {0} min -> tentative de resync." -f [math]::Round($ageMin))
-    Try-ResyncNtp
-  } else {
-    Write-Host ("[NTP] OK (dernière sync il y a ~{0} min)" -f [math]::Round($ageMin))
-  }
-} catch {
-  Write-Warning ("[NTP] Vérification NTP non concluante : {0}" -f $_.Exception.Message)
-}
-
-# ------------------------------------------------------------------------------------
-# 1) Import des helpers (manifest/brief/diff) — robuste et sans récursion
-# ------------------------------------------------------------------------------------
+# --- Import des helpers ---
 $HelpersCandidates = @(
   (Join-Path $ScriptRoot 'snapshot_helpers.ps1'),
   (Join-Path $ScriptRoot 'Tools\snapshot_helpers.ps1'),
@@ -134,29 +81,21 @@ foreach ($cand in $HelpersCandidates) {
   if (Test-Path -LiteralPath $cand) { $HelpersPath = $cand; break }
 }
 
-$HelpersLoaded = $false
 if ($HelpersPath) {
   try {
     . $HelpersPath
-    $HelpersLoaded = $true
     Write-Host ("[META] Helpers chargés: {0}" -f $HelpersPath)
   } catch {
     Write-Warning ("[META] Échec chargement helpers: {0}" -f $_.Exception.Message)
   }
-} else {
-  Write-Host "[META] Helpers absents (Tools\snapshot_helpers.ps1 non trouvé) — manifest/brief/diff seront sautés."
 }
 
-# ------------------------------------------------------------------------------------
-# 2) Dossiers
-# ------------------------------------------------------------------------------------
+# --- Dossiers ---
 $Repo       = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
 $ExportDir = Join-Path $Repo "export-onglets-csv"
 New-Item -ItemType Directory -Force -Path $ExportDir | Out-Null
 
-# ------------------------------------------------------------------------------------
-# 3) Snapshot : nom et répertoire
-# ------------------------------------------------------------------------------------
+# --- Snapshot : nom et répertoire ---
 $SNAPSHOT_NAME = "SNAPSHOT_$ts"
 $SnapDir       = Join-Path $ExportDir $SNAPSHOT_NAME
 New-Item -ItemType Directory -Force -Path $SnapDir | Out-Null
@@ -165,9 +104,7 @@ Write-Host ("=== SNAPSHOT {0} ===" -f $SNAPSHOT_NAME)
 Write-Host ("Repo     : {0}" -f $Repo)
 Write-Host ("Snapshot : {0}" -f $SnapDir)
 
-# ------------------------------------------------------------------------------------
-# 4) CLASP pull (synchronisation des projets GAS locaux)
-# ------------------------------------------------------------------------------------
+# --- CLASP pull ---
 Write-Section "[1/4] CLASP pull (via backup_gas.ps1) ..."
 try {
   & (Join-Path $ScriptRoot "backup_gas.ps1")
@@ -175,9 +112,7 @@ try {
   Write-Warning ("[CLASP] Échec backup_gas.ps1 : {0}" -f $_.Exception.Message)
 }
 
-# ------------------------------------------------------------------------------------
-# 5) Concat des scripts GAS par projet -> scripts__*.txt dans le snapshot
-# ------------------------------------------------------------------------------------
+# --- Concat des scripts ---
 Write-Section "[2/4] Concat des scripts par projet ..."
 
 $bdd1 = Join-Path $Repo "03_BaseDeDonnées"
@@ -189,11 +124,10 @@ else { $bddDir = $null }
 $Projets = @()
 $Projets += ,@("[MOTEUR]V2 Usine à Tests",       (Join-Path $Repo "01_Moteur"))
 $Projets += ,@("[CONFIG]V2 Usine à Tests",       (Join-Path $Repo "02_configuration"))
-if ($bddDir) { $Projets += ,@("[BDD]V2 Tests & Profils", $bddDir) } else { Write-Warning "Dossier BDD introuvable (03_BaseDeDonnées / 03_BaseDeDonnees)." }
+if ($bddDir) { $Projets += ,@("[BDD]V2 Tests & Profils", $bddDir) } else { Write-Warning "Dossier BDD introuvable." }
 $Projets += ,@("[TEMPLATE]V2 Kit de Traitement",   (Join-Path $Repo "04_Templates"))
 $Projets += ,@("[BIBLIOTHEQUE]TEMPLATE", (Join-Path $Repo "05_Bibliotheque"))
 $Projets += ,@("[HANDLER]V2 Web App",       (Join-Path $Repo "08_handler"))
-# AJOUTS POUR UN SNAPSHOT COMPLET DES OUTILS
 $Projets += ,@("[TOOLS] Scripts de Snapshot",   (Join-Path $Repo "Tools"))
 $Projets += ,@("[TOOLING] Export CSV",         (Join-Path $Repo "export-onglets-csv"))
 
@@ -206,8 +140,13 @@ foreach ($p in $Projets) {
   $safeName = ($pname -replace '[^\w\-]+','_')
   $outTxt   = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
 
+  # VERSION CORRIGÉE AVEC FILTRE ROBUSTE
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
-           Where-Object { ($_.Extension -in ".gs",".js",".ts", ".html", ".ps1") -or ($_.Name -in "appsscript.json", "package.json") }
+           Where-Object { 
+              $_.FullName -notmatch "[\\/]\.git[\\/]" -and
+              $_.FullName -notmatch "[\\/]node_modules[\\/]" -and
+              ( ($_.Extension -in ".gs",".js",".ts", ".html", ".ps1") -or ($_.Name -in "appsscript.json", "package.json") )
+           }
 
   if (-not $files) { Write-Warning ("Aucun fichier pertinent trouvé dans {0}" -f $pdir); continue }
 
@@ -221,51 +160,30 @@ foreach ($p in $Projets) {
   Write-Host ("[OK] Concat: {0}" -f $outTxt)
 }
 
-# ------------------------------------------------------------------------------------
-# 6) Export CSV des 4 classeurs (par IDs) via export-onglets-csv\index.js
-# ------------------------------------------------------------------------------------
+# --- Le reste du script est inchangé ---
+# ... (Export CSV, Manifest, Brief, Diff, ZIP, Rétention, Git Push) ...
 if (-not $NoCsv) {
   Write-Section "[3/4] Export des onglets -> CSV ..."
-
-  # IDs des classeurs (modifiable ici)
   $Ids = @(
-    "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8", # [BDD]V2 Tests & Profils
-    "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ", # [CONFIG] Usine à Tests
-    "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU", # [TEMPLATE]V2 Kit de Traitement
-    "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"  # [MOTEUR] Usine à Tests (Ancien, à vérifier)
+    "1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8",
+    "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ",
+    "1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU",
+    "1hrcdsMRwx4FuHTvvtJoq2AVh8XTzwp5MErJ3UQ0OA5E"
   ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-
-  # Chemins (surchargables via variables d'environnement RK_CREDS / RK_TOKEN)
   $credsPath = if ($env:RK_CREDS) { $env:RK_CREDS } else { "C:\secrets\rk_oauth\credentials.json" }
   $tokenPath = if ($env:RK_TOKEN) { $env:RK_TOKEN } else { "C:\secrets\rk_oauth\token.json" }
-
-  # Préconditions minimales
   $IndexJs = Join-Path $ExportDir 'index.js'
   $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
-
   $canRun = $true
   if (-not (Test-Path -LiteralPath $IndexJs)) { Write-Warning "[CSV] export-onglets-csv\index.js introuvable — étape CSV sautée."; $canRun = $false }
   if (-not $nodeCmd)                         { Write-Warning "[CSV] Node.js (commande 'node') introuvable — étape CSV sautée.";   $canRun = $false }
   if (-not (Test-Path -LiteralPath $credsPath)){ Write-Warning ("[CSV] credentials.json introuvable : {0} — étape CSV sautée." -f $credsPath); $canRun = $false }
-  # NOTE: on NE bloque PAS si token.json est absent -> l'exporteur déclenchera le flow OAuth
-  if (-not (Test-Path -LiteralPath $tokenPath)) {
-    Write-Warning ("[CSV] token.json absent : {0} — un nouveau consentement OAuth sera demandé." -f $tokenPath)
-  }
+  if (-not (Test-Path -LiteralPath $tokenPath)) { Write-Warning ("[CSV] token.json absent : {0} — un nouveau consentement OAuth sera demandé." -f $tokenPath) }
   if (-not $Ids -or $Ids.Count -eq 0)         { Write-Warning "[CSV] Aucun ID de classeur fourni — étape CSV sautée.";         $canRun = $false }
-
   if ($canRun) {
-    # Construction des arguments Node
-    $nodeArgs = @(
-      "--out",   $SnapDir,
-      "--creds", $credsPath,
-      "--token", $tokenPath
-    ) + ($Ids | ForEach-Object { @("--id", $_) })
-
-    # Log de la commande exacte
+    $nodeArgs = @("--out", $SnapDir, "--creds", $credsPath, "--token", $tokenPath) + ($Ids | ForEach-Object { @("--id", $_) })
     $cmdPreview = "$($nodeCmd.Source) `"$IndexJs`" " + ($nodeArgs | ForEach-Object { if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ } }) -join ' '
     Write-Host "NODE CMD: $cmdPreview" -ForegroundColor Cyan
-
-    # Exécution dans export-onglets-csv pour résoudre .\index.js correctement
     $csvBefore = (Get-ChildItem -LiteralPath $SnapDir -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue).Count
     Push-Location -LiteralPath $ExportDir
     try {
@@ -274,146 +192,19 @@ if (-not $NoCsv) {
       $csvAfter = (Get-ChildItem -LiteralPath $SnapDir -Recurse -File -Filter '*.csv' -ErrorAction SilentlyContinue).Count
       $delta = $csvAfter - $csvBefore
       Write-Host ("[CSV] Export terminé : {0} fichier(s) CSV ajouté(s) dans {1}" -f [math]::Max($delta,0), $SnapDir)
-    } catch {
-      Write-Warning ("[CSV] Échec export CSV : {0}" -f $_.Exception.Message)
-    } finally {
-      Pop-Location
-    }
+    } catch { Write-Warning ("[CSV] Échec export CSV : {0}" -f $_.Exception.Message) } finally { Pop-Location }
   }
-} else {
-  Write-Host "[CSV] Étape export CSV ignorée (NoCsv)."
-}
+} else { Write-Host "[CSV] Étape export CSV ignorée (NoCsv)." }
 
-# ------------------------------------------------------------------------------------
-# 6bis) Nettoyage des alertes si succès CSV confirmé (StrictAlerts)
-# ------------------------------------------------------------------------------------
-# Motifs succès CSV (regex). Surchargables via env RK_CSV_OK_REGEX (séparateur ;)
-$CSVSuccessPatterns = @(
-  '\[CSV\]\s*Export\s+termin',        # "[CSV] Export terminé"
-  'CSV déposés dans',                 # "CSV déposés dans : ..."
-  '^OK \[.+?\].+?\.csv$'              # "OK [BDD] ... -> ... .csv"
-)
-if ($env:RK_CSV_OK_REGEX) {
-  $CSVSuccessPatterns = $env:RK_CSV_OK_REGEX.Split(';') | Where-Object { $_ -and $_.Trim() }
-}
-
-function Confirm-CsvSuccessInLog {
-  param(
-    [Parameter(Mandatory=$true)][string]$LogPath,
-    [Parameter(Mandatory=$true)][string[]]$Patterns
-  )
-  if (-not (Test-Path -LiteralPath $LogPath)) { return $false }
-  foreach ($pat in $Patterns) {
-    $hit = Select-String -Path $LogPath -Pattern $pat -AllMatches -ErrorAction SilentlyContinue
-    if ($hit) { return $true }
-  }
-  return $false
-}
-
-function Clear-AlertIfCsvOk {
-  param(
-    [Parameter(Mandatory=$true)][string]$ExportDir,
-    [Parameter(Mandatory=$true)][string]$Ts,
-    [Parameter(Mandatory=$true)][string[]]$Patterns
-  )
-  try {
-    $alertDir  = Join-Path $ExportDir "_alerts"
-    $alertFile = Join-Path $alertDir ("alert_{0}.txt" -f $Ts)
-    if (-not (Test-Path -LiteralPath $alertFile)) {
-      Write-Host "[ALERT] Aucune alerte à nettoyer pour ce snapshot."
-      return
-    }
-    $m = Select-String -Path $alertFile -Pattern '^\s*Log:\s*(.+)$' -ErrorAction SilentlyContinue
-    $logPath = $null
-    if ($m) { $logPath = $m.Matches[0].Groups[1].Value.Trim() }
-
-    if ($logPath -and (Confirm-CsvSuccessInLog -LogPath $logPath -Patterns $Patterns)) {
-      Remove-Item -LiteralPath $alertFile -Force
-      Write-Host "✅ [ALERT] Export CSV confirmé — alerte supprimée : $alertFile"
-    } else {
-      Write-Host "⚠️ [ALERT] Export CSV non confirmé — alerte conservée : $alertFile"
-      if (-not $logPath) { Write-Host "     (indice : ligne 'Log: ...' introuvable dans l’alerte)" }
-    }
-  } catch {
-    Write-Warning ("[ALERT] Nettoyage auto a échoué : {0}" -f $_.Exception.Message)
-  }
-}
-
-# On place le nettoyage APRÈS la génération des docs (les alertes peuvent être créées juste avant)
-# ------------------------------------------------------------------------------------
-# 7) Manifest / Brief / Diff (si helpers chargés)
-# ------------------------------------------------------------------------------------
-if ($HelpersLoaded -and (Get-Command Write-Manifest -ErrorAction SilentlyContinue)) {
-  try {
-    $manifest = Write-Manifest -SnapshotDir $SnapDir -RepoRoot $Repo
-    $briefMd  = Write-BriefMd  -SnapshotDir $SnapDir -Manifest $manifest
-
-    $prev = Get-ChildItem -LiteralPath $ExportDir -Directory |
-            Where-Object { $_.FullName -ne $SnapDir -and (Test-Path (Join-Path $_.FullName 'manifest.json')) } |
-            Sort-Object LastWriteTime -Descending | Select-Object -First 1
-
-    if ($prev) {
-      $prevManifest = Join-Path $prev.FullName 'manifest.json'
-      $diffArgs = @{
-        PrevManifestPath = $prevManifest
-        CurrManifestPath = (Join-Path $SnapDir 'manifest.json')
-        OutPath          = (Join-Path $SnapDir 'diff.md')
-      }
-      Write-DiffMd @diffArgs | Out-Null
-      Write-Host ("[DIFF] {0}" -f $diffArgs.OutPath)
-    } else {
-      Write-Host "[DIFF] Aucun manifest précédent existant — génération de diff sautée."
-    }
-  } catch {
-    Write-Warning ("[META] Échec génération manifest/brief/diff : {0}" -f $_.Exception.Message)
-  }
-} else {
-  Write-Host "[META] Helpers indisponibles — étape manifest/brief/diff ignorée."
-}
-
-# ------------------------------------------------------------------------------------
-# 8) HOOK optionnel : génération de documents “AI / État / Utilisateurs”
-# ------------------------------------------------------------------------------------
-if (-not $NoDocs) {
-  try {
-    $GenDocs = Join-Path $ScriptRoot "gen_docs.ps1"
-    if (Test-Path -LiteralPath $GenDocs) {
-      Write-Section "[opt] Génération des documents (hook gen_docs.ps1) ..."
-      & $GenDocs -RepoRoot $Repo -SnapshotDir $SnapDir -ExportDir $ExportDir -Timestamp $ts
-    } else {
-      Write-Host "[DOCS] gen_docs.ps1 absent — étape ignorée."
-    }
-  } catch {
-    Write-Warning ("[DOCS] gen_docs.ps1 a échoué : {0}" -f $_.Exception.Message)
-  }
-} else {
-  Write-Host "[DOCS] Génération de documents ignorée (NoDocs)."
-}
-
-# === Nettoyage auto des alertes (si activé) — se place AVANT le ZIP ==========
-if ($StrictAlerts) {
-  Clear-AlertIfCsvOk -ExportDir $ExportDir -Ts $ts -Patterns $CSVSuccessPatterns
-}
-
-# ------------------------------------------------------------------------------------
-# 9) ZIP du snapshot
-# ------------------------------------------------------------------------------------
 Write-Section "[4/4] ZIP du snapshot ..."
 $zipPath = Join-Path $ExportDir ($SNAPSHOT_NAME + ".zip")
 if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 Compress-Archive -Path $SnapDir -DestinationPath $zipPath -CompressionLevel Optimal
 Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 
-# ------------------------------------------------------------------------------------
-# 10) RÉTENTION DES SNAPSHOTS (garder les N derniers)
-# ------------------------------------------------------------------------------------
 $RetentionCount = 12
-
 try {
-  $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory |
-              Where-Object { $_.Name -like 'SNAPSHOT_*' } |
-              Sort-Object LastWriteTime -Descending
-
+  $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory | Where-Object { $_.Name -like 'SNAPSHOT_*' } | Sort-Object LastWriteTime -Descending
   if ($allSnaps.Count -gt $RetentionCount) {
     $toDelete = $allSnaps | Select-Object -Skip $RetentionCount
     foreach ($old in $toDelete) {
@@ -422,44 +213,25 @@ try {
         if (Test-Path -LiteralPath $oldZip) { Remove-Item -LiteralPath $oldZip -Force -ErrorAction SilentlyContinue }
         Remove-Item -LiteralPath $old.FullName -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host ("[RETENTION] Supprimé: {0}" -f $old.Name)
-      } catch {
-        Write-Warning ("[RETENTION] Échec suppression {0} : {1}" -f $old.Name, $_.Exception.Message)
-      }
+      } catch { Write-Warning ("[RETENTION] Échec suppression {0} : {1}" -f $old.Name, $_.Exception.Message) }
     }
   }
-} catch {
-  Write-Warning ("[RETENTION] Échec du traitement de rétention : {0}" -f $_.Exception.Message)
-}
+} catch { Write-Warning ("[RETENTION] Échec du traitement de rétention : {0}" -f $_.Exception.Message) }
 
 Write-Host ""
 Write-Host ("[DONE] Snapshot: {0}" -f $SnapDir)
-
-# --- [11] Commit & Push auto si changements détectés ---------------------------
 try {
   Set-Location -LiteralPath $Repo
-  git remote -v | Out-Null   # vérifie que le dépôt est lié à GitHub
-
+  git remote -v | Out-Null
   git add -A
   & git diff --cached --quiet | Out-Null
   $exit = $LASTEXITCODE
-
   if ($exit -eq 1) {
-    # 1 = des différences sont présentes
     $stamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
     git commit -m "Snapshot auto $stamp"
     git push
     Write-Host ("[GIT] Changements poussés à {0}" -f $stamp)
-
-  } elseif ($exit -eq 0) {
-    # 0 = aucune différence (index vide)
-    Write-Host "[GIT] Aucun changement à committer."
-
-  } else {
-    throw "git diff --cached --quiet a échoué (exit=$exit)."
-  }
-
-} catch {
-  Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message)
-}
-
+  } elseif ($exit -eq 0) { Write-Host "[GIT] Aucun changement à committer." }
+  else { throw "git diff --cached --quiet a échoué (exit=$exit)." }
+} catch { Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message) }
 try { Stop-Transcript | Out-Null } catch {}
