@@ -117,10 +117,10 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibleNorm);
     resultats = { ...resultats, ...profilEtReco };
     const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
-    const infosProfilComplet = profilsMap[resulta
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+    const infosProfilComplet = profilsMap[resultats.profilFinal];
 
-:', `"${resultats.profilFinal}"`);
+    // --- ESPIONS POUR LE BUG DE CORRESPONDANCE ---
+    _log(DEBUG_DATA_LOADING, 'PROFIL RECHERCHÃ‰ :', `"${resultats.profilFinal}"`);
     _log(DEBUG_DATA_LOADING, 'PROFILS DISPONIBLES :', Object.keys(profilsMap));
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
     // --- FIN DES ESPIONS ---
@@ -353,6 +353,189 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\RetraitementUI.html ---
+
+ <!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: 'Roboto', Arial, sans-serif; padding: 0 20px; background-color: #f8f9fa; color: #3c4043; }
+      h3 { font-size: 20px; font-weight: 500; color: #1a73e8; border-bottom: 1px solid #dadce0; padding-bottom: 8px; margin-top: 24px; }
+      .form-group { margin-bottom: 16px; }
+      label { font-size: 12px; font-weight: 700; color: #5f6368; display: block; margin-bottom: 4px; }
+      input[type="text"], input[type="email"], select { width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+      input[type="text"][readonly] { background-color: #f1f3f4; color: #5f6368; }
+      .button-group { margin-top: 24px; display: flex; justify-content: space-between; }
+      button { padding: 10px 16px; border: none; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; }
+      #btn-lancer { background-color: #1a73e8; color: white; }
+      #btn-annuler { background-color: #e8eaed; color: #5f6368; }
+      #status { margin-top: 16px; font-size: 12px; color: #5f6368; padding: 8px; background-color: #e8f0fe; border-radius: 4px; text-align: center; display: none; }
+      #status.error { background-color: #fce8e6; color: #a50e0e; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <input type="hidden" id="row-index-data" value="<?= ligneActive ?>">
+    
+    <h3>Retraitement de RÃ©ponse</h3>
+
+    <div id="info-section">
+      <div class="form-group"> <label for="nom">NOM DU RÃ‰PONDANT</label> <input type="text" id="nom" name="nom_repondant" readonly> </div>
+      <div class="form-group"> <label for="email">E-MAIL DU RÃ‰PONDANT</label> <input type="text" id="email" name="email_repondant" readonly> </div>
+      <div class="form-group"> <label for="langue-origine">LANGUE D'ORIGINE</label> <input type="text" id="langue-origine" name="langue_origine" readonly> </div>
+    </div>
+    
+    <hr>
+    
+    <h3>Options</h3>
+    <div id="options-section">
+        <div class="form-group">
+          <label for="langue-cible">FORCER LA LANGUE DE L'E-MAIL</label>
+          <select id="langue-cible" name="langue_cible">
+            <option value="FR">FranÃ§ais (FR)</option> <option value="EN">English (EN)</option> <option value="ES">EspaÃ±ol (ES)</option> <option value="DE">Deutsch (DE)</option>
+          </select>
+        </div>
+        <div class="form-group">
+         <label for="niveau-resultat">FORCER LE NIVEAU DE RÃ‰SULTAT</label>
+         <select id="niveau-resultat" name="niveau_resultat">
+           <option value="">Automatique (par dÃ©faut)</option>
+           <option value="N1">Niveau 1</option>
+           <option value="N2">Niveau 2</option>
+           <option value="N3">Niveau 3</option>
+         </select>
+       </div>
+       
+       <div class="form-group">
+         <label for="alias-expediteur">ALIAS D'EXPÃ‰DITION (VIDE = email par dÃ©faut)</label>
+         <input type="email" id="alias-expediteur" name="alias_expediteur">
+       </div>
+       </div>
+    
+    <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
+    <div id="destinataires-section">
+      <div class="form-group">
+        <label style="display: flex; align-items: center; font-weight: normal;"> <input type="checkbox" id="check-repondant" name="check_repondant" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au RÃ©pondant </label>
+        <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-formateur" name="check_formateur" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Formateur </label>
+        <label style="display: flex; align-items: center; font-weight: normal; margin-top: 8px;"> <input type="checkbox" id="check-patron" name="check_patron" style="margin-right: 8px; transform: scale(1.2);"> Envoyer au Patron </label>
+      </div>
+      
+      <div id="formateur-email-group" class="form-group hidden">
+        <label for="email-formateur">E-MAIL DU FORMATEUR</label>
+        <input type="email" id="email-formateur" name="email_formateur" placeholder="adresse.formateur@example.com">
+      </div>
+      
+      <div id="patron-email-group" class="form-group hidden">
+        <label for="email-patron">E-MAIL DU PATRON</label>
+        <input type="email" id="email-patron" name="email_patron" placeholder="adresse.patron@example.com">
+      </div>
+
+      <div class="form-group">
+          <label for="email-test">AJOUTER UNE ADRESSE DE TEST</label>
+          <input type="email" id="email-test" name="email_test" placeholder="adresse.test@example.com">
+      </div>
+    </div>
+
+    <div class="button-group"> <button id="btn-annuler">Annuler</button> <button id="btn-lancer" disabled>ðŸš€ Lancer le Retraitement</button> </div>
+    <div id="status">Chargement des donnÃ©es...</div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const rowIndex = document.getElementById('row-index-data').value;
+        const statusDiv = document.getElementById('status');
+        const lancerBtn = document.getElementById('btn-lancer');
+        
+        const checkFormateur = document.getElementById('check-formateur');
+        const formateurEmailGroup = document.getElementById('formateur-email-group');
+        const checkPatron = document.getElementById('check-patron');
+        const patronEmailGroup = document.getElementById('patron-email-group');
+
+        function onDataReceived(data) {
+          if (!data || typeof data !== 'object') {
+            onFailure({ message: "Les donnÃ©es reÃ§ues du serveur sont invalides ou vides. VÃ©rifiez que la ligne " + rowIndex + " contient des donnÃ©es valides." });
+            return;
+          }
+          
+          document.getElementById('nom').value = data.nomRepondant || 'Non trouvÃ©';
+          document.getElementById('email').value = data.emailRepondant || 'Non trouvÃ©';
+          document.getElementById('langue-origine').value = data.langueOrigine || 'Non dÃ©tectÃ©e';
+          document.getElementById('langue-cible').value = data.langueOrigine || 'FR';
+          document.getElementById('alias-expediteur').value = data.emailAlias || '';
+          
+          document.getElementById('check-repondant').checked = data.repondantActif;
+          
+          const isFormateurActive = data.formateurActif === true;
+          checkFormateur.checked = isFormateurActive;
+          document.getElementById('email-formateur').value = data.formateurEmail || '';
+          formateurEmailGroup.classList.toggle('hidden', !isFormateurActive);
+          
+          const isPatronActive = data.patronActif === true;
+          checkPatron.checked = isPatronActive;
+          document.getElementById('email-patron').value = data.patronEmail || '';
+          patronEmailGroup.classList.toggle('hidden', !isPatronActive);
+
+          statusDiv.style.display = 'none';
+          statusDiv.classList.remove('error');
+          lancerBtn.disabled = false;
+        }
+
+        function onLaunchSuccess(message) {
+          statusDiv.textContent = message;
+          statusDiv.style.display = 'block';
+          statusDiv.classList.remove('error');
+          setTimeout(() => google.script.host.close(), 3000); 
+        }
+
+        function onFailure(error) {
+          statusDiv.textContent = "Erreur : " + (error.message || "Une erreur inconnue est survenue.");
+          statusDiv.style.display = 'block';
+          statusDiv.classList.add('error');
+          lancerBtn.disabled = false;
+        }
+
+        checkFormateur.addEventListener('change', function() {
+          formateurEmailGroup.classList.toggle('hidden', !this.checked);
+        });
+        
+        checkPatron.addEventListener('change', function() {
+          patronEmailGroup.classList.toggle('hidden', !this.checked);
+        });
+        
+        document.getElementById('btn-lancer').addEventListener('click', function() {
+          lancerBtn.disabled = true;
+          statusDiv.textContent = 'Traitement en cours...';
+          statusDiv.style.display = 'block';
+          statusDiv.classList.remove('error');
+          
+          const options = {
+            rowIndex: rowIndex,
+            langue: document.getElementById('langue-cible').value,
+            niveau: document.getElementById('niveau-resultat').value,
+            alias: document.getElementById('alias-expediteur').value.trim(),
+            destinataires: {
+              repondant: document.getElementById('check-repondant').checked,
+              formateur: document.getElementById('check-formateur').checked,
+              formateurEmail: document.getElementById('email-formateur').value.trim(),
+              patron: document.getElementById('check-patron').checked,
+              patronEmail: document.getElementById('email-patron').value.trim(),
+              test: document.getElementById('email-test').value.trim()
+            }
+          };
+          google.script.run.withSuccessHandler(onLaunchSuccess).withFailureHandler(onFailure).lancerRetraitementDepuisUI(options);
+        });
+
+        document.getElementById('btn-annuler').addEventListener('click', () => google.script.host.close());
+
+        statusDiv.style.display = 'block';
+        google.script.run.withSuccessHandler(onDataReceived).withFailureHandler(onFailure).getDonneesPourRetraitement(rowIndex);
+      });
+    </script>
+  </body>
+</html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+
 // =================================================================================
 // == FICHIER : Menu.gs
 // == VERSION : 2.6  (onInstall + onOpen unique, titre harmonisÃ©)
@@ -1161,9 +1344,9 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
     const header0 = headersRo
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
 
-s('key'));
+des('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1474,6 +1657,50 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <style>
+      body { padding: 20px; font-family: Arial, sans-serif; text-align: center; }
+      input { width: 100%; margin-bottom: 15px; }
+      button { margin-left: 10px; }
+    </style>
+  </head>
+  <body>
+    <p>Entrez le numÃ©ro de la ligne Ã  retraiter :</p>
+    <input type="text" id="row-input" autofocus>
+    <div>
+      <button class="action" onclick="submitRow()">OK</button>
+      <button onclick="google.script.host.close()">Annuler</button>
+    </div>
+
+    <script>
+      // Permet d'utiliser la touche "EntrÃ©e"
+      document.getElementById('row-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitRow();
+        }
+      });
+
+      function submitRow() {
+        const rowNum = document.getElementById('row-input').value;
+        if (!isNaN(rowNum) && rowNum.trim() !== '' && parseInt(rowNum, 10) > 1) {
+          // Appelle la fonction cÃ´tÃ© serveur pour ouvrir la barre latÃ©rale
+          google.script.run.ouvrirSidebarPourLigne(parseInt(rowNum, 10));
+          google.script.host.close(); // Ferme ce dialogue
+        } else {
+          alert('Veuillez entrer un numÃ©ro de ligne valide (supÃ©rieur Ã  1).');
+        }
+      }
+    </script>
+  </body>
+</html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\GestionTriggers.js ---
 
 // =================================================================================
 // == FICHIER : GestionTriggers.gs
@@ -2009,10 +2236,10 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  const K1 = envVals[base+1], K2 = envVals[base+2];
 Â  Â  const R1 = envVals[base+3], R2 = envVals[base+4];
 
-Â  Â  const hasK = (K1!=null && K2!
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
-
-2) : null;
+Â  Â  const hasK = (K1!=null && K2!=null);
+Â  Â  const hasR = (R1!=null && R2!=null);
+Â  Â  const k = hasK ? avg(K1, K2) : null;
+Â  Â  const r = hasR ? avg(R1, R2) : null;
 Â  Â  if (k!=null) { sumK += k; filledK++; }
 Â  Â  if (r!=null) { sumR += r; filledR++; }
 
@@ -2070,6 +2297,9 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Resilience.js
