@@ -55,29 +55,36 @@
       <div id="status"></div>
     </div>
 
-    <script>
-      // On intercepte la soumission du formulaire
-      document.getElementById('identificationForm').addEventListener('submit', function(e) {
-        e.preventDefault(); // Empêche la page de se recharger
-        
-        const button = document.getElementById('submitButton');
-        const statusDiv = document.getElementById('status');
-        button.disabled = true;
-        statusDiv.innerText = 'Vérification en cours...';
-        
-        // On appelle notre fonction côté serveur (dans Code.gs) en lui passant les données du formulaire
-        google.script.run
-          .withSuccessHandler(function(responseHtml) {
-            // Si le serveur répond avec succès, on remplace le contenu de la page par la réponse
-            document.body.innerHTML = responseHtml;
-          })
-          .withFailureHandler(function(error) {
-            // En cas d'erreur, on l'affiche et on réactive le bouton
-            statusDiv.innerHTML = '<strong>Erreur :</strong> ' + error.message;
-            button.disabled = false;
-          })
-          .processFormSubmission(this); // 'this' représente l'objet formulaire
-      });
-    </script>
+<script>
+  // On intercepte la soumission du formulaire
+  document.getElementById('identificationForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Empêche la page de se recharger
+    
+    const button = document.getElementById('submitButton');
+    const statusDiv = document.getElementById('status');
+    button.disabled = true;
+    statusDiv.innerText = 'Vérification en cours...';
+    
+    // On appelle notre fonction côté serveur (dans Code.gs) en lui passant les données du formulaire
+    google.script.run
+      .withSuccessHandler(function(response) {
+        // NOUVELLE LOGIQUE : on vérifie la réponse du serveur
+        if (response && response.redirectUrl) {
+          // Si le serveur a renvoyé un objet avec une URL de redirection, on l'exécute.
+          // window.top.location.href est utilisé pour s'assurer que toute la page est redirigée.
+          window.top.location.href = response.redirectUrl;
+        } else {
+          // Comportement de secours : si le serveur renvoie du HTML, on l'affiche comme avant.
+          document.body.innerHTML = response;
+        }
+      })
+      .withFailureHandler(function(error) {
+        // En cas d'erreur, on l'affiche et on réactive le bouton
+        statusDiv.innerHTML = '<strong>Erreur :</strong> ' + error.message;
+        button.disabled = false;
+      })
+      .processFormSubmission(this); // 'this' représente l'objet formulaire
+  });
+</script>
   </body>
 </html>

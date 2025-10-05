@@ -187,33 +187,18 @@ function processFormSubmission(formObject) {
       detailsPourOrders // On ajoute les détails spécifiques
     ]);
 
-    // --- ÉTAPE 3 : Récupérer l'URL du formulaire de test (Form 2) ---
-    const formId = config.ID_Formulaire_Cible;
-    
-    if (!formId) {
-      return `<h1>Service Indisponible</h1><p>Le formulaire pour ce test n'est pas encore configuré.</p>`;
+// --- ÉTAPE 3 : Récupérer l'URL du formulaire de test public depuis la configuration ---
+    const testFormUrl = config.Lien_Formulaire_Public;
+    if (!testFormUrl) {
+      throw new Error("L'URL du formulaire de test (Lien_Formulaire_Public) n'est pas configurée pour cette ligne.");
     }
-    
-    const formUrl = `https://docs.google.com/forms/d/e/${formId}/viewform`;
 
-    // --- ÉTAPE 4 : Renvoyer une page de succès avec le lien vers le test ---
-    const participantName = formObject.nom || "Participant";
-    return `
-      <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding-top: 50px; }
-        .container { max-width: 600px; margin: auto; }
-        a.button { 
-          background-color: #4CAF50; color: white; padding: 15px 30px; 
-          text-decoration: none; font-size: 18px; border-radius: 5px;
-          display: inline-block; margin-top: 20px;
-        }
-      </style>
-      <div class="container">
-        <h1>Merci, ${participantName} !</h1>
-        <p>Vos informations ont bien été enregistrées. Vous pouvez maintenant commencer le test.</p>
-        <a href="${formUrl}" target="_self" class="button">Commencer le test</a>
-      </div>
-    `;
+    // --- ÉTAPE 4 : Renvoyer un objet de redirection au client ---
+    // Le code côté navigateur (dans Index.html) interprétera cet objet 
+    // et effectuera la redirection lui-même.
+    return { redirectUrl: testFormUrl };
+    
+
 
   } catch (error) {
     Logger.log("Erreur critique dans processFormSubmission: " + error.toString());

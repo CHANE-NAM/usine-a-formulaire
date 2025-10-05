@@ -15,7 +15,7 @@
       <h1>Identification</h1>
       <h2><?= titreTest ?></h2>
 
-      <form method="POST">
+      <form id="paymentForm">
         <div style="margin-bottom: 20px;">
           <label for="nom">Nom :</label><br>
           <input type="text" id="nom" name="nom" required style="width: 80%; padding: 8px; margin-top: 5px;">
@@ -25,10 +25,40 @@
           <input type="email" id="email" name="email" required style="width: 80%; padding: 8px; margin-top: 5px;">
         </div>
         <button type="submit" style="padding: 10px 30px; font-size: 1.1em;">Continuer</button>
-      <input type="hidden" name="encryptedCode" value="<?= encryptedCode ?>">
-      <input type="hidden" name="formType" value="paiement">
-    
-    </form>
+        <input type="hidden" name="encryptedCode" value="<?= encryptedCode ?>">
+        <input type="hidden" name="formType" value="paiement">
+      </form>
+      
+      <div id="status" style="margin-top: 20px; color: #555; font-style: italic;"></div>
     </div>
+
+    <script>
+      document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        e.preventDefault(); // Empêche la soumission standard
+        
+        const button = document.querySelector('button[type="submit"]');
+        const statusDiv = document.getElementById('status');
+        
+        button.disabled = true;
+        statusDiv.innerText = 'Vérification en cours...';
+
+        google.script.run
+          .withSuccessHandler(function(response) {
+            if (response && response.redirectUrl) {
+              // Redirection si le serveur nous donne l'URL
+              window.top.location.href = response.redirectUrl;
+            } else {
+              // Comportement de secours
+              document.body.innerHTML = response;
+            }
+          })
+          .withFailureHandler(function(error) {
+            // En cas d'erreur, on affiche le message et on réactive le bouton
+            statusDiv.innerHTML = '<strong>Erreur :</strong> ' + error.message;
+            button.disabled = false;
+          })
+          .processFormSubmission(this); // 'this' représente l'objet formulaire
+      });
+    </script>
   </body>
 </html>

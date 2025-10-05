@@ -14,7 +14,7 @@
     <div class="container">
       <h1>Accès Entreprise</h1>
       <h2><?= titreTest ?></h2>
-      <form method="POST">
+      <form id="b2bForm">
         <div style="margin-bottom: 20px;">
           <label for="nom">Nom :</label><br>
           <input type="text" id="nom" name="nom" required style="width: 80%; padding: 8px; margin-top: 5px;">
@@ -32,5 +32,37 @@
         <input type="hidden" name="formType" value="b2b">
       </form>
     </div>
+   <div id="status" style="margin-top: 20px; color: #555; font-style: italic;"></div>
+<script>
+  document.getElementById('b2bForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Empêche la soumission standard
+    
+    // On trouve le bouton et le div de statut
+    const button = document.querySelector('button[type="submit"]');
+    const statusDiv = document.getElementById('status');
+    
+    // On désactive le bouton et on affiche un message
+    button.disabled = true;
+    statusDiv.innerText = 'Vérification en cours...';
+
+    // On exécute la même logique que pour Index.html
+    google.script.run
+      .withSuccessHandler(function(response) {
+        if (response && response.redirectUrl) {
+          // Redirection si le serveur nous donne l'URL
+          window.top.location.href = response.redirectUrl;
+        } else {
+          // Comportement de secours au cas où le serveur renverrait du HTML
+          document.body.innerHTML = response;
+        }
+      })
+      .withFailureHandler(function(error) {
+        // En cas d'erreur, on affiche le message et on réactive le bouton
+        statusDiv.innerHTML = '<strong>Erreur :</strong> ' + error.message;
+        button.disabled = false;
+      })
+      .processFormSubmission(this); // 'this' représente l'objet formulaire
+  });
+</script> 
   </body>
 </html>
