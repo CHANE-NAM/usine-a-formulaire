@@ -130,7 +130,7 @@ finally {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1 ---
 
 # Tools\snapshot_rk.ps1
-# === Snapshot complet : GAS + CSV + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
+# === Snapshot complet : GAS + CSV + DOCS + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
 [CmdletBinding()]
 param(
   [switch]$NoDocs,       # ne pas appeler gen_docs.ps1
@@ -151,38 +151,9 @@ function Write-Section($text) {
 }
 
 # --- Helpers NTP légers ---
-function Test-IsAdmin {
-  try {
-    $wi = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $wp = New-Object Security.Principal.WindowsPrincipal($wi)
-    return $wp.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-  } catch { return $false }
-}
-function Get-LastNtpSyncAgeMinutes {
-  try {
-    $raw = (w32tm /query /status) -join "`n"
-    $dt = $null
-    if ($raw -match 'Heure de la derni[eè]re synchronisation r[eé]ussie\s*:\s*([0-9/\-]+\s+[0-9:]+)') {
-      $dt = [datetime]::Parse($matches[1], [System.Globalization.CultureInfo]::CurrentCulture)
-    } elseif ($raw -match 'Last Successful Sync Time\s*:\s*([0-9/\-]+\s+[0-9:]+)') {
-      $dt = [datetime]::Parse($matches[1], [System.Globalization.CultureInfo]::InvariantCulture)
-    }
-    if ($null -eq $dt) { return $null }
-    return ([datetime]::UtcNow - $dt.ToUniversalTime()).TotalMinutes
-  } catch { return $null }
-}
-function Try-ResyncNtp {
-  try {
-    if (-not (Test-IsAdmin)) {
-      Write-Host "[NTP] Pas de privilèges administrateur -> resync ignorée (ce n'est pas bloquant)."
-      return
-    }
-    w32tm /resync | Out-Null
-    Write-Host "[NTP] Resynchronisation demandée."
-  } catch {
-    Write-Warning ("[NTP] Resynchronisation a échoué : {0}" -f $_.Exception.Message)
-  }
-}
+function Test-IsAdmin { ... }
+function Get-LastNtpSyncAgeMinutes { ... }
+function Try-ResyncNtp { ... }
 
 # --- Préparation et chemins ---
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot }
@@ -223,7 +194,7 @@ if ($HelpersPath) {
 
 # --- Dossiers ---
 $Repo       = (Resolve-Path (Join-Path $ScriptRoot "..")).Path
-$ExportDir = Join-Path $Repo "export-onglets-csv"
+$ExportDir  = Join-Path $Repo "export-onglets-csv"
 New-Item -ItemType Directory -Force -Path $ExportDir | Out-Null
 
 # --- Snapshot : nom et répertoire ---
@@ -271,7 +242,6 @@ foreach ($p in $Projets) {
   $safeName = ($pname -replace '[^\w\-]+','_')
   $outTxt   = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
 
-  # VERSION CORRIGÉE AVEC FILTRE ROBUSTE
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
            Where-Object { 
               $_.FullName -notmatch "[\\/]\.git[\\/]" -and
@@ -291,8 +261,7 @@ foreach ($p in $Projets) {
   Write-Host ("[OK] Concat: {0}" -f $outTxt)
 }
 
-# --- Le reste du script est inchangé ---
-# ... (Export CSV, Manifest, Brief, Diff, ZIP, Rétention, Git Push) ...
+# --- Export CSV ---
 if (-not $NoCsv) {
   Write-Section "[3/4] Export des onglets -> CSV ..."
   $Ids = @(
@@ -327,12 +296,29 @@ if (-not $NoCsv) {
   }
 } else { Write-Host "[CSV] Étape export CSV ignorée (NoCsv)." }
 
+# --- Génération des docs (avant le ZIP !) ---
+if (-not $NoDocs) {
+  Write-Host "[DOCS] Génération des fichiers manifest/brief/diff..."
+  try {
+    & (Join-Path $ScriptRoot "gen_docs.ps1") `
+      -RepoRoot $Repo `
+      -SnapshotDir $SnapDir `
+      -ExportDir $ExportDir `
+      -Timestamp $ts
+    Write-Host "[DOCS] Génération manifest/brief/diff : OK"
+  } catch {
+    Write-Warning ("[DOCS] Erreur lors de la génération des fichiers docs : {0}" -f $_.Exception.Message)
+  }
+}
+
+# --- ZIP du snapshot ---
 Write-Section "[4/4] ZIP du snapshot ..."
 $zipPath = Join-Path $ExportDir ($SNAPSHOT_NAME + ".zip")
 if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 Compress-Archive -Path $SnapDir -DestinationPath $zipPath -CompressionLevel Optimal
 Write-Host ("[ZIP] Archive: {0}" -f $zipPath)
 
+# --- Rétention ---
 $RetentionCount = 12
 try {
   $allSnaps = Get-ChildItem -LiteralPath $ExportDir -Directory | Where-Object { $_.Name -like 'SNAPSHOT_*' } | Sort-Object LastWriteTime -Descending
@@ -366,6 +352,7 @@ try {
   else { throw "git diff --cached --quiet a échoué (exit=$exit)." }
 } catch { Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message) }
 try { Stop-Transcript | Out-Null } catch {}
+
 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\fix_nbsp.ps1 ---
 
@@ -1115,6 +1102,26 @@ if ($aiIndexLines.Count) { foreach ($l in $aiIndexLines) { [void]$sbBrief.Append
 [void]$sbBrief.AppendLine('> Lis le brief ci-dessus. Propose-moi les points d''attention et liste les documents complémentaires qu''il te faudrait (nom exact dans ce snapshot). Dis-moi dans quel ordre les lire. Puis pose tes questions de clarification.')
 [void]$sbBrief.AppendLine('')
 Write-FileUtf8 $DocsBrief $sbBrief.ToString()
+# === Bloc correctif pour générer manifest.json, brief.md, diff.md ===
+. (Join-Path $ScriptRoot 'snapshot_helpers.ps1')
+
+$manifestPath = Write-Manifest -SnapshotDir $SnapshotDir -RepoRoot $RepoRoot
+$briefPath = Write-BriefMd -SnapshotDir $SnapshotDir -Manifest $manifestPath
+
+# Diff avec le snapshot précédent
+$snapDirs = Get-ChildItem -LiteralPath $ExportDir -Directory | Where-Object { $_.Name -like 'SNAPSHOT_*' } | Sort-Object Name
+$prevSnap = $null
+foreach ($d in $snapDirs) {
+  if ($d.FullName -eq $SnapshotDir) { break }
+  $prevSnap = $d
+}
+if ($prevSnap) {
+  $prevManifest = Join-Path $prevSnap.FullName 'manifest.json'
+  if (Test-Path $prevManifest) {
+    $diffPath = Join-Path $SnapshotDir 'diff.md'
+    Write-DiffMd -PrevManifestPath $prevManifest -CurrManifestPath $manifestPath -OutPath $diffPath
+  }
+}
 
 Write-Host '[DOCS] Génération terminée : ' $DocsRoot
 exit 0
@@ -1439,4 +1446,64 @@ catch {
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
 
 {"timeZone":"Indian/Mauritius","exceptionLogging":"STACKDRIVER","runtimeVersion":"V8"}
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\gen_synthese.ps1 ---
+
+# gen_synthese.ps1 — Génère la synthèse markdown à partir des fichiers snapshot
+param(
+  [string]$SnapshotDir = ""
+)
+
+# Si aucun dossier snapshot fourni, prend le dernier trouvé
+if (-not $SnapshotDir -or -not (Test-Path -LiteralPath $SnapshotDir)) {
+  $ExportDir = Join-Path $PSScriptRoot "..\export-onglets-csv"
+  $lastSnap = Get-ChildItem -LiteralPath $ExportDir -Directory | Where-Object { $_.Name -like 'SNAPSHOT_*' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+  if (-not $lastSnap) { Write-Error "Aucun snapshot trouvé !"; exit 1 }
+  $SnapshotDir = $lastSnap.FullName
+}
+
+# Charge le modèle de prompt (modèle markdown)
+$templatePath = Join-Path $PSScriptRoot "modele_synthese.md"
+if (-not (Test-Path $templatePath)) { Write-Error "Modèle modele_synthese.md introuvable !"; exit 1 }
+$template = Get-Content $templatePath -Raw
+
+# Charge les fichiers du snapshot
+$briefPath = Join-Path $SnapshotDir "brief.md"
+$manifestPath = Join-Path $SnapshotDir "manifest.json"
+$diffPath = Join-Path $SnapshotDir "diff.md"
+
+# Insert sections
+function Get-SectionOrEmpty($path) {
+  if (Test-Path $path) { return Get-Content $path -Raw }
+  else { return "_Section absente_" }
+}
+# Variables : à enrichir selon ton workflow (par exemple en extrayant depuis le brief, manifest ou un CSV spécifique)
+$variables = "_À compléter selon le projet_"
+
+# Compose la synthèse
+$out = $template `
+    -replace "{{date}}", (Get-Date -Format "yyyy-MM-dd HH:mm") `
+    -replace "{{section_brief}}", (Get-SectionOrEmpty $briefPath) `
+    -replace "{{section_manifest}}", (Get-SectionOrEmpty $manifestPath) `
+    -replace "{{section_diff}}", (Get-SectionOrEmpty $diffPath) `
+    -replace "{{section_variables}}", $variables
+
+# Chemin du dossier Syntheses à la racine du projet
+$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$SyntheseDir = Join-Path $ProjectRoot "Syntheses"
+if (-not (Test-Path $SyntheseDir)) { New-Item -ItemType Directory -Path $SyntheseDir | Out-Null }
+
+# Nom de la synthèse (date + heure)
+$syntheseName = "synthese_session_" + (Get-Date -Format "yyyyMMdd_HHmm") + ".md"
+$outPath = Join-Path $SyntheseDir $syntheseName
+
+# Écrit le fichier final
+Set-Content -Path $outPath -Value $out -Encoding UTF8
+
+Write-Host "✅ Synthèse générée ici : $outPath"
+# Optionnel : Copie dans le presse-papiers
+# $out | Set-Clipboard
+
+exit 0
 
