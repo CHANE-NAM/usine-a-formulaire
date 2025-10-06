@@ -1,77 +1,119 @@
 // =================================================================================
 // == PROJET [MOTEUR] - FICHIER INTERFACE UTILISATEUR
-// == VERSION : 9.2 (Adaptation pour le déploiement asynchrone en 2 étapes)
+// == VERSION : 10.2 (Ajout Étape 3 - Vérification automatique)
 // == RÔLE    : Gère l'interface utilisateur (menus et boîtes de dialogue).
 // =================================================================================
-
-// =================================================================================
-// == INTERRUPTEUR DE DÉBOGAGE
-// =================================================================================
-// ==> METTEZ CETTE VARIABLE À 'false' POUR DÉSACTIVER LES LOGS DÉTAILLÉS.
-const DEBUG_MODE_MENU = true;
-
-/**
- * Journalise un message de débogage uniquement si le mode débogage est activé.
- * @param {string} message Le message à journaliser.
- */
-function debugLogMenu(message) {
-  if (DEBUG_MODE_MENU) {
-    Logger.log(`[DEBUG MENU] ${message}`);
-  }
-}
 
 /**
  * Crée le menu personnalisé à l'ouverture de la feuille de calcul.
  */
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🏭 Usine à Tests')
-    .addItem("🚀 Déployer un Test (Automatique)", "orchestrateurDeploiementComplet_UI")
+    .createMenu('🏭 Usine à Tests') // Émoji usine pour le titre principal
+    .addItem("📦 Étape 1 : Créer les fichiers du Kit", "etape1_creerKit_UI")
+    .addItem("⚙️ Étape 2 : Configurer le Kit sélectionné", "etape2_configurerKit_UI")
+    .addItem("🔍 Étape 3 : Vérifier le Kit sélectionné", "etape3_verifierKit_UI")
     .addToUi();
 }
 
 /**
- * Orchestre le lancement du déploiement en 2 étapes depuis l'UI.
- * Affiche une boîte de dialogue à l'utilisateur et lance la première étape du processus.
+ * Interface pour lancer l'Étape 1 : Création des fichiers.
  */
-function orchestrateurDeploiementComplet_UI() {
-  debugLogMenu("Ouverture de la boîte de dialogue de déploiement...");
+function etape1_creerKit_UI() {
   const ui = SpreadsheetApp.getUi();
-  const response =
-    ui.prompt(
-      '🚀 Déploiement Asynchrone',
-      'Entrez le numéro de la ligne à déployer entièrement :',
-      ui.ButtonSet.OK_CANCEL
+  try {
+    const rowIndex = _getRowFromSelectionOrAsk_(
+      "Lancement de l'Étape 1",
+      "Entrez le numéro de la ligne à utiliser pour la CRÉATION :"
+    );
+    ui.alert(
+      "Lancement de la création...",
+      `Les fichiers vont être créés. La ligne ${rowIndex} sera mise à jour dans quelques instants.`,
+      ui.ButtonSet.OK
     );
 
+    etape1_creerKit(rowIndex);
+
+    ui.alert(
+      "✅ Étape 1 terminée",
+      `Les fichiers ont été créés et les IDs ont été inscrits sur la ligne ${rowIndex}.\nVous pouvez maintenant passer à l'étape 2.`,
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    Logger.log(`ERREUR lors du lancement de l'Étape 1 : ${e.toString()}`);
+    SpreadsheetApp.getUi().alert(`❌ ERREUR (Étape 1) : ${e.message}`);
+  }
+}
+
+/**
+ * Interface pour lancer l'Étape 2 : Configuration des fichiers.
+ */
+function etape2_configurerKit_UI() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const rowIndex = _getRowFromSelectionOrAsk_(
+      "Lancement de l'Étape 2",
+      "Entrez le numéro de la ligne à CONFIGURER :"
+    );
+    ui.alert(
+      "Lancement de la configuration...",
+      `Le kit de la ligne ${rowIndex} va être configuré. Veuillez patienter.`,
+      ui.ButtonSet.OK
+    );
+
+    etape2_configurerKit(rowIndex);
+
+    ui.alert(
+      "✅ Étape 2 terminée",
+      `Le kit de la ligne ${rowIndex} a été configuré avec succès et est prêt à l'emploi.`,
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    Logger.log(`ERREUR lors du lancement de l'Étape 2 : ${e.toString()}`);
+    SpreadsheetApp.getUi().alert(`❌ ERREUR (Étape 2) : ${e.message}`);
+  }
+}
+
+/**
+ * Interface pour lancer l'Étape 3 : Vérification du kit.
+ */
+function etape3_verifierKit_UI() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const rowIndex = _getRowFromSelectionOrAsk_(
+      "Vérification du Kit",
+      "Entrez le numéro de la ligne à VÉRIFIER :"
+    );
+    ui.alert(
+      "Lancement de la vérification...",
+      `La ligne ${rowIndex} va être vérifiée.`,
+      ui.ButtonSet.OK
+    );
+
+    etape3_verifierKit(rowIndex);
+
+  } catch (e) {
+    Logger.log(`ERREUR lors du lancement de l'Étape 3 : ${e.toString()}`);
+    SpreadsheetApp.getUi().alert(`❌ ERREUR (Étape 3) : ${e.message}`);
+  }
+}
+
+/**
+ * Helper pour demander à l'utilisateur le numéro de la ligne à traiter.
+ * VERSION CORRIGÉE : demande toujours le numéro de ligne et valide la saisie.
+ */
+function _getRowFromSelectionOrAsk_(title, promptMessage) {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt(title, promptMessage, ui.ButtonSet.OK_CANCEL);
+
   if (response.getSelectedButton() !== ui.Button.OK || response.getResponseText() === '') {
-    debugLogMenu("Déploiement annulé par l'utilisateur.");
-    return;
+    throw new Error("Opération annulée par l'utilisateur.");
   }
 
   const rowIndex = parseInt(response.getResponseText(), 10);
   if (isNaN(rowIndex) || rowIndex <= 1) {
-    ui.alert('Numéro de ligne invalide.');
-    debugLogMenu(`Tentative de déploiement avec une ligne invalide : ${response.getResponseText()}`);
-    return;
+    throw new Error("Numéro de ligne invalide (doit être > 1).");
   }
 
-  debugLogMenu(`Lancement de l'étape 1 pour la ligne ${rowIndex}...`);
-  try {
-    // On ne lance que l'étape 1. La fonction Etape 2 sera appelée automatiquement par un déclencheur.
-    lancerDeploiementComplet_Etape1(rowIndex);
-
-    // On affiche un message de confirmation simple pour informer l'utilisateur.
-    // Il n'y a plus de liens à afficher ici, car ils seront générés lors de l'étape 2.
-    ui.alert(
-      '✅ Processus Lancé',
-      'La création du kit a démarré en arrière-plan. La ligne ' + rowIndex + ' sera mise à jour automatiquement dans environ 1 minute.',
-      ui.ButtonSet.OK
-    );
-    debugLogMenu("Message de confirmation affiché à l'utilisateur.");
-
-  } catch (e) {
-    Logger.log(`ERREUR Critique lors du lancement du déploiement (ligne ${rowIndex}) : ${e.toString()}`);
-    ui.alert(`❌ ERREUR : Le lancement a échoué. Consultez les logs. Message : ${e.message}`);
-  }
+  return rowIndex;
 }
