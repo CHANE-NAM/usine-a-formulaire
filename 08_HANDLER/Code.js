@@ -187,16 +187,21 @@ function processFormSubmission(formObject) {
       detailsPourOrders // On ajoute les détails spécifiques
     ]);
 
-// --- ÉTAPE 3 : Récupérer l'URL du formulaire de test public depuis la configuration ---
-    const testFormUrl = config.Lien_Formulaire_Public;
-    if (!testFormUrl) {
-      throw new Error("L'URL du formulaire de test (Lien_Formulaire_Public) n'est pas configurée pour cette ligne.");
+    // --- DÉBUT DE LA CORRECTION ---
+    // ÉTAPE 3 : Récupérer l'ID du formulaire de test final depuis la configuration
+    const finalFormId = config['ID_Formulaire_Cible'];
+    if (!finalFormId) {
+      throw new Error("Impossible de trouver l'ID du formulaire cible (colonne 'ID_Formulaire_Cible') dans la configuration.");
     }
 
-    // --- ÉTAPE 4 : Renvoyer un objet de redirection au client ---
-    // Le code côté navigateur (dans Index.html) interprétera cet objet 
-    // et effectuera la redirection lui-même.
-    return { redirectUrl: testFormUrl };
+    // ÉTAPE 4 : Construire l'URL de redirection et la renvoyer au client
+    // On construit l'URL publique de visualisation (viewform), et non l'URL de modification (edit).
+    const redirectUrl = `https://docs.google.com/forms/d/e/${finalFormId}/viewform`;
+    
+    Logger.log(`Redirection de l'utilisateur vers le formulaire final : ${redirectUrl}`);
+    
+    return { redirectUrl: redirectUrl };
+    // --- FIN DE LA CORRECTION ---
     
 
 
