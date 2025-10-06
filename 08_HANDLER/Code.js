@@ -146,6 +146,10 @@ function estAdmin(userEmail) {
  * @returns {Object} { redirectUrl } pour rediriger côté client.
  */
 function processFormSubmission(formObject) {
+
+  Logger.log("--- DÉBUT DE VÉRIFICATION ---");
+  Logger.log("Données reçues du formulaire (formObject) : " + JSON.stringify(formObject));
+  
   try {
     // --- ÉTAPE 1 : Valider et déchiffrer le code pour retrouver la configuration ---
     const encryptedCode = formObject.encryptedCode;
@@ -176,9 +180,13 @@ function processFormSubmission(formObject) {
     }
 
     // On hash le code chiffré pour ne pas stocker le code en clair
-    const codeHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, encryptedCode)
-      .map(b => (('0' + (b & 0xFF).toString(16)).slice(-2))).join('');
+        // On crée une clé unique basée sur le test ET l'email de l'utilisateur
+        const userEmail = formObject.email || 'no-email-provided';
+        const uniqueKey = `rowIndex:${rowIndex}|email:${userEmail.toLowerCase()}`;
 
+        // On hash cette clé unique pour la stocker de manière sécurisée
+        const codeHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, uniqueKey)
+          .map(b => (('0' + (b & 0xFF).toString(16)).slice(-2))).join('');
     // Vérifie si déjà consommé
     const lastRowTokens = tokensSheet.getLastRow();
     if (lastRowTokens >= 2) {

@@ -168,17 +168,18 @@ function etape2_configurerKit(rowIndex) {
 }
 
 /**
- * ÉTAPE 3 : Vérifie la cohérence du kit déployé.
- * Contrôle : Form existant, Sheet existante, lien actif, statut cohérent.
+/**
+ * ÉTAPE 3 : Vérifie la cohérence du kit et écrit le rapport dans un onglet dédié.
  */
 function etape3_verifierKit(rowIndex) {
   Logger.log(`Lancement de l'Étape 3 (Vérification) pour la ligne ${rowIndex}...`);
   const rapport = [];
-
   try {
     const config = getConfigurationFromRow(rowIndex);
     const formId = config['ID_Formulaire_Cible'];
     const sheetId = config['ID_Sheet_Cible'];
+    const lienForm = config['Accès Direct Formulaire'];
+    const lienPublic = config['Lien_Formulaire_Public'];
     const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName('Paramètres Généraux');
     const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
     const colIndex = {};
@@ -187,17 +188,17 @@ function etape3_verifierKit(rowIndex) {
     // 1️⃣ Vérifier la présence du Formulaire
     try {
       const form = FormApp.openById(formId);
-      rapport.push(`✅ Formulaire trouvé : ${form.getTitle()}`);
+      rapport.push(`✅ Formulaire trouvé : ${form.getTitle()}\n   (ID: ${formId})`);
     } catch (e) {
-      rapport.push(`❌ Formulaire introuvable ou non accessible (ID : ${formId})`);
+      rapport.push(`❌ Formulaire introuvable (ID : ${formId})`);
     }
 
     // 2️⃣ Vérifier la présence de la Feuille
     try {
       const sheet = SpreadsheetApp.openById(sheetId);
-      rapport.push(`✅ Feuille de réponses trouvée : ${sheet.getName()}`);
+      rapport.push(`✅ Feuille de réponses trouvée : ${sheet.getName()}\n   (ID: ${sheetId})`);
     } catch (e) {
-      rapport.push(`❌ Feuille introuvable ou non accessible (ID : ${sheetId})`);
+      rapport.push(`❌ Feuille introuvable (ID : ${sheetId})`);
     }
 
     // 3️⃣ Vérifier la liaison Form → Sheet
@@ -214,25 +215,40 @@ function etape3_verifierKit(rowIndex) {
     }
 
     // 4️⃣ Vérifier les liens dans la feuille
-    const lienForm = config['Accès Direct Formulaire'];
-    const lienPublic = config['Lien_Formulaire_Public'];
     if (lienForm && /https?:\/\/(docs|forms)\.google\.com\/forms\/.+\/edit/.test(lienForm)) {
-      rapport.push('✅ Lien d\'édition du formulaire valide.');
+      rapport.push(`✅ Lien d'édition valide :\n   ${lienForm}`);
     } else {
-      rapport.push('⚠️ Lien d\'édition du formulaire manquant ou invalide.');
+      rapport.push('⚠️ Lien d\'édition manquant ou invalide.');
     }
     if (lienPublic && String(lienPublic).includes('script.google.com')) {
-      rapport.push('✅ Lien public (macro) présent.');
+      rapport.push(`✅ Lien public (macro) présent :\n   ${lienPublic}`);
     } else {
       rapport.push('⚠️ Lien public (macro) manquant ou invalide.');
     }
 
-    // 5️⃣ Mise à jour du statut et affichage
+    // 5️⃣ Mise à jour du statut
     const ok = rapport.every(r => r.startsWith('✅') || r.startsWith('⚠️'));
     configSheet.getRange(rowIndex, colIndex['Statut'] + 1).setValue(ok ? '✅ Vérifié' : '⚠️ À revoir');
+    
+    // --- CHANGEMENT ICI : Écriture du rapport dans un onglet ---
+    const rapportSheetName = 'Rapport de Vérification';
+    const moteurSS = SpreadsheetApp.getActiveSpreadsheet(); // Le classeur [MOTEUR] actuel
+    let rapportSheet = moteurSS.getSheetByName(rapportSheetName);
 
-    Logger.log('RAPPORT DE VÉRIFICATION :\n' + rapport.join('\n'));
-    SpreadsheetApp.getUi().alert('Rapport de vérification', rapport.join('\n\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+    if (!rapportSheet) {
+      rapportSheet = moteurSS.insertSheet(rapportSheetName); // Crée l'onglet s'il n'existe pas
+    }
+
+    rapportSheet.clear(); // Efface l'ancien rapport
+    rapportSheet.getRange('A1').setValue(`Rapport de Vérification - Ligne ${rowIndex} (Généré le ${new Date().toLocaleString()})`).setFontWeight('bold');
+    
+    const outputData = rapport.map(item => [item]); // Prépare les données pour l'écriture
+    rapportSheet.getRange(2, 1, outputData.length, 1).setValues(outputData).setWrap(true);
+    
+    rapportSheet.autoResizeColumn(1); // Ajuste la largeur de la colonne
+    moteurSS.setActiveSheet(rapportSheet); // Affiche l'onglet du rapport à l'utilisateur
+
+    SpreadsheetApp.getUi().alert('Rapport Terminé', `Le rapport de vérification a été généré dans l'onglet "${rapportSheetName}".`, SpreadsheetApp.getUi().ButtonSet.OK);
 
   } catch (e) {
     Logger.log(`ERREUR Critique (ÉTAPE 3, ligne ${rowIndex}) : ${e.toString()}\n${e.stack}`);

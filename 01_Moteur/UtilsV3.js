@@ -9,7 +9,9 @@
 // ⚙️ ID de la feuille de configuration centrale (CONFIG)
 const ID_FEUILLE_CONFIGURATION = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
 
+// --
 // ------------------------------------
+
 // IDs système (CONFIG → onglet sys_ID_Fichiers)
 // ------------------------------------
 function getSystemIds() {
