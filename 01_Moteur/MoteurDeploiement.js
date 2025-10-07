@@ -1,22 +1,8 @@
 // =================================================================================
 // == PROJET [MOTEUR] - FICHIER LOGIQUE MÉTIER
-// == VERSION : 12.2 (Alignement rowIndex + UI saisie)
-// == RÔLE    : Contient la logique de déploiement manuel en deux étapes.
+// == VERSION : 12.9 (Correction finale avec FormApp.setRequireSignIn)
+// == RÔLE    : Contient la logique de déploiement manuel en trois étapes.
 // =================================================================================
-
-// -- UI : saisie manuelle du numéro de ligne (1-based, ≥ 2)
-function etape2_configurerKit_UI() {
-  const ui = SpreadsheetApp.getUi();
-  const res = ui.prompt('Numéro de ligne à traiter dans "Paramètres Généraux" (≥ 2) :', ui.ButtonSet.OK_CANCEL);
-  if (res.getSelectedButton() !== ui.Button.OK) return;
-
-  const rowIndex = Number(res.getResponseText());
-  if (!Number.isInteger(rowIndex) || rowIndex < 2) {
-    ui.alert('Valeur invalide. Indique un entier ≥ 2.');
-    return;
-  }
-  etape2_configurerKit(rowIndex); // passe la ligne saisie (1-based)
-}
 
 /**
  * ÉTAPE 1 : Crée les fichiers (Form & Sheet) et met à jour la ligne de configuration avec les IDs.
@@ -36,18 +22,15 @@ function etape1_creerKit(rowIndex) {
       ? DriveApp.getFolderById(config['ID_Dossier_Cible'])
       : DriveApp.getFolderById(systemIds.ID_DOSSIER_CIBLE_GEN);
 
-    // 1. Création du Sheet
     const templateSheet = SpreadsheetApp.openById(systemIds.ID_TEMPLATE_TRAITEMENT_V2);
     const ssCopy = templateSheet.copy(nomFichierComplet);
     const sheetId = ssCopy.getId();
 
-    // 2. Création du Form (copie Drive)
     const templateFormFile = DriveApp.getFileById(systemIds.ID_TEMPLATE_FORMULAIRE);
     const formFile = templateFormFile.makeCopy(nomFichierComplet, dossierCible);
     const formId = formFile.getId();
     Logger.log(`[ÉTAPE 1] Fichiers créés. ID Form: ${formId}, ID Sheet: ${sheetId}.`);
 
-    // 3. Mise à jour de la feuille CONFIG
     const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName('Paramètres Généraux');
     const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
     const colIndex = {};
@@ -69,6 +52,7 @@ function etape1_creerKit(rowIndex) {
   }
 }
 
+
 /**
  * ÉTAPE 2 : Configure les fichiers en utilisant l'API REST Google Forms et finalise le statut.
  */
@@ -83,76 +67,76 @@ function etape2_configurerKit(rowIndex) {
       throw new Error('ID de formulaire ou de feuille manquant sur la ligne ' + rowIndex + '. Lancez d\'abord l\'Étape 1.');
     }
 
-    // --- 1. CONFIGURATION VIA L'API FORMS REST ---
-    Logger.log(`[ÉTAPE 2] Configuration du titre et des paramètres via l'API Forms...`);
-    const requests = [
-      {
-        updateFormInfo: {
-          info: {
-            title: config['Titre_Formulaire_Utilisateur'] || 'Formulaire sans titre',
-            description: config['Sous-Titre_Formulaire'] || ''
-          },
-          updateMask: 'title,description'
+    // --- Appel 1 : Mise à jour du titre et du mode quiz via UrlFetchApp ---
+    const batchUpdateRequest = {
+      requests: [
+        {
+          updateFormInfo: {
+            info: {
+              title: config['Titre_Formulaire_Utilisateur'] || 'Formulaire sans titre',
+              description: config['Sous-Titre_Formulaire'] || ''
+            },
+            updateMask: 'title,description'
+          }
+        },
+        {
+          updateSettings: {
+            settings: { quizSettings: { isQuiz: false } },
+            updateMask: 'quizSettings.isQuiz'
+          }
         }
-      },
-      {
-        updateSettings: {
-          settings: { quizSettings: { isQuiz: false } },
-          updateMask: 'quizSettings.isQuiz'
-        }
-      }
-    ];
-
-    const url = `https://forms.googleapis.com/v1/forms/${formId}:batchUpdate`;
-    const options = {
+      ]
+    };
+    const batchUpdateUrl = `https://forms.googleapis.com/v1/forms/${formId}:batchUpdate`;
+    const batchUpdateOptions = {
       method: 'post',
       contentType: 'application/json',
-      payload: JSON.stringify({ requests }),
+      payload: JSON.stringify(batchUpdateRequest),
       headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
       muteHttpExceptions: true
     };
-    const response = UrlFetchApp.fetch(url, options);
-    Logger.log(`[ÉTAPE 2] Réponse API : ${response.getResponseCode()} - ${response.getContentText()}`);
-
-    if (response.getResponseCode() >= 300) {
-      throw new Error('Erreur API Forms : ' + response.getContentText());
+    const batchUpdateResponse = UrlFetchApp.fetch(batchUpdateUrl, batchUpdateOptions);
+    Logger.log(`[ÉTAPE 2] Réponse API (Titre/Quiz): ${batchUpdateResponse.getResponseCode()} - ${batchUpdateResponse.getContentText()}`);
+    if (batchUpdateResponse.getResponseCode() >= 300) {
+      throw new Error('Erreur API Forms (Titre/Quiz) : ' + batchUpdateResponse.getContentText());
     }
     Logger.log(`[ÉTAPE 2] Titre et paramètres de base mis à jour avec succès.`);
 
-    // --- 2. CONSTRUCTION DES QUESTIONS ---
+    // --- Appel 2 (FINAL) : Publication via le service FormApp ---
     const form = FormApp.openById(formId);
+    Logger.log(`[ÉTAPE 2] Publication du formulaire pour accès public via FormApp...`);
+    try {
+
+      form.setLimitOneResponsePerUser(false); // Correction : Le nom correct de la fonction.
+        Logger.log(`[ÉTAPE 2] Formulaire rendu accessible publiquement.`);
+    } catch(e) {
+        Logger.log(`[ÉTAPE 2] AVERTISSEMENT : Échec de la publication automatique : ${e.message}`);
+        SpreadsheetApp.getUi().alert('Avertissement', 'La publication automatique du formulaire a échoué. Vous devrez peut-être le faire manuellement. Détails : ' + e.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    }
+    
+    // --- Suite de la fonction... ---
     const bdd = SpreadsheetApp.openById(getSystemIds().ID_BDD);
     const languesAInclure = _identifierLangues(bdd, config['Type_Test']);
-    _construireQuestionsFormulaire(form, languesAInclure, config['nbQuestions']);
+
+    _construireQuestionsFormulaire(form, bdd, config, languesAInclure);
     Logger.log('[ÉTAPE 2] Construction des questions terminée.');
 
-    // --- 3. LIAISON DE LA FEUILLE DE RÉPONSES ---
     try {
       form.setDestination(FormApp.DestinationType.SPREADSHEET, sheetId);
       Logger.log('[ÉTAPE 2] Liaison de la feuille de réponses réussie.');
     } catch (e) {
       Logger.log(`[ÉTAPE 2] AVERTISSEMENT : Liaison manuelle requise (${e.message})`);
-      SpreadsheetApp.getUi().alert(
-        'Liaison manuelle requise',
-        'La configuration est presque terminée, mais la liaison à la feuille de réponses doit être faite manuellement.\n\nOuvrez le formulaire, onglet "Réponses" → Sélectionnez la feuille de calcul de destination.',
-        SpreadsheetApp.getUi().ButtonSet.OK
-      );
+      SpreadsheetApp.getUi().alert('Liaison manuelle requise', 'La liaison doit être faite manuellement.\n\nOuvrez le formulaire, onglet "Réponses" → Sélectionnez la destination.', SpreadsheetApp.getUi().ButtonSet.OK);
     }
 
-    // --- 4. MISE À JOUR FINALE DE LA FEUILLE CONFIG ---
     const configSheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIGURATION).getSheetByName('Paramètres Généraux');
     const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
     const colIndex = {};
     headers.forEach((header, i) => { if (header) colIndex[String(header).trim()] = i; });
 
-    const urlHandler = getSystemIds().ID_WEBAPP_HANDLER; // doit être l'URL de la web-app publiée
-
-    // rowIndex est déjà un numéro de ligne 1-based (saisi UI ou déterminé en amont)
+    const urlHandler = getSystemIds().ID_WEBAPP_HANDLER;
     const payload = { rowIndex: rowIndex };
-    const encryptedCode = CryptoJS.AES.encrypt(
-      JSON.stringify(payload),
-      'FELIX QUI POTUIT RERUM COGNOCERE CAUSA VIC'
-    ).toString();
+    const encryptedCode = CryptoJS.AES.encrypt(JSON.stringify(payload), 'FELIX QUI POTUIT RERUM COGNOCERE CAUSA VIC').toString();
     const urlFinaleChiffree = `${urlHandler}?code=${encodeURIComponent(encryptedCode)}`;
 
     configSheet.getRange(rowIndex, colIndex['Lien_Formulaire_Public'] + 1).setValue(urlFinaleChiffree);
@@ -167,11 +151,12 @@ function etape2_configurerKit(rowIndex) {
   }
 }
 
-/**
+
 /**
  * ÉTAPE 3 : Vérifie la cohérence du kit et écrit le rapport dans un onglet dédié.
  */
 function etape3_verifierKit(rowIndex) {
+  // ... (cette fonction reste inchangée)
   Logger.log(`Lancement de l'Étape 3 (Vérification) pour la ligne ${rowIndex}...`);
   const rapport = [];
   try {
@@ -185,7 +170,6 @@ function etape3_verifierKit(rowIndex) {
     const colIndex = {};
     headers.forEach((h, i) => { if (h) colIndex[String(h).trim()] = i; });
 
-    // 1️⃣ Vérifier la présence du Formulaire
     try {
       const form = FormApp.openById(formId);
       rapport.push(`✅ Formulaire trouvé : ${form.getTitle()}\n   (ID: ${formId})`);
@@ -193,7 +177,6 @@ function etape3_verifierKit(rowIndex) {
       rapport.push(`❌ Formulaire introuvable (ID : ${formId})`);
     }
 
-    // 2️⃣ Vérifier la présence de la Feuille
     try {
       const sheet = SpreadsheetApp.openById(sheetId);
       rapport.push(`✅ Feuille de réponses trouvée : ${sheet.getName()}\n   (ID: ${sheetId})`);
@@ -201,7 +184,6 @@ function etape3_verifierKit(rowIndex) {
       rapport.push(`❌ Feuille introuvable (ID : ${sheetId})`);
     }
 
-    // 3️⃣ Vérifier la liaison Form → Sheet
     try {
       const form = FormApp.openById(formId);
       const dest = form.getDestinationId();
@@ -214,7 +196,6 @@ function etape3_verifierKit(rowIndex) {
       rapport.push('❌ Impossible de vérifier la liaison Form → Sheet.');
     }
 
-    // 4️⃣ Vérifier les liens dans la feuille
     if (lienForm && /https?:\/\/(docs|forms)\.google\.com\/forms\/.+\/edit/.test(lienForm)) {
       rapport.push(`✅ Lien d'édition valide :\n   ${lienForm}`);
     } else {
@@ -226,27 +207,25 @@ function etape3_verifierKit(rowIndex) {
       rapport.push('⚠️ Lien public (macro) manquant ou invalide.');
     }
 
-    // 5️⃣ Mise à jour du statut
     const ok = rapport.every(r => r.startsWith('✅') || r.startsWith('⚠️'));
     configSheet.getRange(rowIndex, colIndex['Statut'] + 1).setValue(ok ? '✅ Vérifié' : '⚠️ À revoir');
     
-    // --- CHANGEMENT ICI : Écriture du rapport dans un onglet ---
     const rapportSheetName = 'Rapport de Vérification';
-    const moteurSS = SpreadsheetApp.getActiveSpreadsheet(); // Le classeur [MOTEUR] actuel
+    const moteurSS = SpreadsheetApp.getActiveSpreadsheet();
     let rapportSheet = moteurSS.getSheetByName(rapportSheetName);
 
     if (!rapportSheet) {
-      rapportSheet = moteurSS.insertSheet(rapportSheetName); // Crée l'onglet s'il n'existe pas
+      rapportSheet = moteurSS.insertSheet(rapportSheetName);
     }
 
-    rapportSheet.clear(); // Efface l'ancien rapport
+    rapportSheet.clear();
     rapportSheet.getRange('A1').setValue(`Rapport de Vérification - Ligne ${rowIndex} (Généré le ${new Date().toLocaleString()})`).setFontWeight('bold');
     
-    const outputData = rapport.map(item => [item]); // Prépare les données pour l'écriture
+    const outputData = rapport.map(item => [item]);
     rapportSheet.getRange(2, 1, outputData.length, 1).setValues(outputData).setWrap(true);
     
-    rapportSheet.autoResizeColumn(1); // Ajuste la largeur de la colonne
-    moteurSS.setActiveSheet(rapportSheet); // Affiche l'onglet du rapport à l'utilisateur
+    rapportSheet.autoResizeColumn(1);
+    moteurSS.setActiveSheet(rapportSheet);
 
     SpreadsheetApp.getUi().alert('Rapport Terminé', `Le rapport de vérification a été généré dans l'onglet "${rapportSheetName}".`, SpreadsheetApp.getUi().ButtonSet.OK);
 

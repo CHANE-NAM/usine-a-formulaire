@@ -90,33 +90,59 @@ function _identifierLangues(bdd, typeTest) {
 /**
  * Construit les questions dans le formulaire, en gérant le multi-langues.
  */
-function _construireQuestionsFormulaire(form, languesAInclure, nbQuestionsConfig) {
-    if (languesAInclure.length > 1) {
-        Logger.log(`Mode multi-langues détecté (${languesAInclure.length} langues).`);
-        const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
-        const choices = [];
-        languesAInclure.forEach(langue => {
-            const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
-            choices.push(itemLangue.createChoice(langue.nomComplet, page));
-            
-            _ajouterQuestionsDepuisFeuille(form, langue.feuille, nbQuestionsConfig);
-            
-            // --- DÉBUT DE LA CORRECTION v8.1 ---
-        
-            // On s'assure que la redirection vers la page de soumission est bien appliquée
-            // à l'objet 'page' que nous venons de créer, qui est un PageBreakItem.
-            if (page && typeof page.setGoToPage === 'function') {
-                page.setGoToPage(FormApp.PageNavigationType.SUBMIT);
-            }
-            
-            // --- FIN DE LA CORRECTION v8.1 ---
-        });
-        itemLangue.setChoices(choices);
-    } else {
-        Logger.log(`Mode langue unique détecté. Insertion directe des questions.`);
-        const uniqueLangue = languesAInclure[0];
-        _ajouterQuestionsDepuisFeuille(form, uniqueLangue.feuille, nbQuestionsConfig);
+/**
+ * Construit les questions dans le formulaire, en gérant les méta-blocs et le multi-langues.
+ */
+function _construireQuestionsFormulaire(form, bdd, config, languesAInclure) { // Signature MODIFIÉE
+  const nbQuestionsConfig = config['nbQuestions'];
+
+  // --- GESTION CORRIGÉE DES BLOCS MÉTA ---
+  const blocsMetaAInclure = (config['Blocs_Meta_A_Inclure'] || '').split(',').map(s => s.trim()).filter(Boolean);
+
+  if (blocsMetaAInclure.length > 0) {
+    Logger.log(`[MÉTA] Ajout des blocs méta : ${blocsMetaAInclure.join(', ')}`);
+    const metaSheet = bdd.getSheetByName('Questions_META_FR');
+    if (metaSheet) {
+      const metaData = metaSheet.getDataRange().getValues();
+      const metaHeaders = metaData.shift();
+      const idCol = metaHeaders.indexOf('ID_Question');
+
+      blocsMetaAInclure.forEach(blocId => {
+        if (blocId === 'META_NOM_COMPLET' || blocId === 'META_EMAIL') {
+          Logger.log(`[MÉTA] Bloc ignoré car géré par le HANDLER : ${blocId}`);
+          return;
+        }
+        const rowData = metaData.find(row => row[idCol] === blocId);
+        if (rowData) {
+          const [id, type_old, titre, options, logique, description, params_json] = rowData;
+          creerItemFormulaire(form, type_old, titre, options, description, params_json);
+        }
+      });
+      form.addPageBreakItem().setTitle("Début du Test");
     }
+  }
+
+  // --- Suite de la fonction (inchangée) ---
+  if (languesAInclure.length > 1) {
+    Logger.log(`Mode multi-langues détecté (${languesAInclure.length} langues).`);
+    const itemLangue = form.addMultipleChoiceItem().setTitle("Langue / Language").setRequired(true);
+    const choices = [];
+    languesAInclure.forEach(langue => {
+      const page = form.addPageBreakItem().setTitle("Questions (" + langue.nomComplet + ")");
+      choices.push(itemLangue.createChoice(langue.nomComplet, page));
+
+      _ajouterQuestionsDepuisFeuille(form, langue.feuille, nbQuestionsConfig);
+
+      if (page && typeof page.setGoToPage === 'function') {
+        page.setGoToPage(FormApp.PageNavigationType.SUBMIT);
+      }
+    });
+    itemLangue.setChoices(choices);
+  } else {
+    Logger.log(`Mode langue unique détecté. Insertion directe des questions.`);
+    const uniqueLangue = languesAInclure[0];
+    _ajouterQuestionsDepuisFeuille(form, uniqueLangue.feuille, nbQuestionsConfig);
+  }
 }
 
 /**

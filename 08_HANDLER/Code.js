@@ -230,7 +230,29 @@ function processFormSubmission(formObject) {
     try {
       // Chemin fiable : demander l’URL publiée au service Forms
       const form = FormApp.openById(finalFormId);
-      redirectUrl = form.getPublishedUrl();
+      // === DÉBUT DE LA MODIFICATION ===
+
+      // 1. Récupère l'URL de base du formulaire
+      let baseUrl = form.getPublishedUrl();
+
+      // 2. Prépare le paramètre de langue
+      const langCode = formObject.langue || 'FR'; // Le code FR/EN choisi par l'utilisateur
+      const langFullName = {
+        'FR': 'Français',
+        'EN': 'English',
+        'ES': 'Español',
+        'DE': 'Deutsch'
+      }[langCode] || langCode; // Convertit le code en nom complet (ex: "Français")
+
+      // L'identifiant de votre question "Langue" a été intégré ici
+      const languageEntryId = 'entry.32207297'; 
+
+      // 3. Construit l'URL finale avec le paramètre de langue prérempli
+      redirectUrl = `${baseUrl}?${languageEntryId}=${encodeURIComponent(langFullName)}`;
+
+      // === FIN DE LA MODIFICATION ===
+
+
     } catch (e) {
       // Repli : /d/<id>/viewform
       redirectUrl = `https://docs.google.com/forms/d/${finalFormId}/viewform`;
