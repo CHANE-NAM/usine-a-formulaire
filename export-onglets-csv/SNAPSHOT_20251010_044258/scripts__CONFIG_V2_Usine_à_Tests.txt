@@ -108,10 +108,10 @@ function getQuestionCountForTestType(typeTest) {
 
 /**
  * Traite les donnÃ©es soumises depuis la barre latÃ©rale et crÃ©e une nouvelle ligne de configuration.
- * @param {Object} formObject L'objet contenant les donnÃ©es du formulaire.
- * @returns {string} Un message de succÃ¨s.
- */
-function processNewTestConfiguration(formObject) {
+ * @param {Object} formObject L'objet conte
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\FormulaireUI.html ---
+
+t) {
   try {
     const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
     const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
@@ -366,9 +366,6 @@ function getSystemIds() {
   });
   return ids;
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\FormulaireUI.html ---
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -872,10 +869,10 @@ function htmlReport_(rows) {
       .err{color:#b71c1c}
     </style>`;
   if (!rows.length) {
-    return HtmlService.createHtmlOutput(head + `<h2>Validation des en-tÃªte
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ModifierTestUI.html ---
-
-s.map(r => `
+    return HtmlService.createHtmlOutput(head + `<h2>Validation des en-tÃªtes</h2><p class="ok">Aucune anomalie dÃ©tectÃ©e ðŸ‘</p>`)
+      .setTitle('Validation en-tÃªtes');
+  }
+  const rowsHtml = rows.map(r => `
     <tr>
       <td>${esc(r.classeur)}</td>
       <td>${esc(r.onglet)}</td>
@@ -970,6 +967,9 @@ function validateAllHeaders() {
   SpreadsheetApp.getUi().showSidebar(out);
 }
 
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ModifierTestUI.html ---
 
 <!DOCTYPE html>
 <html>

@@ -62,10 +62,6 @@
           <label><input type="radio" name="langue" value="EN"> English</label>
         </div>
 
-        <div class="form-group">
-          <label for="pays">Pays *</label>
-          <input type="text" id="pays" name="pays" required>
-        </div>
 
         <button type="submit" id="submitButton">Valider et continuer</button>
       </form>
@@ -74,36 +70,44 @@
     </div>
 
 <script>
-  // On intercepte la soumission du formulaire
-  document.getElementById('identificationForm').addEventListener('submit', function(e) {
-    e.preventDefault(); // EmpÃªche la page de se recharger
-    
-    const button = document.getElementById('submitButton');
+  // Intercepter la soumission du formulaire d'identification
+  document.getElementById('identificationForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('submitButton');
     const statusDiv = document.getElementById('status');
-    button.disabled = true;
-    statusDiv.innerText = 'VÃ©rification en cours...';
-    
-    // On appelle notre fonction cÃ´tÃ© serveur (dans Code.gs) en lui passant les donnÃ©es du formulaire
+    btn.disabled = true;
+    statusDiv.textContent = 'VÃ©rification en cours...';
+
+    // Construire un OBJET simple Ã  partir du formulaire (pas lâ€™Ã©lÃ©ment DOM)
+    const data = Object.fromEntries(new FormData(this).entries());
+
+    // Sâ€™assurer que le code chiffrÃ© est bien transmis (champ hidden dans la page)
+    const hiddenCode = document.getElementById('encryptedCode');
+    if (hiddenCode && hiddenCode.value) data.encryptedCode = hiddenCode.value;
+
+    // Indiquer le type de parcours si besoin (adapter si tu as dÃ©jÃ  un champ hidden)
+    if (!data.formType) data.formType = 'gratuit';
+
     google.script.run
-      .withSuccessHandler(function(response) {
-        // NOUVELLE LOGIQUE : on vÃ©rifie la rÃ©ponse du serveur
-        if (response && response.redirectUrl) {
-          // Si le serveur a renvoyÃ© un objet avec une URL de redirection, on l'exÃ©cute.
-          // window.top.location.href est utilisÃ© pour s'assurer que toute la page est redirigÃ©e.
-          window.top.location.href = response.redirectUrl;
+      .withSuccessHandler(function (res) {
+        if (res && res.redirectUrl) {
+          // Utiliser UNIQUEMENT lâ€™URL renvoyÃ©e par le serveur
+          window.location.assign(res.redirectUrl);
         } else {
-          // Comportement de secours : si le serveur renvoie du HTML, on l'affiche comme avant.
-          document.body.innerHTML = response;
+          statusDiv.innerHTML = '<strong>Erreur :</strong> URL de redirection manquante.';
+          btn.disabled = false;
         }
       })
-      .withFailureHandler(function(error) {
-        // En cas d'erreur, on l'affiche et on rÃ©active le bouton
-        statusDiv.innerHTML = '<strong>Erreur :</strong> ' + error.message;
-        button.disabled = false;
+      .withFailureHandler(function (err) {
+        statusDiv.innerHTML = '<strong>Erreur :</strong> ' + (err && err.message ? err.message : err);
+        btn.disabled = false;
       })
-      .processFormSubmission(this); // 'this' reprÃ©sente l'objet formulaire
+      .processFormSubmission(data); // <-- on envoie un objet sÃ©rialisÃ©, pas lâ€™Ã©lÃ©ment <form>
   });
 </script>
+
+
   </body>
 </html>
 
@@ -201,7 +205,7 @@ function doGet(e) {
       return HtmlService.createHtmlOutput('<h1>Erreur : ParamÃ¨tre d\'identification du test manquant.</h1>');
     }
     const encryptedCode = e.parameter.code.replace(/ /g, '+');
-    
+
     let payload;
     try {
       const decryptedBytes = CryptoJS.AES.decrypt(encryptedCode, SECRET_KEY);
@@ -222,18 +226,19 @@ function doGet(e) {
     // 3. Aiguillage en fonction du parcours utilisateur
     switch (config.Mode_Acces_Test) {
       case 'Payant':
-        return afficherPagePaiement(config, encryptedCode); 
-      
+        return afficherPagePaiement(config, encryptedCode);
+
       case 'B2B':
         return afficherPageB2B(config, encryptedCode);
 
-      case 'CLOS':
+      case 'CLOS': {
         const userEmail = Session.getActiveUser().getEmail();
         const isAdmin = estAdmin(userEmail);
         if (!isAdmin) {
           return HtmlService.createHtmlOutput('<h1>Ce test est actuellement fermÃ©.</h1>');
         }
         return afficherPageIdentificationGratuite(config, encryptedCode);
+      }
 
       case 'Gratuit':
       default:
@@ -290,15 +295,15 @@ function afficherPageB2B(config, encryptedCode) {
  * RÃ©cupÃ¨re la configuration complÃ¨te pour une ligne donnÃ©e.
  */
 function getConfigFromRow(rowIndex) {
-  const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
-  const paramsSheet = configSS.getSheetByName('ParamÃ¨tres GÃ©nÃ©raux');
-  const headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
-  const configData = paramsSheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+  if (!rowIndex || rowIndex < 2) throw new Error("rowIndex invalide (attendu: numÃ©ro de ligne >= 2).");
 
-  const config = headers.reduce((obj, header, index) => {
-    obj[header] = configData[index];
-    return obj;
-  }, {});
+  const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+  const sh = ss.getSheetByName('ParamÃ¨tres GÃ©nÃ©raux');
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const row = sh.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+
+  const config = {};
+  headers.forEach((h, i) => config[h] = row[i]);
   return config;
 }
 
@@ -308,24 +313,36 @@ function getConfigFromRow(rowIndex) {
 function estAdmin(userEmail) {
   const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
   const optionsSheet = configSS.getSheetByName('sys_Options_Parametres');
-  const adminEmailsRange = optionsSheet.getRange(2, 26, optionsSheet.getLastRow() - 1, 1).getValues();
-  const ADMIN_EMAILS = adminEmailsRange.map(row => row[0].trim()).filter(String);
-  return ADMIN_EMAILS.includes(userEmail);
+  const lastRow = optionsSheet.getLastRow();
+  if (lastRow < 2) return false;
+
+  const adminEmailsRange = optionsSheet.getRange(2, 26, lastRow - 1, 1).getValues();
+  const ADMIN_EMAILS = adminEmailsRange
+    .map(r => r[0])
+    .filter(v => v != null && String(v).trim() !== '')
+    .map(v => String(v).trim().toLowerCase());
+
+  const email = (userEmail || '').trim().toLowerCase();
+  return email && ADMIN_EMAILS.includes(email);
 }
 
 /**
  * Traite les donnÃ©es soumises depuis le formulaire HTML d'identification.
- * @param {Object} formObject - Un objet reprÃ©sentant les donnÃ©es du formulaire (nom, email, etc.).
- * @returns {String} Une chaÃ®ne de caractÃ¨res HTML Ã  afficher Ã  l'utilisateur.
+ * @param {Object} formObject - (nom, email, formType, code, encryptedCode)
+ * @returns {Object} { redirectUrl } pour rediriger cÃ´tÃ© client.
  */
 function processFormSubmission(formObject) {
+
+  Logger.log("--- DÃ‰BUT DE VÃ‰RIFICATION ---");
+  Logger.log("DonnÃ©es reÃ§ues du formulaire (formObject) : " + JSON.stringify(formObject));
+  
   try {
     // --- Ã‰TAPE 1 : Valider et dÃ©chiffrer le code pour retrouver la configuration ---
     const encryptedCode = formObject.encryptedCode;
     if (!encryptedCode) {
       throw new Error("Le code de session est manquant. Impossible de continuer.");
     }
-    
+
     let payload;
     try {
       const decryptedBytes = CryptoJS.AES.decrypt(encryptedCode.replace(/ /g, '+'), SECRET_KEY);
@@ -334,53 +351,117 @@ function processFormSubmission(formObject) {
     } catch (e) {
       throw new Error("Le code de session est invalide.");
     }
-    const rowIndex = payload.rowIndex;
+
+    const rowIndex = Number(payload.rowIndex);
     const config = getConfigFromRow(rowIndex);
 
-    // --- NOUVEAU : GÃ©rer les logiques spÃ©cifiques par type de formulaire ---
-    let detailsPourOrders = ""; // Variable pour stocker les infos supplÃ©mentaires
+    // Ouvre UNE SEULE FOIS la feuille CONFIG pour tout le traitement
+    const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
 
+    // --- CONTRÃ”LE ONE-TIME: refuser toute rÃ©utilisation du mÃªme code chiffrÃ© ---
+    let tokensSheet = configSS.getSheetByName("Tokens");
+    if (!tokensSheet) {
+      tokensSheet = configSS.insertSheet("Tokens");
+      tokensSheet.appendRow(["Timestamp", "CodeHash", "RowIndex", "Email", "Status"]); // Status: USED | BLOCKED
+    }
+
+    // On hash le code chiffrÃ© pour ne pas stocker le code en clair
+        // On crÃ©e une clÃ© unique basÃ©e sur le test ET l'email de l'utilisateur
+        const userEmail = formObject.email || 'no-email-provided';
+        const uniqueKey = `rowIndex:${rowIndex}|email:${userEmail.toLowerCase()}`;
+
+        // On hash cette clÃ© unique pour la stocker de maniÃ¨re sÃ©curisÃ©e
+        const codeHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, uniqueKey)
+          .map(b => (('0' + (b & 0xFF).toString(16)).slice(-2))).join('');
+    // VÃ©rifie si dÃ©jÃ  consommÃ©
+    const lastRowTokens = tokensSheet.getLastRow();
+    if (lastRowTokens >= 2) {
+      const range = tokensSheet.getRange(2, 2, lastRowTokens - 1, 1).getValues(); // Col B = CodeHash
+      const used = range.some(r => String(r[0]) === codeHash);
+      if (used) throw new Error("Lien dÃ©jÃ  utilisÃ© (sÃ©curitÃ© one-time). Contactez lâ€™administrateur.");
+    }
+
+    // Marque comme utilisÃ© AVANT de rediriger (anti double-clic / refresh)
+    tokensSheet.appendRow([new Date(), codeHash, rowIndex, (formObject.email || ''), "USED"]);
+    SpreadsheetApp.flush();
+
+    // --- Logiques spÃ©cifiques par type de formulaire ---
+    let detailsPourOrders = "";
     if (formObject.formType === 'b2b') {
-      const codeAcces = formObject.code; // 'code' est le "name" de notre champ dans B2B.html
+      const codeAcces = formObject.code; // name="code" dans B2B.html
       Logger.log(`Parcours B2B dÃ©tectÃ©. Code d'accÃ¨s fourni : ${codeAcces}`);
       detailsPourOrders = `Code: ${codeAcces}`;
-      // NOTE FUTURE : C'est ici que nous ajouterons la logique pour valider le code d'accÃ¨s.
+      // NOTE FUTURE : ajouter ici la validation du code d'accÃ¨s si nÃ©cessaire.
     } else if (formObject.formType === 'paiement') {
-      Logger.log(`Parcours Payant dÃ©tectÃ©.`);
-      detailsPourOrders = "Parcours Payant";
-      // NOTE FUTURE : C'est ici qu'on lancerait la redirection vers un module de paiement.
+      Logger.log('Parcours Payant dÃ©tectÃ©.');
+      detailsPourOrders = 'Parcours Payant';
+      // NOTE FUTURE : dÃ©clencher ici la redirection vers module de paiement.
     }
 
     // --- Ã‰TAPE 2 : Enregistrer les informations dans la feuille "Orders" ---
-    const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
     let ordersSheet = configSS.getSheetByName("Orders");
-    
     if (!ordersSheet) {
       ordersSheet = configSS.insertSheet("Orders");
       ordersSheet.appendRow(["Timestamp", "Nom", "Email", "Test Row Index", "Statut", "DÃ©tails"]);
     }
-    
-    ordersSheet.appendRow([
-      new Date(),
-      formObject.nom,
-      formObject.email,
-      rowIndex,
-      "IDENTIFIED",
-      detailsPourOrders // On ajoute les dÃ©tails spÃ©cifiques
-    ]);
+    ordersSheet.appendRow([new Date(), formObject.nom, formObject.email, rowIndex, "IDENTIFIED", detailsPourOrders]);
 
-// --- Ã‰TAPE 3 : RÃ©cupÃ©rer l'URL du formulaire de test public depuis la configuration ---
-    const testFormUrl = config.Lien_Formulaire_Public;
-    if (!testFormUrl) {
-      throw new Error("L'URL du formulaire de test (Lien_Formulaire_Public) n'est pas configurÃ©e pour cette ligne.");
+    // --- Ã‰TAPE 3 : RÃ©cupÃ©rer l'URL publique fiable du formulaire final ---
+    const finalFormId = config['ID_Formulaire_Cible'];
+    if (!finalFormId) {
+      throw new Error("Impossible de trouver l'ID du formulaire cible (colonne 'ID_Formulaire_Cible').");
     }
 
-    // --- Ã‰TAPE 4 : Renvoyer un objet de redirection au client ---
-    // Le code cÃ´tÃ© navigateur (dans Index.html) interprÃ©tera cet objet 
-    // et effectuera la redirection lui-mÃªme.
-    return { redirectUrl: testFormUrl };
-    
+    let redirectUrl;
+    try {
+      // Chemin fiable : demander lâ€™URL publiÃ©e au service Forms
+      const form = FormApp.openById(finalFormId);
+      // === DÃ‰BUT DE LA MODIFICATION ===
 
+      // 1. RÃ©cupÃ¨re l'URL de base du formulaire
+      let baseUrl = form.getPublishedUrl();
+
+      // 2. PrÃ©pare le paramÃ¨tre de langue
+      const langCode = formObject.langue || 'FR'; // Le code FR/EN choisi par l'utilisateur
+      const langFullName = {
+        'FR': 'FranÃ§ais',
+        'EN': 'English',
+        'ES': 'EspaÃ±ol',
+        'DE': 'Deutsch'
+      }[langCode] || langCode; // Convertit le code en nom complet (ex: "FranÃ§ais")
+
+      // L'identifiant de votre question "Langue" a Ã©tÃ© intÃ©grÃ© ici
+      const languageEntryId = 'entry.32207297'; 
+
+      // 3. Construit l'URL finale avec le paramÃ¨tre de langue prÃ©rempli
+      redirectUrl = `${baseUrl}?${languageEntryId}=${encodeURIComponent(langFullName)}`;
+
+      // === FIN DE LA MODIFICATION ===
+
+
+    } catch (e) {
+      // Repli : /d/<id>/viewform
+      redirectUrl = `https://docs.google.com/forms/d/${finalFormId}/viewform`;
+    }
+
+    // Option future si tu stockes lâ€™URL publique en CONFIG :
+    // if (config['Lien_Formulaire_Questions']) redirectUrl = String(config['Lien_Formulaire_Questions']);
+
+    Logger.log(`Redirection de l'utilisateur vers le formulaire final : ${redirectUrl}`);
+    try {
+  let logsSheet = configSS.getSheetByName('Handler_Logs');
+  if (!logsSheet) {
+    logsSheet = configSS.insertSheet('Handler_Logs');
+    logsSheet.appendRow(['Timestamp','RowIndex','Key','Value']);
+  }
+  logsSheet.appendRow([new Date(), rowIndex, 'redirectUrl', redirectUrl]);
+    SpreadsheetApp.flush(); // (optionnel) force lâ€™Ã©criture
+
+} catch (e) {
+  Logger.log('Handler_Logs error: ' + e);
+}
+
+    return { redirectUrl: redirectUrl };
 
   } catch (error) {
     Logger.log("Erreur critique dans processFormSubmission: " + error.toString());
@@ -388,13 +469,12 @@ function processFormSubmission(formObject) {
   }
 }
 
-
 /**
  * Fonction de compatibilitÃ©, non utilisÃ©e dans le flux principal.
  */
 function handleFormSubmit(e) {
   try {
-    const configSpreadsheet = SpreadsheetApp.openById("1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ");
+    const configSpreadsheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
     const ordersSheet = configSpreadsheet.getSheetByName("Orders");
 
     if (!ordersSheet) {
@@ -424,6 +504,7 @@ function handleFormSubmit(e) {
     Logger.log('ERREUR dans handleFormSubmit: ' + err.toString() + "\n" + err.stack);
   }
 }
+
 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\08_handler\Paiement.html ---
 
@@ -523,3 +604,20 @@ function handleFormSubmit(e) {
     return CryptoJS.lib.WordArray.create(words, nBytes);
   };
 })();
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\08_handler\test_redemande_autorisation.js ---
+
+
+
+function warmUpScopes() {
+  // Spreadsheet scope
+  const ss = SpreadsheetApp.openById("1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ");
+  ss.getSheets()[0].getRange(1,1).getValue();
+
+  // Form scope (mettre un ID de formulaire valide pour tester)
+  try {
+    const TEST_FORM_ID = '13X7ZbByK_XvxaKvDVn6XZYOS6AjNJ9RsEVyC_L2yMrE'; // <- ton ID d'Ã©dition
+    FormApp.openById(TEST_FORM_ID).getTitle();
+  } catch (e) {}
+}
+
