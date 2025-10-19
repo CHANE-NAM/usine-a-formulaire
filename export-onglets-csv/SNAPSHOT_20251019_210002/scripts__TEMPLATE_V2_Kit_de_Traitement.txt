@@ -2932,10 +2932,10 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   }
 
   for (const brique of briquesDeContenu) {
-    const elementType = (brique[idx.element] || '').toString().trim();
-    const contenu = brique[idx.contenu];
-    switch (elementType) {
-      case 'Sujet_Email': sujet = contenu; break;
+    const elementType 
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+
+ case 'Sujet_Email': sujet = contenu; break;
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Champ_Profil': if (contenu && donneesPourEmail[contenu]) { corpsHtml += donneesPourEmail[contenu] + "<br>"; } break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
@@ -3052,9 +3052,6 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
-
 /**
  * T_Data.gs
  * @fileoverview GÃ¨re la lecture et la prÃ©paration des donnÃ©es depuis les feuilles de calcul.
