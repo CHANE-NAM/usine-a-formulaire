@@ -1343,8 +1343,10 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRow[0].toLowerCase();
-    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
+    const header0 = headersRo
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
+
+des('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1655,9 +1657,6 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
 
 <!DOCTYPE html>
 <html>
@@ -3737,10 +3736,8 @@ function auditKit() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const list = ScriptApp.getUserTriggers(ss) || [];
     const hasInstallable = list.some(t => t.getHandlerFunction && t.getHandlerFunction() === 'handleFormSubmit');
-    out.checks.triggerInstallable = { ok: ha
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TriggerHandler.js ---
-
-un dÃ©clencheur installable "handleFormSubmit" dÃ©tectÃ©â€”relance le menu "Activer le traitement automatique".');
+    out.checks.triggerInstallable = { ok: hasInstallable, found: list.map(t => t.getHandlerFunction && t.getHandlerFunction()) };
+    if (!hasInstallable) out.notes.push('Aucun dÃ©clencheur installable "handleFormSubmit" dÃ©tectÃ©â€”relance le menu "Activer le traitement automatique".');
   } catch (e) {
     out.checks.triggerInstallable = { ok: false, error: e.message };
     out.errors.push('Triggers: ' + e.message);
@@ -3765,6 +3762,9 @@ un dÃ©clencheur installable "handleFormSubmit" dÃ©tectÃ©â€”relance le
 
   return out; // pratique si tu veux consommer le JSON ailleurs
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TriggerHandler.js ---
 
 /**
  * @OnlyCurrentDoc
