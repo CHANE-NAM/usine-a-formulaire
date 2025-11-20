@@ -1943,10 +1943,12 @@ function _injectScenario(opts) {
         }
         // Fallback : prendre le profil Ã  l'index courant
         if (!profil) {
-          profil = profilSequence[scaleIndex] || 'ENV
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
+          profil = profilSequence[scaleIndex] || 'ENV_STABILITE';
+        }
 
-Scenario(profil, min, max, scenario, scaleIndex);
+        const min = scale.getLowerBound();
+        const max = scale.getUpperBound();
+        const val = _valueForScenario(profil, min, max, scenario, scaleIndex);
         resp.withItemResponse(scale.createResponse(val));
 
         scaleIndex++;
@@ -2139,6 +2141,9 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
 }
 
 
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
