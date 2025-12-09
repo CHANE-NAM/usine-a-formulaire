@@ -1,0 +1,1226 @@
+﻿=== Projet: [CONFIG]V2 Usine à Tests (G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration) ===
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\appsscript.json ---
+
+{
+  "timeZone": "Indian/Mauritius",
+  "dependencies": {
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8"
+}
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\Menu.js ---
+
+// =================================================================================
+// == FICHIER : Menu.js
+// == VERSION : 4.7 - Finalisation de la sauvegarde de tous les champs.
+// == RÃ”LE  : Logique cÃ´tÃ© serveur pour l'application web de configuration.
+// =================================================================================
+
+const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
+const ID_MODELE_FICHE_TEST = "1W_amKwp5kyyGWmg5LTaIQe5K8Gzxf_qvcjGskRy1Sq8";
+
+/**
+ * CrÃ©e le menu de l'application Ã  l'ouverture de la feuille de calcul.
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('ðŸ­ Usine')
+    .addSubMenu(ui.createMenu('Configuration')
+      .addItem('Configurer un nouveau test...', 'showConfigurationSidebar')
+      .addItem('Modifier un test existant...', 'showEditSidebar_UI')
+      .addItem('Dupliquer un test existant...', 'showDuplicateUI'))
+    .addSubMenu(ui.createMenu('Validation')
+      .addItem('VÃ©rifier les en-tÃªtes (CONFIG, BDD, TEMPLATE)', 'validateAllHeaders'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('Documents')
+      .addItem('GÃ©nÃ©rer la fiche de test (imprimable)...', 'showPrintableSheetUI'))
+    .addToUi();
+}
+
+/**
+ * Affiche la barre latÃ©rale de configuration (FormulaireUI.html).
+ */
+function showConfigurationSidebar() {
+  const html = HtmlService.createHtmlOutputFromFile('FormulaireUI').setTitle('Configuration Usine Ã  Tests').setWidth(600);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * RÃ©cupÃ¨re les donnÃ©es initiales pour peupler les listes dÃ©roulantes de la barre latÃ©rale.
+ * @returns {Object} Un objet contenant les listes d'options.
+ */
+function getInitialData() {
+  try {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const optionsSheet = ss.getSheetByName("sys_Options_Parametres");
+    if (!optionsSheet) throw new Error("L'onglet 'sys_Options_Parametres' est introuvable.");
+    
+    const optionsData = optionsSheet.getDataRange().getValues();
+    const headers = optionsData.shift().map(h => String(h || '').trim());
+    const optionsMap = {};
+    headers.forEach((header, i) => {
+      if (header) optionsMap[header] = optionsData.map(row => row[i]).filter(String);
+    });
+
+    let availableMetaBlocks = [];
+    try {
+      const systemIds = getSystemIds();
+      const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+      const metaSheet = bdd.getSheetByName('Questions_META_FR');
+      if (metaSheet) {
+          const metaData = metaSheet.getRange(2, 1, metaSheet.getLastRow() - 1, 3).getValues();
+          availableMetaBlocks = metaData.map(row => ({ id: row[0], title: row[2] })).filter(block => block.id && block.title);
+      }
+    } catch(e) {
+      console.error("Impossible de charger les blocs mÃ©ta : " + e.message);
+    }
+    optionsMap.availableMetaBlocks = availableMetaBlocks;
+    return optionsMap;
+  } catch (err) {
+    Logger.log("ERREUR FATALE dans getInitialData: " + err.stack);
+    throw new Error("Erreur cÃ´tÃ© serveur : " + err.message);
+  }
+}
+
+/**
+ * RÃ©cupÃ¨re le nombre de questions disponibles pour un type de test donnÃ© depuis la BDD.
+ * @param {string} typeTest Le type de test (ex: 'CouleursV6').
+ * @returns {number} Le nombre de questions.
+ */
+function getQuestionCountForTestType(typeTest) {
+  if (!typeTest) return 0;
+  try {
+    const systemIds = getSystemIds();
+    if (systemIds && systemIds.ID_BDD) {
+      const bdd = SpreadsheetApp.openById(systemIds.ID_BDD);
+      const questionSheet = bdd.getSheets().find(s => s.getName().startsWith('Questions_' + typeTest));
+      return questionSheet ? questionSheet.getLastRow() - 1 : 0;
+    }
+    return 0;
+  } catch (err) {
+    Logger.log('Erreur getQuestionCountForTestType pour ' + typeTest + ': ' + err.message);
+    return 0;
+  }
+}
+
+/**
+ * Traite les donnÃ©es soumises depuis la barre latÃ©rale et crÃ©e une nouvelle ligne de configuration.
+ * @param {Object} formObject L'objet conte
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\FormulaireUI.html ---
+
+t) {
+  try {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+    if (!paramsSheet) throw new Error("L'onglet 'ParamÃ¨tres GÃ©nÃ©raux' est introuvable.");
+
+    const headers = paramsSheet.getRange(1, 1, 1, paramsSheet.getLastColumn()).getValues()[0];
+    
+    const dataRow = {};
+    
+    // Cartographie complÃ¨te des donnÃ©es du formulaire vers les colonnes de la feuille
+    dataRow['Titre_Formulaire_Utilisateur'] = formObject.titre;
+    dataRow['Sous-Titre_Formulaire'] = formObject.sousTitre;
+    dataRow['Type_Test'] = formObject.type;
+    dataRow['nbQuestions'] = formObject.nbQuestions;
+    dataRow['Limite_Lignes_A_Traiter'] = getQuestionCountForTestType(formObject.type);
+    dataRow['Blocs_Meta_A_Inclure'] = formObject.blocsMeta ? formObject.blocsMeta.join(',') : '';
+    
+    if (String(formObject.repondantContenu).includes('Niveau1')) dataRow['ID_Gabarit_Email_Repondant'] = 'RESULTATS_N1';
+    else if (String(formObject.repondantContenu).includes('Niveau2')) dataRow['ID_Gabarit_Email_Repondant'] = 'RESULTATS_N2';
+    else if (String(formObject.repondantContenu).includes('Niveau3')) dataRow['ID_Gabarit_Email_Repondant'] = 'RESULTATS_N3';
+
+    // Emails
+    dataRow['Repondant_Email_Actif'] = formObject.repondantActif ? "Oui" : "Non";
+    dataRow['Repondant_Quand'] = formObject.repondantQuand;
+    dataRow['Repondant_Contenu'] = formObject.repondantContenu;
+    dataRow['Patron_Email_Mode'] = formObject.patronActif ? "Oui" : "Non";
+    dataRow['Patron_Email'] = formObject.patronEmail;
+    dataRow['Patron_Quand'] = formObject.patronQuand;
+    dataRow['Patron_Contenu'] = formObject.patronContenu;
+    dataRow['Formateur_Email_Actif'] = formObject.formateurActif ? "Oui" : "Non";
+    dataRow['Formateur_Nom'] = formObject.formateurNom;
+    dataRow['Formateur_Email'] = formObject.formateurEmail;
+    dataRow['Formateur_Quand'] = formObject.formateurQuand;
+    dataRow['Formateur_Contenu'] = formObject.formateurContenu;
+    dataRow['Developpeur_Email'] = formObject.devEmail || "chanenam@gmail.com";
+    dataRow['Email_Alias'] = formObject.Email_Alias;
+
+    // Moteur & AccÃ¨s
+    dataRow['Moteur_Calcul'] = formObject.Moteur_Calcul;
+    dataRow['Mode_Acces_Test'] = formObject.Mode_Acces_Test;
+    
+    // Paiement
+    dataRow['PAYMENT_PROVIDER'] = formObject.PAYMENT_PROVIDER;
+    dataRow['BYPASS_PAYMENT'] = formObject.BYPASS_PAYMENT;
+    dataRow['REQUIRE_PASSWORD'] = formObject.REQUIRE_PASSWORD;
+    dataRow['FORM2_PASSWORD'] = formObject.FORM2_PASSWORD;
+    
+    // Livrables
+    dataRow['DELIVERABLE_TYPE'] = formObject.DELIVERABLE_TYPE;
+    dataRow['DELIVERABLE_TTL_MIN'] = formObject.DELIVERABLE_TTL_MIN;
+
+    // Contexte & RGPD
+    dataRow['CTX_ASK_ROLE'] = formObject.CTX_ASK_ROLE;
+    dataRow['CTX_ASK_DEPARTMENT'] = formObject.CTX_ASK_DEPARTMENT;
+    dataRow['CTX_ASK_RGPD'] = formObject.CTX_ASK_RGPD;
+    dataRow['CTX_COUNTRY_SOURCE'] = formObject.CTX_COUNTRY_SOURCE;
+
+    dataRow['Statut'] = 'En construction';
+    
+    const nouvelleLigne = headers.map(header => dataRow[header] !== undefined ? dataRow[header] : '');
+    
+    paramsSheet.appendRow(nouvelleLigne);
+    return "Configuration enregistrÃ©e avec succÃ¨s !";
+  } catch (e) {
+    Logger.log("ERREUR processNewTestConfiguration: " + e.stack);
+    throw new Error("Erreur interne lors de la sauvegarde : " + e.message);
+  }
+}
+
+/**
+ * Affiche une UI pour demander la ligne Ã  modifier.
+ */
+function showEditSidebar_UI() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt('Modifier un Test', 'Veuillez entrer le numÃ©ro de la ligne Ã  modifier :', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const rowIndex = parseInt(response.getResponseText());
+    if (!isNaN(rowIndex) && rowIndex > 1) {
+      showEditSidebar(rowIndex);
+    } else {
+      ui.alert('NumÃ©ro de ligne invalide.');
+    }
+  }
+}
+
+/**
+ * Affiche la barre latÃ©rale d'Ã©dition pour une ligne donnÃ©e.
+ * @param {number} rowIndex Le numÃ©ro de la ligne Ã  Ã©diter.
+ */
+function showEditSidebar(rowIndex) {
+  const template = HtmlService.createTemplateFromFile('ModifierTestUI');
+  template.rowIndex = rowIndex;
+  const html = template.evaluate().setTitle('Ã‰dition du Test (Ligne ' + rowIndex + ')').setWidth(600);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * RÃ©cupÃ¨re les donnÃ©es d'une ligne de configuration pour l'Ã©dition.
+ * @param {number} rowIndex Le numÃ©ro de la ligne.
+ * @returns {Object} Un objet avec les en-tÃªtes et les valeurs de la ligne.
+ */
+function getTestDataForEdit(rowIndex) {
+  const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const values = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+  return { headers: headers, values: values };
+}
+
+/**
+ * Met Ã  jour les donnÃ©es d'une ligne de configuration.
+ * @param {number} rowIndex Le numÃ©ro de la ligne Ã  mettre Ã  jour.
+ * @param {Object} updatedData Un objet contenant les nouvelles donnÃ©es.
+ * @returns {string} Un message de succÃ¨s.
+ */
+function updateTestData(rowIndex, updatedData) {
+  const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndexMap = new Map(headers.map((h, i) => [h, i]));
+  for (const header in updatedData) {
+    if (colIndexMap.has(header)) {
+      const colIndex = colIndexMap.get(header);
+      sheet.getRange(rowIndex, colIndex + 1).setValue(updatedData[header]);
+    }
+  }
+  return "Modifications enregistrÃ©es avec succÃ¨s !";
+}
+
+/**
+ * Affiche une UI pour demander la ligne Ã  dupliquer.
+ */
+function showDuplicateUI() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt('Dupliquer une Configuration de Test', 'Veuillez entrer le numÃ©ro de la ligne Ã  dupliquer :', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const rowIndex = parseInt(response.getResponseText());
+    if (!isNaN(rowIndex) && rowIndex > 1) {
+      try {
+        const newRowIndex = duplicateTestConfiguration(rowIndex);
+        ui.alert('SuccÃ¨s', `La ligne ${rowIndex} a Ã©tÃ© dupliquÃ©e Ã  la fin de la feuille (nouvelle ligne : ${newRowIndex}).`, ui.ButtonSet.OK);
+      } catch (e) {
+        ui.alert('Erreur', e.message, ui.ButtonSet.OK);
+      }
+    } else {
+      ui.alert('NumÃ©ro de ligne invalide.');
+    }
+  }
+}
+
+/**
+ * Duplique une ligne de configuration.
+ * @param {number} rowIndex Le numÃ©ro de la ligne Ã  dupliquer.
+ * @returns {number} Le numÃ©ro de la nouvelle ligne crÃ©Ã©e.
+ */
+function duplicateTestConfiguration(rowIndex) {
+  const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+  if (rowIndex > sheet.getLastRow()) {
+    throw new Error("La ligne spÃ©cifiÃ©e n'existe pas.");
+  }
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const sourceValues = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const fieldsToClear = ['Id_Unique', 'Nom_Fichier_Complet', 'Lien_Formulaire_Public', 'ID_Formulaire_Cible', 'ID_Sheet_Cible', 'AccÃ¨s Direct Formulaire'];
+  const shortUrlHeader = headers.find(h => h && h.toLowerCase().includes('raccourci'));
+  if (shortUrlHeader) fieldsToClear.push(shortUrlHeader);
+  
+  const newValues = headers.map(header => {
+    const colIndex = headers.indexOf(header);
+    const sourceValue = sourceValues[colIndex];
+    if (fieldsToClear.includes(header)) return '';
+    if (header === 'Statut') return 'En construction';
+    if (header === 'Titre_Formulaire_Utilisateur') return sourceValue + ' (Copie)';
+    return sourceValue;
+  });
+  
+  sheet.appendRow(newValues);
+  const newRowIndex = sheet.getLastRow();
+  sheet.getRange(newRowIndex, 1).activate();
+  return newRowIndex;
+}
+
+/**
+ * Affiche une UI pour gÃ©nÃ©rer une fiche de test imprimable.
+ */
+function showPrintableSheetUI() {
+  if (ID_MODELE_FICHE_TEST === "METTEZ_ICI_L_ID_DE_VOTRE_MODELE_GOOGLE_DOC") {
+    SpreadsheetApp.getUi().alert("Configuration requise", "Veuillez d'abord renseigner l'ID de votre modÃ¨le Google Doc.", SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt('GÃ©nÃ©rer une Fiche de Test', 'Veuillez entrer le numÃ©ro de la ligne :', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const rowIndex = parseInt(response.getResponseText());
+    if (!isNaN(rowIndex) && rowIndex > 1) {
+      try {
+        const fileUrl = generatePrintableSheet(rowIndex);
+        const htmlOutput = HtmlService.createHtmlOutput(`<p>La fiche de test a Ã©tÃ© gÃ©nÃ©rÃ©e.</p><a href="${fileUrl}" target="_blank">Ouvrir le document</a>`).setWidth(300).setHeight(100);
+        ui.showModalDialog(htmlOutput, 'Document CrÃ©Ã©');
+      } catch (e) {
+        ui.alert('Erreur', e.message, ui.ButtonSet.OK);
+      }
+    } else {
+      ui.alert('NumÃ©ro de ligne invalide.');
+    }
+  }
+}
+
+/**
+ * GÃ©nÃ¨re une fiche de test Ã  partir d'un modÃ¨le Google Doc.
+ * @param {number} rowIndex Le numÃ©ro de la ligne de configuration Ã  utiliser.
+ * @returns {string} L'URL du document gÃ©nÃ©rÃ©.
+ */
+function generatePrintableSheet(rowIndex) {
+  const sheet = SpreadsheetApp.openById(ID_FEUILLE_CONFIG).getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
+  if (rowIndex > sheet.getLastRow()) throw new Error("La ligne n'existe pas.");
+  
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const values = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const dataForFusion = {};
+  headers.forEach((header, i) => {
+    dataForFusion[header] = values[i];
+  });
+
+  const templateFile = DriveApp.getFileById(ID_MODELE_FICHE_TEST);
+  const destinationFolder = DriveApp.getRootFolder();
+  const testTitle = dataForFusion['Titre_Formulaire_Utilisateur'] || 'Fiche de Test';
+  const newFileName = `Fiche - ${testTitle}`;
+  const newFile = templateFile.makeCopy(newFileName, destinationFolder);
+  const doc = DocumentApp.openById(newFile.getId());
+  const body = doc.getBody();
+  
+  for (const key in dataForFusion) {
+    body.replaceText(`{{${key}}}`, dataForFusion[key]);
+  }
+  
+  doc.saveAndClose();
+  Logger.log(`Document gÃ©nÃ©rÃ© : ${newFile.getName()} (ID: ${newFile.getId()})`);
+  return newFile.getUrl();
+}
+
+/**
+ * RÃ©cupÃ¨re les IDs des fichiers systÃ¨me (BDD, etc.) depuis l'onglet sys_ID_Fichiers.
+ * @returns {Object} Un dictionnaire des IDs.
+ */
+function getSystemIds() {
+  const configSS = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+  const idSheet = configSS.getSheetByName('sys_ID_Fichiers');
+  if (!idSheet) { throw new Error("L'onglet 'sys_ID_Fichiers' est introuvable."); }
+  
+  const data = idSheet.getDataRange().getValues();
+  const ids = {};
+  data.slice(1).forEach(row => {
+    if (row[0] && row[1]) ids[row[0]] = row[1];
+  });
+  return ids;
+}
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .hidden-section { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out, opacity 0.3s ease-out; opacity: 0; }
+      .visible-section { max-height: 600px; opacity: 1; transition: max-height 0.5s ease-in, opacity 0.5s ease-in; }
+    </style>
+  </head>
+  <body class="bg-gray-100 p-4 font-sans">
+    <form id="main-form" onsubmit="submitForm(event)">
+      <h1 class="text-xl font-bold text-gray-800 mb-4">Configurer un Nouveau Test</h1>
+
+      <div class="mb-4">
+        <label for="titreTest" class="block text-sm font-medium text-gray-700">Titre du Test (pour l'utilisateur)</label>
+        <input type="text" id="titreTest" name="titre" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+      
+      <div class="mb-4">
+        <label for="sousTitreTest" class="block text-sm font-medium text-gray-700">Sous-Titre (optionnel)</label>
+        <input type="text" id="sousTitreTest" name="sousTitre" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+
+      <div class="mb-4">
+        <label for="typeTest" class="block text-sm font-medium text-gray-700">Type de Test</label>
+        <select id="typeTest" name="type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"></select>
+      </div>
+      
+      <div class="mb-4">
+        <label for="Moteur_Calcul" class="block text-sm font-medium text-gray-700">Type de Moteur</label>
+        <select id="Moteur_Calcul" name="Moteur_Calcul" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"></select>
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700">Questions Standards (Blocs MÃ©ta)</label>
+        <div id="meta-blocks-container" class="mt-2 p-3 bg-white border border-gray-300 rounded-md space-y-2"></div>
+      </div>
+
+      <div id="questions-info" class="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-md hidden">
+        <p class="text-sm text-indigo-700">Nombre de questions disponibles : <span id="question-count" class="font-bold">...</span></p>
+      </div>
+
+      <div class="mb-4">
+        <label for="nbQuestions" class="block text-sm font-medium text-gray-700">Nombre de questions Ã  utiliser</label>
+        <input type="number" id="nbQuestions" name="nbQuestions" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+
+      <hr class="my-6">
+
+      <div class="mb-2">
+        <label class="flex items-center">
+          <input type="checkbox" id="sendEmailRepondant" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+          <span class="ml-2 text-sm text-gray-700">Envoyer un email au rÃ©pondant ?</span>
+        </label>
+      </div>
+      <div id="detailsRepondant" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
+
+      <div class="mb-2">
+        <label class="flex items-center">
+          <input type="checkbox" id="sendEmailPatron" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+          <span class="ml-2 text-sm text-gray-700">Envoyer un email au patron ?</span>
+        </label>
+      </div>
+      <div id="detailsPatron" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
+
+      <div class="mb-2">
+        <label class="flex items-center">
+          <input type="checkbox" id="sendEmailFormateur" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+          <span class="ml-2 text-sm text-gray-700">Envoyer un email au formateur ?</span>
+        </label>
+      </div>
+      <div id="detailsFormateur" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
+
+      <hr class="my-6">
+      
+      <div class="mb-4">
+        <label for="emailAlias" class="block text-sm font-medium text-gray-700">Alias d'expÃ©dition (optionnel)</label>
+        <input type="email" id="emailAlias" name="Email_Alias" placeholder="contact@mon-entreprise.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+
+      <div class="mb-4">
+        <label for="emailDev" class="block text-sm font-medium text-gray-700">Email du DÃ©veloppeur (notifications)</label>
+        <input type="email" id="emailDev" name="devEmail" placeholder="DÃ©faut : chanenam@gmail.com" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+      </div>
+
+      <hr class="my-6">
+      
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Paiement & AccÃ¨s</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="PAYMENT_PROVIDER" class="block text-sm font-medium text-gray-700">Fournisseur de Paiement</label>
+          <select id="PAYMENT_PROVIDER" name="PAYMENT_PROVIDER" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="BYPASS_PAYMENT" class="block text-sm font-medium text-gray-700">Contourner le Paiement</label>
+          <select id="BYPASS_PAYMENT" name="BYPASS_PAYMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="REQUIRE_PASSWORD" class="block text-sm font-medium text-gray-700">Exiger un Mot de Passe</label>
+          <select id="REQUIRE_PASSWORD" name="REQUIRE_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="FORM2_PASSWORD" class="block text-sm font-medium text-gray-700">Mot de Passe du Test</label>
+          <select id="FORM2_PASSWORD" name="FORM2_PASSWORD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="Mode_Acces_Test" class="block text-sm font-medium text-gray-700">Mode AccÃ¨s Test</label>
+          <select id="Mode_Acces_Test" name="Mode_Acces_Test" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+      </div>
+      
+      <hr class="my-6">
+      
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Livrables & Contexte</h2>
+      </div>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="DELIVERABLE_TYPE" class="block text-sm font-medium text-gray-700">Type de Livrable</label>
+          <select id="DELIVERABLE_TYPE" name="DELIVERABLE_TYPE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="DELIVERABLE_TTL_MIN" class="block text-sm font-medium text-gray-700">DurÃ©e de vie du lien (minutes)</label>
+          <select id="DELIVERABLE_TTL_MIN" name="DELIVERABLE_TTL_MIN" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_ASK_ROLE" class="block text-sm font-medium text-gray-700">Demander le RÃ´le/Fonction</label>
+          <select id="CTX_ASK_ROLE" name="CTX_ASK_ROLE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_ASK_DEPARTMENT" class="block text-sm font-medium text-gray-700">Demander le DÃ©partement</label>
+          <select id="CTX_ASK_DEPARTMENT" name="CTX_ASK_DEPARTMENT" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_ASK_RGPD" class="block text-sm font-medium text-gray-700">Demander Consentement RGPD</label>
+          <select id="CTX_ASK_RGPD" name="CTX_ASK_RGPD" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+        <div>
+          <label for="CTX_COUNTRY_SOURCE" class="block text-sm font-medium text-gray-700">Demander le Pays</label>
+          <select id="CTX_COUNTRY_SOURCE" name="CTX_COUNTRY_SOURCE" class="mt-1 block w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md"></select>
+        </div>
+      </div>
+      
+      <button type="submit" id="submit-button" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
+        CrÃ©er la Configuration
+      </button>
+    </form>
+
+    <div id="feedback-screen" class="hidden text-center py-10">
+      <p id="feedback-message" class="text-lg text-gray-700"></p>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        google.script.run
+          .withSuccessHandler(populateInitialData)
+          .withFailureHandler(onFailure)
+          .getInitialData();
+        setupEventListeners();
+      });
+      
+      function onFailure(error) {
+        alert("ERREUR CRITIQUE : Impossible de charger les donnÃ©es de configuration.\n\nMessage : " + error.message);
+        console.error(error);
+      }
+
+      function populateInitialData(data) {
+        function fillList(selectId, optionsArray) {
+          const selectElement = document.getElementById(selectId);
+          if (!selectElement) return;
+          selectElement.innerHTML = `<option value="">-- Choisir --</option>`;
+          const options = (optionsArray || []).map(v => String(v ?? '').trim()).filter((v, i, a) => v && a.indexOf(v) === i);
+          options.forEach(opt => {
+              const optionElement = document.createElement('option');
+              optionElement.value = opt;
+              optionElement.textContent = opt;
+              selectElement.appendChild(optionElement);
+          });
+        }
+        
+        fillList('typeTest', data.Type_Test);
+        fillList('Moteur_Calcul', data.Moteur_Calcul);
+        
+        fillList('PAYMENT_PROVIDER', data.PAYMENT_PROVIDER);
+        fillList('BYPASS_PAYMENT', data.BYPASS_PAYMENT);
+        fillList('REQUIRE_PASSWORD', data.REQUIRE_PASSWORD);
+        fillList('FORM2_PASSWORD', data.FORM2_PASSWORD);
+        fillList('DELIVERABLE_TYPE', data.DELIVERABLE_TYPE);
+        fillList('DELIVERABLE_TTL_MIN', data.DELIVERABLE_TTL_MIN);
+        fillList('CTX_ASK_ROLE', data.CTX_ASK_ROLE);
+        fillList('CTX_ASK_DEPARTMENT', data.CTX_ASK_DEPARTMENT);
+        fillList('CTX_ASK_RGPD', data.CTX_ASK_RGPD);
+        fillList('CTX_COUNTRY_SOURCE', data.CTX_COUNTRY_SOURCE);
+        fillList('Mode_Acces_Test', data.Mode_Acces_Test);
+        
+        const metaContainer = document.getElementById('meta-blocks-container');
+        if (data.availableMetaBlocks && data.availableMetaBlocks.length > 0) {
+          metaContainer.innerHTML = '';
+          data.availableMetaBlocks.forEach(block => {
+            const isChecked = (block.id === 'META_EMAIL' || block.id === 'META_NOM_COMPLET');
+            const label = document.createElement('label');
+            label.className = 'flex items-center text-sm text-gray-800';
+            label.innerHTML = `<input type="checkbox" value="${block.id}" name="blocsMeta" class="meta-block-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" ${isChecked ? 'checked' : ''}> <span class="ml-2">${block.title}</span>`;
+            metaContainer.appendChild(label);
+          });
+        } else {
+          metaContainer.innerHTML = '<p class="text-xs text-gray-500">Aucun bloc mÃ©ta trouvÃ© dans la BDD.</p>';
+        }
+
+        populateEmailOptions('detailsRepondant', 'Repondant', data);
+        populateEmailOptions('detailsPatron', 'Patron', data);
+        populateEmailOptions('detailsFormateur', 'Formateur', data);
+      }
+
+      function setupEventListeners() {
+        document.getElementById('typeTest').addEventListener('change', function() {
+          const selectedType = this.value;
+          const infoDiv = document.getElementById('questions-info');
+          const countSpan = document.getElementById('question-count');
+
+          if (selectedType) {
+            infoDiv.classList.remove('hidden');
+            countSpan.textContent = 'Chargement...';
+            google.script.run.withSuccessHandler(updateQuestionCount).getQuestionCountForTestType(selectedType);
+          } else {
+            infoDiv.classList.add('hidden');
+          }
+        });
+
+        setupEmailSectionToggle('sendEmailRepondant', 'detailsRepondant');
+        setupEmailSectionToggle('sendEmailPatron', 'detailsPatron');
+        setupEmailSectionToggle('sendEmailFormateur', 'detailsFormateur');
+      }
+
+      function submitForm(event) {
+          event.preventDefault();
+          const form = event.target;
+          
+          if (!form.titre.value || !form.type.value || !form.Moteur_Calcul.value || !form.nbQuestions.value) {
+              alert('Veuillez remplir tous les champs obligatoires (Titre, Type de Test, Type de Moteur, Nombre de questions).');
+              return;
+          }
+
+          const formObject = {};
+          const formData = new FormData(form);
+          for (let [key, value] of formData.entries()) {
+              if (formObject.hasOwnProperty(key)) {
+                  if (!Array.isArray(formObject[key])) {
+                      formObject[key] = [formObject[key]];
+                  }
+                  formObject[key].push(value);
+              } else {
+                  formObject[key] = value;
+              }
+          }
+          
+          // GÃ©rer les cases Ã  cocher qui ne sont pas soumises si non cochÃ©es
+          formObject.repondantActif = document.getElementById('sendEmailRepondant').checked;
+          formObject.patronActif = document.getElementById('sendEmailPatron').checked;
+          formObject.formateurActif = document.getElementById('sendEmailFormateur').checked;
+
+          showFeedbackScreen('Enregistrement en cours...');
+          document.getElementById('submit-button').disabled = true;
+
+          google.script.run
+            .withSuccessHandler(onSaveSuccess)
+            .withFailureHandler(onSaveFailure)
+            .processNewTestConfiguration(formObject);
+      }
+      
+      function populateEmailOptions(containerId, prefix, options) {
+        const container = document.getElementById(containerId);
+        let html = '';
+        
+        if (prefix === 'Formateur') {
+          html += `<div class="mt-2 mb-3"><label for="nom${prefix}" class="block text-sm font-medium text-gray-600">Nom du ${prefix}</label><input type="text" id="nom${prefix}" name="formateurNom" class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm"></div>`;
+        }
+        
+        if (prefix === 'Patron' || prefix === 'Formateur') {
+          html += `<div class="mt-2 mb-3"><label for="email${prefix}" class="block text-sm font-medium text-gray-600">Adresse e-mail du ${prefix}</label><input type="email" id="email${prefix}" name="${prefix.toLowerCase()}Email" class="mt-1 block w-full px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm"></div>`;
+        }
+        
+        const arrQuand = options[`${prefix}_Quand`] || [];
+        const arrContenu = options[`${prefix}_Contenu`] || [];
+
+        html += `<div class="mt-2 mb-3"><label for="quand${prefix}" class="block text-sm font-medium text-gray-600">Quand envoyer l'email ?</label><select id="quand${prefix}" name="${prefix.toLowerCase()}Quand" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 rounded-md">${arrQuand.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
+        html += `<div class="mt-2 mb-3"><label for="contenu${prefix}" class="block text-sm font-medium text-gray-600">Quel niveau de contenu ?</label><select id="contenu${prefix}" name="${prefix.toLowerCase()}Contenu" class="mt-1 block w-full pl-2 pr-8 py-1.5 text-base border-gray-300 rounded-md">${arrContenu.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div>`;
+
+        container.innerHTML = html;
+      }
+
+      function updateQuestionCount(count) {
+        document.getElementById('question-count').textContent = count;
+      }
+
+      function setupEmailSectionToggle(checkboxId, sectionId) {
+        document.getElementById(checkboxId).addEventListener('change', function() {
+          const section = document.getElementById(sectionId);
+          if (this.checked) {
+            section.classList.remove('hidden-section');
+            section.classList.add('visible-section');
+          } else {
+            section.classList.remove('visible-section');
+            section.classList.add('hidden-section');
+          }
+        });
+      }
+
+      function onSaveSuccess(message) {
+        showFeedbackScreen(message);
+        setTimeout(() => google.script.host.close(), 2000);
+      }
+
+      function onSaveFailure(error) {
+        showFeedbackScreen('Erreur : ' + (error?.message || error));
+        document.getElementById('submit-button').disabled = false;
+      }
+
+      function showFeedbackScreen(message) {
+        const mainForm = document.getElementById('main-form');
+        if(mainForm) mainForm.classList.add('hidden');
+        const feedbackScreen = document.getElementById('feedback-screen');
+        document.getElementById('feedback-message').textContent = message;
+        feedbackScreen.classList.remove('hidden');
+      }
+    </script>
+  </body>
+</html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
+
+// Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine Ã  Tests.
+// const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
+
+/**
+ * Fonction Ã  usage unique pour convertir toutes les URLs de formulaires existantes
+ * dans l'onglet 'ParamÃ¨tres GÃ©nÃ©raux' en leurs versions courtes (forms.gle).
+ */
+function convertirLiensExistantsEnCourts() {
+  const nomOnglet = "ParamÃ¨tres GÃ©nÃ©raux";
+  
+  try {
+    const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
+    const sheet = ss.getSheetByName(nomOnglet);
+    
+    if (!sheet) {
+      throw new Error(`L'onglet "${nomOnglet}" est introuvable.`);
+    }
+    
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    const headers = values[0];
+    
+    // Trouve automatiquement la colonne contenant les liens
+    const linkColumnIndex = headers.indexOf("Lien_Formulaire_Public");
+    if (linkColumnIndex === -1) {
+      throw new Error("La colonne 'Lien_Formulaire_Public' est introuvable.");
+    }
+
+    // Boucle sur chaque ligne (en sautant l'en-tÃªte)
+    for (let i = 1; i < values.length; i++) {
+      const longUrl = values[i][linkColumnIndex];
+      
+      // Ne traite que les URLs longues et non vides
+      if (longUrl && typeof longUrl === 'string' && longUrl.includes("docs.google.com/forms")) {
+        // Extrait l'ID du formulaire Ã  partir de l'URL longue
+        const formId = longUrl.split('/d/')[1].split('/')[0];
+        
+        if (formId) {
+          // Ouvre le formulaire par son ID et obtient l'URL courte
+          const form = FormApp.openById(formId);
+          const shortUrl = form.getShortUrl();
+          
+          // Met Ã  jour la cellule avec la nouvelle URL courte
+          // Les indices de range commencent Ã  1, donc i+1 et linkColumnIndex+1
+          sheet.getRange(i + 1, linkColumnIndex + 1).setValue(shortUrl);
+          Logger.log(`Ligne ${i + 1}: URL convertie pour le formulaire ${formId}`);
+        }
+      }
+    }
+    
+    SpreadsheetApp.getUi().alert("Conversion terminÃ©e avec succÃ¨s !");
+    
+  } catch (e) {
+    Logger.log(`Erreur lors de la conversion : ${e.toString()}`);
+    SpreadsheetApp.getUi().alert(`Une erreur est survenue : ${e.message}`);
+  }
+}
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ValidationRunner.js ---
+
+/** ValidationRunner.gs â€” Runner de validation des en-tÃªtes (CONFIG â†’ BDD â†’ TEMPLATE)
+ * Ajoute un menu "Validation" dans le classeur CONFIG pour vÃ©rifier les onglets requis
+ * et les en-tÃªtes attendues, en se basant STRICTEMENT sur les noms dâ€™en-tÃªtes (jamais dâ€™indices).
+ * Rapport affichÃ© en sidebar (HTML).
+ *
+ * PRÃ‰REQUIS :
+ * - Avoir les IDs des 3 classeurs :
+ *    - ID_CONFIG : celui du classeur courant (dÃ©tectÃ© automatiquement)
+ *    - ID_BDD, ID_TEMPLATE : soit lus dâ€™un onglet "sys_ID_Fichiers" (si prÃ©sent),
+ *      soit saisis en dur ci-dessous dans FALLBACK_IDS.
+ */
+
+/** ================ CONFIGURATION MINIMALE ================ **/
+const FALLBACK_IDS = {
+  ID_BDD:      '1m2MGBd0nyiAl3qw032B6Nfj7zQL27bRSBexiOPaRZd8', // â† remplace si besoin
+  ID_TEMPLATE: '1XwyTt9hcFLd-_IrCYuKY4_E6Dw9aUrls-AGQp65dzDU'  // â† remplace si besoin
+};
+// Variantes de noms acceptÃ©es pour certains onglets (tolÃ©rance orthographe/accents)
+const SHEET_NAME_VARIANTS = {
+  'ParamÃ¨tres GÃ©nÃ©raux': ['ParamÃ¨tres GÃ©nÃ©raux','Parametres Generaux','Parameters','ParamÃ¨tres Generaux','Parametres GÃ©nÃ©raux']
+};
+
+/** ================ MENU ================== **/
+function addValidationMenu_(ui) {
+  ui.createMenu('Validation')
+    .addItem('VÃ©rifier les en-tÃªtes (CONFIG, BDD, TEMPLATE)', 'validateAllHeaders')
+    .addToUi();
+}
+/** ================ HELPERS ================== **/
+function normalizeHeader_(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire accents
+    .replace(/\s+/g, ' ') // espaces multiples â†’ un espace
+    .trim()
+    .toLowerCase();
+}
+
+function getHeaderRow_(sheet) {
+  if (!sheet) return [];
+  const lastCol = sheet.getLastColumn();
+  if (lastCol === 0) return [];
+  return sheet.getRange(1,1,1,lastCol).getValues()[0] || [];
+}
+
+function findSheetByVariants_(ss, canonicalName) {
+  const variants = SHEET_NAME_VARIANTS[canonicalName] || [canonicalName];
+  for (const name of variants) {
+    const sh = ss.getSheetByName(name);
+    if (sh) return sh;
+  }
+  return null;
+}
+
+function assertHeaders_(sheet, requiredNames, report, context) {
+  const headers = getHeaderRow_(sheet);
+  const normalized = headers.map(normalizeHeader_);
+  const missing = requiredNames
+    .map(normalizeHeader_)
+    .filter(req => !normalized.includes(req));
+
+  if (missing.length) {
+    report.push({
+      classeur: context.classeur,
+      onglet: sheet ? sheet.getName() : context.ongletAttendu,
+      type: 'En-tÃªtes manquantes',
+      details: 'Manquantes: ' + missing.join(', '),
+      headersTrouves: headers.join(' | ')
+    });
+  }
+}
+
+function getSystemIdsFromConfig_() {
+  // Essaie de lire dans un onglet "sys_ID_Fichiers" (2 colonnes : ClÃ©, Valeur)
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName('sys_ID_Fichiers');
+  const ids = { ID_CONFIG: ss.getId(), ID_BDD: FALLBACK_IDS.ID_BDD, ID_TEMPLATE: FALLBACK_IDS.ID_TEMPLATE };
+
+  if (!sh) return ids;
+
+  const values = sh.getDataRange().getValues();
+  const map = {};
+  values.forEach(row => {
+    const k = String(row[0] || '').trim();
+    const v = String(row[1] || '').trim();
+    if (k && v) map[k] = v;
+  });
+
+  if (map.ID_CONFIG)   ids.ID_CONFIG = map.ID_CONFIG;
+  if (map.ID_BDD)      ids.ID_BDD = map.ID_BDD;
+  if (map.ID_TEMPLATE) ids.ID_TEMPLATE = map.ID_TEMPLATE;
+
+  return ids;
+}
+
+function htmlReport_(rows) {
+  const esc = s => String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const head = `
+    <style>
+      body{font-family:Segoe UI,Arial,sans-serif;font-size:13px;padding:12px}
+      h2{margin:0 0 10px 0}
+      table{border-collapse:collapse;width:100%}
+      th,td{border:1px solid #ddd;padding:6px;vertical-align:top}
+      th{background:#fafafa;text-align:left}
+      tr:nth-child(even){background:#fcfcfc}
+      .ok{color:#2e7d32}
+      .err{color:#b71c1c}
+    </style>`;
+  if (!rows.length) {
+    return HtmlService.createHtmlOutput(head + `<h2>Validation des en-tÃªtes</h2><p class="ok">Aucune anomalie dÃ©tectÃ©e ðŸ‘</p>`)
+      .setTitle('Validation en-tÃªtes');
+  }
+  const rowsHtml = rows.map(r => `
+    <tr>
+      <td>${esc(r.classeur)}</td>
+      <td>${esc(r.onglet)}</td>
+      <td class="err">${esc(r.type)}</td>
+      <td>${esc(r.details)}</td>
+      <td>${esc(r.headersTrouves || '')}</td>
+    </tr>`).join('');
+  const html = `
+    ${head}
+    <h2>Validation des en-tÃªtes</h2>
+    <table>
+      <thead><tr>
+        <th>Classeur</th><th>Onglet</th><th>Type</th><th>DÃ©tails</th><th>En-tÃªtes trouvÃ©es</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+  return HtmlService.createHtmlOutput(html).setTitle('Validation en-tÃªtes');
+}
+
+/** ================ RUNNER PRINCIPAL ================== **/
+function validateAllHeaders() {
+  const report = [];
+  const { ID_CONFIG, ID_BDD, ID_TEMPLATE } = getSystemIdsFromConfig_();
+
+  // --- CONFIG ---
+  try {
+    const ssCfg = SpreadsheetApp.openById(ID_CONFIG);
+    const shParams = findSheetByVariants_(ssCfg, 'ParamÃ¨tres GÃ©nÃ©raux');
+    if (!shParams) {
+      report.push({ classeur:'CONFIG', onglet:'ParamÃ¨tres GÃ©nÃ©raux', type:'Onglet manquant', details:'Aucune variante trouvÃ©e (ParamÃ¨tres GÃ©nÃ©raux/Parametres Generaux/Parameters)' });
+    } else {
+      assertHeaders_(shParams, [
+        'Type_Test','Repondant_Quand','Repondant_Contenu','Patron_Quand','Patron_Contenu','Formateur_Quand','Formateur_Contenu'
+      ], report, { classeur:'CONFIG', ongletAttendu:'ParamÃ¨tres GÃ©nÃ©raux' });
+    }
+  } catch (e) {
+    report.push({ classeur:'CONFIG', onglet:'*', type:'Erreur', details:String(e) });
+  }
+
+  // --- BDD ---
+  try {
+    const ssBdd = SpreadsheetApp.openById(ID_BDD);
+    // sys_Composition_Emails
+    const shCompo = ssBdd.getSheetByName('sys_Composition_Emails');
+    if (!shCompo) {
+      report.push({ classeur:'BDD', onglet:'sys_Composition_Emails', type:'Onglet manquant', details:'Non trouvÃ©' });
+    } else {
+      assertHeaders_(shCompo, [
+        'Type_Test','Code_Langue','Code_Niveau_Email','Code_Profil','Element','Ordre','Contenu / ID_Document'
+      ], report, { classeur:'BDD', ongletAttendu:'sys_Composition_Emails' });
+    }
+    // sys_PiecesJointes
+    const shPJ = ssBdd.getSheetByName('sys_PiecesJointes');
+    if (!shPJ) {
+      report.push({ classeur:'BDD', onglet:'sys_PiecesJointes', type:'Onglet manquant', details:'Non trouvÃ©' });
+    } else {
+      assertHeaders_(shPJ, [
+        'Type_Test','Code_Langue','Code_Niveau_Email','Code_Profil','ID_Document','Nom_Fichier'
+      ], report, { classeur:'BDD', ongletAttendu:'sys_PiecesJointes' });
+    }
+    // Questions_META_FR (optionnel mais frÃ©quent)
+    const shMeta = ssBdd.getSheetByName('Questions_META_FR');
+    if (shMeta) {
+      assertHeaders_(shMeta, [
+        'ID_Question','Libelle','Type','Obligatoire','Bloc'
+      ], report, { classeur:'BDD', ongletAttendu:'Questions_META_FR' });
+    }
+  } catch (e) {
+    report.push({ classeur:'BDD', onglet:'*', type:'Erreur', details:String(e) });
+  }
+
+  // --- TEMPLATE ---
+  try {
+    const ssTpl = SpreadsheetApp.openById(ID_TEMPLATE);
+    // Onglet de config attendu cÃ´tÃ© TEMPLATE (Ã  adapter si besoin)
+    const shTplCfg = ssTpl.getSheetByName('sys_Template_Config');
+    if (shTplCfg) {
+      assertHeaders_(shTplCfg, [
+        'Cle','Valeur'
+      ], report, { classeur:'TEMPLATE', ongletAttendu:'sys_Template_Config' });
+    } else {
+      // pas bloquant : beaucoup de logique template est dans la BDD (compo emails / PJ)
+      // On signale juste l'absence d'onglet de config local si on s'y attendait :
+      // report.push({ classeur:'TEMPLATE', onglet:'sys_Template_Config', type:'Onglet manquant', details:'Optionnel mais recommandÃ©' });
+    }
+  } catch (e) {
+    report.push({ classeur:'TEMPLATE', onglet:'*', type:'Erreur', details:String(e) });
+  }
+
+  // Affiche le rapport
+  const out = htmlReport_(report);
+  SpreadsheetApp.getUi().showSidebar(out);
+}
+
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\ModifierTestUI.html ---
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      .form-row { margin-bottom: 15px; }
+      label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+      input[type="text"] { width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+      input:disabled { background-color: #f2f2f2; color: #777; cursor: not-allowed; }
+      button { padding: 10px 15px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; }
+      button:hover { background-color: #357AE8; }
+      #status { margin-top: 15px; font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <h4>Modifier les paramÃ¨tres du test</h4>
+    <div id="form-container">
+      <p>Chargement des donnÃ©es...</p>
+    </div>
+    
+    <div class="form-row">
+      <button onclick="saveChanges()">Sauvegarder les modifications</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <script>
+      // Ces variables sont passÃ©es depuis le script cÃ´tÃ© serveur
+      const rowIndex = <?= rowIndex ?>;
+
+      // Au chargement de la sidebar, on rÃ©cupÃ¨re les donnÃ©es du test
+      window.addEventListener('load', function() {
+        google.script.run
+          .withSuccessHandler(populateForm)
+          .withFailureHandler(onFailure)
+          .getTestDataForEdit(rowIndex);
+      });
+
+      // Fonction pour construire le formulaire avec les donnÃ©es reÃ§ues
+      function populateForm(data) {
+        const container = document.getElementById('form-container');
+        container.innerHTML = ''; // Nettoyer le message de chargement
+
+        // Liste des champs qui seront en lecture seule
+        const readOnlyFields = [
+          'Id_Unique', 'Nom_Fichier_Complet', 'Statut', 
+          'Lien_Formulaire_Public', 'ID_Formulaire_Cible', 'ID_Sheet_Cible',
+          'AccÃ¨s Direct Formulaire'
+          // Ajoutez d'autres en-tÃªtes de colonne que vous voulez griser
+        ];
+
+        data.headers.forEach((header, index) => {
+          if (!header) return; // Ignorer les colonnes sans en-tÃªte
+
+          const value = data.values[index];
+          const isReadOnly = readOnlyFields.includes(header);
+
+          const rowDiv = document.createElement('div');
+          rowDiv.className = 'form-row';
+
+          const label = document.createElement('label');
+          label.textContent = header;
+          
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.id = header;
+          input.value = value;
+          if (isReadOnly) {
+            input.disabled = true;
+          }
+
+          rowDiv.appendChild(label);
+          rowDiv.appendChild(input);
+          container.appendChild(rowDiv);
+        });
+      }
+
+      // Fonction appelÃ©e par le bouton "Sauvegarder"
+      function saveChanges() {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = 'Sauvegarde en cours...';
+        
+        const updatedData = {};
+        const inputs = document.querySelectorAll('#form-container input');
+        
+        inputs.forEach(input => {
+          // On ne sauvegarde que les champs qui ne sont PAS dÃ©sactivÃ©s
+          if (!input.disabled) {
+            updatedData[input.id] = input.value;
+          }
+        });
+
+        google.script.run
+          .withSuccessHandler(function(successMessage) {
+            statusDiv.textContent = successMessage;
+            // Ferme la sidebar aprÃ¨s 2 secondes
+            setTimeout(function() { google.script.host.close(); }, 2000);
+          })
+          .withFailureHandler(onFailure)
+          .updateTestData(rowIndex, updatedData);
+      }
+
+      function onFailure(error) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = 'Erreur: ' + error.message;
+        alert('Erreur: ' + error.message);
+      }
+    </script>
+  </body>
+</html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\GenererDocumentUI.html ---
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      .form-row { margin-bottom: 15px; }
+      label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+      input[type="number"] { width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+      button { padding: 10px 15px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+      button:hover { background-color: #185abc; }
+      #status { margin-top: 20px; padding: 10px; border-radius: 4px; }
+      .success { background-color: #e6f4ea; color: #137333; }
+      .error { background-color: #fce8e6; color: #c5221f; }
+    </style>
+  </head>
+  <body>
+    <h4>Catalogue des Tests</h4>
+    <p>GÃ©nÃ©rez un document imprimable Ã  partir d'une ligne de configuration.</p>
+    
+    <div class="form-row">
+      <label for="rowIndex">NumÃ©ro de la ligne Ã  utiliser :</label>
+      <input type="number" id="rowIndex" min="2" placeholder="Ex: 5">
+    </div>
+    
+    <div class="form-row">
+      <button onclick="generateDocument()">GÃ©nÃ©rer le Document</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <script>
+      function generateDocument() {
+        const rowIndex = document.getElementById('rowIndex').value;
+        const statusDiv = document.getElementById('status');
+        
+        if (!rowIndex || rowIndex < 2) {
+          alert('Veuillez entrer un numÃ©ro de ligne valide (supÃ©rieur Ã  1).');
+          return;
+        }
+
+        statusDiv.className = '';
+        statusDiv.textContent = 'GÃ©nÃ©ration en cours...';
+        document.querySelector('button').disabled = true;
+
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .generatePrintableSheet(parseInt(rowIndex));
+      }
+
+      function onSuccess(fileUrl) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.className = 'success';
+        statusDiv.innerHTML = 'Document gÃ©nÃ©rÃ© ! <br><a href="' + fileUrl + '" target="_blank">Cliquez ici pour l\'ouvrir</a>';
+        document.querySelector('button').disabled = false;
+        document.getElementById('rowIndex').value = '';
+      }
+
+      function onFailure(error) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.className = 'error';
+        statusDiv.textContent = 'Erreur: ' + error.message;
+        document.querySelector('button').disabled = false;
+      }
+    </script>
+  </body>
+</html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\concat_scripts_repvic.js ---
+
+const fs = require('fs');
+const path = require('path');
+
+// --- CONFIGURATION ---
+// Extensions de fichiers Ã  inclure
+const scriptExtensions = [
+    '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less',
+    '.xml', '.php', '.rb', '.java', '.c', '.cpp', '.cs', '.go',
+    '.sh', '.ps1', '.bat', '.cmd', '.sql', '.vue', '.svelte', '.astro'
+];
+
+// Le dossier Ã  scanner
+const folderToScan = './'; // Ã€ ajuster si besoin
+// --- FIN CONFIGURATION ---
+
+// RÃ©cupÃ©rer le nom du rÃ©pertoire scannÃ©
+const resolvedFolderPath = path.resolve(folderToScan);
+const dirName = path.basename(resolvedFolderPath);
+
+// CrÃ©er une date au format aammjj
+const now = new Date();
+const year = String(now.getFullYear()).slice(2); // 2 derniers chiffres de l'annÃ©e
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const dateStamp = `${year}${month}${day}`;
+
+// Nom du fichier de sortie
+const outputFileName = `${dirName}_Script_${dateStamp}.txt`;
+
+// CrÃ©er une chaÃ®ne avec date et heure en franÃ§ais
+const dateTimeString = `// Fichier gÃ©nÃ©rÃ© le ${now.toLocaleDateString('fr-FR')} Ã  ${now.toLocaleTimeString('fr-FR')}\n\n`;
+
+// Initialiser la variable qui accumulera le contenu
+let allContent = dateTimeString;
+
+// Fonction rÃ©cursive
+function readFilesRecursively(directory) {
+    fs.readdirSync(directory).forEach(file => {
+        const absolutePath = path.join(directory, file);
+        if (fs.statSync(absolutePath).isDirectory()) {
+            readFilesRecursively(absolutePath);
+        } else {
+            const fileExtension = path.extname(file).toLowerCase();
+            // --- MODIFICATION ICI ---
+            // On vÃ©rifie l'extension ET on exclut les fichiers commenÃ§ant par 'concat_scripts'
+            if (scriptExtensions.includes(fileExtension) && !file.startsWith('concat_scripts')) {
+                allContent += `// --- DÃ©but du fichier: ${absolutePath} ---\n`;
+                allContent += fs.readFileSync(absolutePath, 'utf8');
+                allContent += `\n// --- Fin du fichier: ${absolutePath} ---\n\n`;
+            }
+        }
+    });
+}
+
+// Supprimer le fichier de sortie existant
+if (fs.existsSync(outputFileName)) {
+    fs.unlinkSync(outputFileName);
+    console.log(`Ancien fichier '${outputFileName}' supprimÃ©.`);
+}
+
+// Lancer le traitement
+try {
+    readFilesRecursively(folderToScan);
+    fs.writeFileSync(outputFileName, allContent, 'utf8');
+    console.log(`SuccÃ¨s : Tous les scripts ont Ã©tÃ© exportÃ©s dans '${outputFileName}'`);
+} catch (error) {
+    console.error(`Erreur lors de la lecture ou de l'Ã©criture des fichiers : ${error.message}`);
+}
