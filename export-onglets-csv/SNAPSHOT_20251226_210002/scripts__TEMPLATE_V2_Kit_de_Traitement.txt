@@ -117,10 +117,10 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibleNorm);
     resultats = { ...resultats, ...profilEtReco };
     const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
-    const infosProfilComplet = profilsMap[resulta
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\RetraitementUI.html ---
+    const infosProfilComplet = profilsMap[resultats.profilFinal];
 
-sultats.profilFinal}"`);
+    // --- ESPIONS POUR LE BUG DE CORRESPONDANCE ---
+    _log(DEBUG_DATA_LOADING, 'PROFIL RECHERCHÃ‰ :', `"${resultats.profilFinal}"`);
     _log(DEBUG_DATA_LOADING, 'PROFILS DISPONIBLES :', Object.keys(profilsMap));
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
     // --- FIN DES ESPIONS ---
@@ -353,6 +353,9 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\RetraitementUI.html ---
+
  <!DOCTYPE html>
 <html>
   <head>
@@ -633,10 +636,10 @@ function activerTraitementAutomatique() {
     .onFormSubmit()
     .create();
 
-  SpreadsheetApp.getUi().alert('âœ… DÃ©clencheur activÃ© ! Le traitement automatique des rÃ©ponses est maintenant opÃ©rationnel.');
-}
+  SpreadsheetApp.getUi().alert('âœ… DÃ©clen
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
 
-/* ============================================================================
+===========================================
  * SOUS-MENU "Usine Ã  Tests" : helpers & actions
  * NÃ©cessite : getTestConfiguration(), getOriginalLanguage(),
  * _creerObjetReponse(), _getReponsesSheet_(), retraitementTestSansEnvoi(), traiterLigne()
@@ -748,9 +751,6 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
 
 /**
  * =================================================================================
@@ -2711,10 +2711,8 @@ function ui_DryRunLigneSelection() {
 function ui_EnvoiReelLigneSelection() {
   try {
     const row = _getRowFromSelectionOrAsk_();
-    if (typeof traiterLigne !== 'fun
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
-
-du fichier T_Main.gs.');
+    if (typeof traiterLigne !== 'function') {
+      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: traiterLigne(). VÃ©rifiez la prÃ©sence du fichier T_Main.gs.');
       return;
     }
     traiterLigne(row, { isRetraitement: true, dryRun: false, ignoreDeveloppeurEmail: false });
@@ -2850,6 +2848,9 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+
 /**
  * T_Mail.gs
  * @fileoverview GÃ¨re la composition et l'envoi des e-mails de rÃ©sultats.
