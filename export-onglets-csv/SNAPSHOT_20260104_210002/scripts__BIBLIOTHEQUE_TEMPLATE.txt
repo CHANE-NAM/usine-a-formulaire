@@ -221,9 +221,10 @@ function envoyerEmailProgramme(e) {
            <option value="N3">Niveau 3</option>
          </select>
         </div>
-        <div class="form-group">
-         <label for="alias-expediteur">ALIAS D'EXPÃ‰DITION (VIDE = email par dÃ©faut)</label>
-         <input type="email" id="alias-expediteur" name="alias_expediteur">
+        <div class="form-group"
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
+
+email" id="alias-expediteur" name="alias_expediteur">
         </div>
         </div>
     <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
@@ -336,9 +337,6 @@ function envoyerEmailProgramme(e) {
     </script>
   </body>
 </html>
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
-
 function myFunction() {
   
   
