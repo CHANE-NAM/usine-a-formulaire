@@ -636,10 +636,10 @@ function activerTraitementAutomatique() {
     .onFormSubmit()
     .create();
 
-  SpreadsheetApp.getUi().alert('âœ… DÃ©clen
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
+  SpreadsheetApp.getUi().alert('âœ… DÃ©clencheur activÃ© ! Le traitement automatique des rÃ©ponses est maintenant opÃ©rationnel.');
+}
 
-===========================================
+/* ============================================================================
  * SOUS-MENU "Usine Ã  Tests" : helpers & actions
  * NÃ©cessite : getTestConfiguration(), getOriginalLanguage(),
  * _creerObjetReponse(), _getReponsesSheet_(), retraitementTestSansEnvoi(), traiterLigne()
@@ -751,6 +751,9 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
 
 /**
  * =================================================================================
@@ -1800,7 +1803,9 @@ function envoyerEmailProgramme(e) {
     Logger.log(`Nettoyage de la propriÃ©tÃ© ${proprieteId} terminÃ©.`);
 
   } catch (err) {
-    Logger.log(`ERREUR FATALE lors de l'exÃ©cution de l'envoi programmÃ© (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
+    L
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+
     // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
     properties.deleteProperty(proprieteId);
   } finally {
@@ -1817,9 +1822,6 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
-
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
 
