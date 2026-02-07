@@ -237,10 +237,10 @@ foreach ($p in $Projets) {
   $pname = $p[0]
   $pdir  = $p[1]
 
-  if (-not (Test-Path -LiteralPath $pdir)) { Write-W
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\fix_nbsp.ps1 ---
+  if (-not (Test-Path -LiteralPath $pdir)) { Write-Warning ("Dossier introuvable: {0}" -f $pdir); continue }
 
-  = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
+  $safeName = ($pname -replace '[^\w\-]+','_')
+  $outTxt   = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
 
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
            Where-Object { 
@@ -352,6 +352,9 @@ try {
   else { throw "git diff --cached --quiet a échoué (exit=$exit)." }
 } catch { Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message) }
 try { Stop-Transcript | Out-Null } catch {}
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\fix_nbsp.ps1 ---
 
 # Tools/fix_nbsp.ps1
 $path = Join-Path $PSScriptRoot 'snapshot_rk.ps1'
@@ -1231,10 +1234,10 @@ if ($ByTypeLines.Count) {
   [void]$content.AppendLine('- **Par type** :')
   foreach ($l in $ByTypeLines) { [void]$content.AppendLine($l) }
 }
-[void]$content.A
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\FinaliserKit.ps1 ---
-
-AppendLine('## Commits recents')
+[void]$content.AppendLine('')
+[void]$content.AppendLine('- **CSV exportes** : ' + $CsvCount)
+[void]$content.AppendLine('')
+[void]$content.AppendLine('## Commits recents')
 if ($Commits -and $Commits.Count) { foreach ($c in $Commits) { [void]$content.AppendLine('* ' + $c) } }
 else { [void]$content.AppendLine('_(git log indisponible)_') }
 
@@ -1259,6 +1262,9 @@ if (Get-Command Set-Clipboard -ErrorAction SilentlyContinue) {
 }
 Start-Process notepad $BriefPath
 Write-Host "[BRIEF] Genere, copie et ouvert : $BriefPath"
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\FinaliserKit.ps1 ---
 
 # =================================================================================
 # FinaliserKit.ps1 — Rename Google Sheet à partir de la CONFIG (ligne 16)
