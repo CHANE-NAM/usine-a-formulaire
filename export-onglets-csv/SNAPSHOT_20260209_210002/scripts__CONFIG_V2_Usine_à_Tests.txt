@@ -437,10 +437,11 @@ function getSystemIds() {
 
       <div class="mb-2">
         <label class="flex items-center">
-          <input type="checkbox" id="sendEmailFormateur" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
-
-="detailsFormateur" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
+          <input type="checkbox" id="sendEmailFormateur" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+          <span class="ml-2 text-sm text-gray-700">Envoyer un email au formateur ?</span>
+        </label>
+      </div>
+      <div id="detailsFormateur" class="pl-6 border-l-2 border-gray-200 ml-2 mb-4 hidden-section"></div>
 
       <hr class="my-6">
       
@@ -700,6 +701,9 @@ function getSystemIds() {
     </script>
   </body>
 </html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\UtilitaireConversion.js ---
+
 // Remplacez cette variable par l'ID de votre feuille de calcul [CONFIG]V2 Usine Ã  Tests.
 // const ID_FEUILLE_CONFIG = "1kLBqIHZWbHrb4SsoSQcyVsLOmqKHkhSA4FttM5hZtDQ";
 
