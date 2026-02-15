@@ -76,9 +76,10 @@ try {
     }
     Write-Host "RepoPath = $RepoPath"
 
-    # 1) CLASP PULL dans tous les sous-projets dÃ©tectÃ©s
-    if ($hasClasp) {
-        $projects = Get-ChildItem -Path $RepoPath -Recurse -Force -File -Filter ".clasp.json" |
+    # 1) CLASP PULL dans tous les sous
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1 ---
+
+ilter ".clasp.json" |
                     Select-Object -ExpandProperty DirectoryName -Unique
         if (-not $projects) {
             Write-Host "Aucun .clasp.json trouvÃ©. (Ignorable si tout est local)"
@@ -125,9 +126,6 @@ catch {
 finally {
     Stop-Transcript | Out-Null
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1 ---
 
 # Tools\snapshot_rk.ps1
 # === Snapshot complet : GAS + CSV + DOCS + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
@@ -1353,10 +1351,8 @@ try {
   $driveMeta = $null
   try {
     $driveMeta = GET ("https://www.googleapis.com/drive/v3/files/{0}?fields=id,name,mimeType,owners(emailAddress,displayName)" -f $TargetSpreadsheetId)
-    $owner =
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
-
- | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
+    $owner = $driveMeta.owners[0].emailAddress
+    Write-Host -ForegroundColor Yellow ("Drive OK → Nom actuel: ""{0}"" | Type: {1} | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
   } catch {
     Write-Host -ForegroundColor Red "❌ Drive metadata KO (ID invalide, API non activée ou pas d’accès). Détails :"
     Show-HttpError $_
@@ -1443,6 +1439,9 @@ catch {
   Write-Host -ForegroundColor Red $_
   exit 1
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
 
 {"timeZone":"Indian/Mauritius","exceptionLogging":"STACKDRIVER","runtimeVersion":"V8"}
 
