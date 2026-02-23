@@ -221,9 +221,10 @@ function envoyerEmailProgramme(e) {
            <option value="N3">Niveau 3</option>
          </select>
         </div>
-        <div class="form-group">
-         <label for="alias-expediteur">ALIAS D'EXPÃ‰DITION (VIDE = email par dÃ©faut)</label>
-         <input type="email" id="alias-expediteur" name="alias_expediteur">
+        <div class="form-group"
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
+
+email" id="alias-expediteur" name="alias_expediteur">
         </div>
         </div>
     <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
@@ -336,9 +337,6 @@ function envoyerEmailProgramme(e) {
     </script>
   </body>
 </html>
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
-
 function myFunction() {
   
   
@@ -604,10 +602,11 @@ function ouvrirSidebarPourLigne(rowIndex) {
 /** CrÃ©e le dÃ©clencheur onFormSubmit. */
 function activerTraitementAutomatique() {
 Â  const ss = SpreadsheetApp.getActive();
-Â  Â  ScriptApp.getUserTriggers(ss)
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Environnement.js ---
-
-� });
+Â  Â  ScriptApp.getUserTriggers(ss).forEach(trigger => {
+Â  Â  if (trigger.getHandlerFunction() === 'onFormSubmit') {
+Â  Â  Â  ScriptApp.deleteTrigger(trigger);
+Â  Â  }
+Â  });
 Â  Â  ScriptApp.newTrigger('onFormSubmit')
 Â  Â  .forSpreadsheet(ss)
 Â  Â  .onFormSubmit()
@@ -706,6 +705,9 @@ function ui_ConfigResponsesSheet() {
 Â  props.setProperty('RESPONSES_SSID', val);
 Â  ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val);
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Environnement.js ---
+
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
 Â * Regroupe 60 items ENV001..ENV060 en 15 thÃ¨mes (paquets de 4 : 2 "K", 2 "r").
