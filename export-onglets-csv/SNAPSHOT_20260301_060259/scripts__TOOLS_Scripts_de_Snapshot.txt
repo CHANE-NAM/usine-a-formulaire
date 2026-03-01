@@ -237,10 +237,10 @@ foreach ($p in $Projets) {
   $pname = $p[0]
   $pdir  = $p[1]
 
-  if (-not (Test-Path -LiteralPath $pdir)) { Write-Warning ("Dossier introuvable: {0}" -f $pdir); continue }
+  if (-not (Test-Path -LiteralPath $pdir)) { Write-W
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\fix_nbsp.ps1 ---
 
-  $safeName = ($pname -replace '[^\w\-]+','_')
-  $outTxt   = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
+  = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
 
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
            Where-Object { 
@@ -352,9 +352,6 @@ try {
   else { throw "git diff --cached --quiet a échoué (exit=$exit)." }
 } catch { Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message) }
 try { Stop-Transcript | Out-Null } catch {}
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\fix_nbsp.ps1 ---
 
 # Tools/fix_nbsp.ps1
 $path = Join-Path $PSScriptRoot 'snapshot_rk.ps1'
