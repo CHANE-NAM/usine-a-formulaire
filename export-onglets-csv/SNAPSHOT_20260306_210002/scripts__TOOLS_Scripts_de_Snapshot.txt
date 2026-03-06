@@ -1353,8 +1353,10 @@ try {
   $driveMeta = $null
   try {
     $driveMeta = GET ("https://www.googleapis.com/drive/v3/files/{0}?fields=id,name,mimeType,owners(emailAddress,displayName)" -f $TargetSpreadsheetId)
-    $owner = $driveMeta.owners[0].emailAddress
-    Write-Host -ForegroundColor Yellow ("Drive OK → Nom actuel: ""{0}"" | Type: {1} | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
+    $owner =
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
+
+ | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
   } catch {
     Write-Host -ForegroundColor Red "❌ Drive metadata KO (ID invalide, API non activée ou pas d’accès). Détails :"
     Show-HttpError $_
@@ -1441,9 +1443,6 @@ catch {
   Write-Host -ForegroundColor Red $_
   exit 1
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
 
 {"timeZone":"Indian/Mauritius","exceptionLogging":"STACKDRIVER","runtimeVersion":"V8"}
 
