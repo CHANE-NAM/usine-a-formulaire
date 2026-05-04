@@ -1447,10 +1447,8 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
       
       Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
-      Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresP
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Main.js ---
-
-].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
+      Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
+      Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
       Score_MiseenOeuvre: scoresParAxe["Mise en Å“uvre"].total > 0 ? parseFloat(((scoresParAxe["Mise en Å“uvre"].r / scoresParAxe["Mise en Å“uvre"].total) * 10).toFixed(1)) : 0,
 
@@ -1543,6 +1541,9 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Main.js ---
+
 /**
 Â * =================================================================================
 Â * == FICHIER : TEMPLATE_T_Main.gs (POUR LA BIBLIOTHÃˆQUE)
@@ -2101,10 +2102,10 @@ function _sheetLooksLikeResponses_(sheet) {
 
 function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 Â  if (nameMaybe) {
-Â  Â  const sh
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js ---
-
-nses?.*|responses?)$/i;
+Â  Â  const sh = ss.getSheetByName(nameMaybe);
+Â  Â  if (sh) return sh;
+Â  }
+Â  const rx = /^(rÃ©ponses?\s+au\s+formulaire.*|form\s+responses?.*|responses?)$/i;
 Â  const sheets = ss.getSheets();
 Â  for (const sh of sheets) {
 Â  Â  if (rx.test(sh.getName())) return sh;
@@ -2237,6 +2238,9 @@ function diagnostic_CompoEmails_v20_1(kitId) {
 Â  Â  Logger.log('ERREUR diagnostic compo: ' + e.message);
 Â  }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js ---
+
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_PDF.gs
@@ -2475,10 +2479,9 @@ function _chargerQuestions(typeTest, langue) {
     const sheet = bdd.getSheetByName(nomFeuil);
     if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuil}`);
     const data = sheet.getDataRange().getValues();
-    const headersRaw = da
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js ---
-
-ol = headers.indexOf('ID');
+    const headersRaw = data.shift();
+    const headers = (headersRaw || []).map(h => String(h || '').replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim());
+    const idCol = headers.indexOf('ID');
     const paramsCol = headers.indexOf('ParamÃ¨tres (JSON)');
     if (idCol === -1 || paramsCol === -1) throw new Error("Colonnes ID ou 'ParamÃ¨tres (JSON)' manquantes.");
 
@@ -2555,6 +2558,9 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js ---
+
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_Moteur_Standard.gs
