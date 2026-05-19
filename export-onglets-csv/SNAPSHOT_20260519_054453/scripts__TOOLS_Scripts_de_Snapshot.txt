@@ -545,10 +545,9 @@ function Write-BriefMd {
   # -- byType est un PSCustomObject => passer par .PSObject.Properties
   $countsProps = @()
   if ($sum.counts.byType) {
-    $countsProps = $sum.coun
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\backup_menu.js ---
-
-.Name; Value = $_.Value } }
+    $countsProps = $sum.counts.byType.PSObject.Properties |
+                   Sort-Object Name |
+                   ForEach-Object { @{ Name = $_.Name; Value = $_.Value } }
   }
 
   $countsRows = @()
@@ -709,6 +708,9 @@ function Write-AlertIfNeeded {
     Write-Host "[ALERT] Aucun problème critique détecté (filtre strict)."
   }
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\backup_menu.js ---
 
 // Tools/backup_menu.js
 "use strict";
