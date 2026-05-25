@@ -422,10 +422,8 @@ function _normLang(s) {
       </div>
       
       <div id="formateur-email-group" class="form-group hidden">
-        <label for="email-forma
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
-
-dresse.formateur@example.com">
+        <label for="email-formateur">E-MAIL DU FORMATEUR</label>
+        <input type="email" id="email-formateur" name="email_formateur" placeholder="adresse.formateur@example.com">
       </div>
       
       <div id="patron-email-group" class="form-group hidden">
@@ -535,6 +533,9 @@ dresse.formateur@example.com">
     </script>
   </body>
 </html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+
 // =================================================================================
 // == FICHIER : Menu.gs
 // == VERSION : 2.6  (onInstall + onOpen unique, titre harmonisÃ©)
@@ -1342,8 +1343,10 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRow[0].toLowerCase();
-    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
+    const header0 = headersRo
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
+
+des('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1654,9 +1657,6 @@ function mapQuestionsById(bdd, nomFeuille) {
   });
   return mapById;
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
 
 <!DOCTYPE html>
 <html>
@@ -2713,10 +2713,8 @@ function ui_DryRunLigneSelection() {
 function ui_EnvoiReelLigneSelection() {
   try {
     const row = _getRowFromSelectionOrAsk_();
-    if (typeof traiterLigne !== 'fun
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
-
-du fichier T_Main.gs.');
+    if (typeof traiterLigne !== 'function') {
+      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: traiterLigne(). VÃ©rifiez la prÃ©sence du fichier T_Main.gs.');
       return;
     }
     traiterLigne(row, { isRetraitement: true, dryRun: false, ignoreDeveloppeurEmail: false });
@@ -2852,6 +2850,9 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+
 /**
  * T_Mail.gs
  * @fileoverview GÃ¨re la composition et l'envoi des e-mails de rÃ©sultats.
