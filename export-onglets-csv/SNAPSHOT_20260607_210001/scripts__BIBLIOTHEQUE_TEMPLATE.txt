@@ -221,9 +221,10 @@ function envoyerEmailProgramme(e) {
            <option value="N3">Niveau 3</option>
          </select>
         </div>
-        <div class="form-group">
-         <label for="alias-expediteur">ALIAS D'EXPÃ‰DITION (VIDE = email par dÃ©faut)</label>
-         <input type="email" id="alias-expediteur" name="alias_expediteur">
+        <div class="form-group"
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
+
+email" id="alias-expediteur" name="alias_expediteur">
         </div>
         </div>
     <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
@@ -336,9 +337,6 @@ function envoyerEmailProgramme(e) {
     </script>
   </body>
 </html>
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
-
 function myFunction() {
   
   
@@ -432,12 +430,17 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
 
     if (infosProfilComplet) {
-      resultats = { 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js ---
+      resultats = { ...resultats, ...infosProfilComplet };
+    }
+    resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
+  }
 
-alculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
+  _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
   return resultats;
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js ---
+
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
@@ -2097,10 +2100,10 @@ function _sheetLooksLikeResponses_(sheet) {
 
 function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 Â  if (nameMaybe) {
-Â  Â  const sh = ss.getSheetByName(nameMaybe);
-Â  Â  if (sh) return sh;
-Â  }
-Â  const rx = /^(rÃ©ponses?\s+au\s+formulaire.*|form\s+responses?.*|responses?)$/i;
+Â  Â  const sh
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js ---
+
+nses?.*|responses?)$/i;
 Â  const sheets = ss.getSheets();
 Â  for (const sh of sheets) {
 Â  Â  if (rx.test(sh.getName())) return sh;
@@ -2233,9 +2236,6 @@ function diagnostic_CompoEmails_v20_1(kitId) {
 Â  Â  Logger.log('ERREUR diagnostic compo: ' + e.message);
 Â  }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js ---
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_PDF.gs
