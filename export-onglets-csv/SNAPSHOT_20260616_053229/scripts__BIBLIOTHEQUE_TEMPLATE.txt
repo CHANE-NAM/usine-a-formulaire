@@ -1849,10 +1849,7 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
     const compoData = compoSheet.getDataRange().getValues();
     const compoHeaders = compoData.shift().map(h => String(h || '').trim());
-    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: com
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js ---
-
-compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
+    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
     
     let briquesDeContenu = compoData.filter((row) => {
         const typeLigne = (row[idx.typeTest] || '').toString().trim();
@@ -2012,6 +2009,9 @@ compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Docum
       _log_mail(true, '--- FIN ASSEMBLAGE EMAIL ---');
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js ---
+
 /**
 Â * =================================================================================
 Â * == FICHIER : TEMPLATE_T_Data.gs (POUR LA BIBLIOTHÃˆQUE)
