@@ -103,10 +103,8 @@ function envoyerEmailProgramme(e) {
     Logger.log(`Nettoyage de la propriÃ©tÃ© ${proprieteId} terminÃ©.`);
 
   } catch (err) {
-    L
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\appsscript.json ---
-
-  // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
+    Logger.log(`ERREUR FATALE lors de l'exÃ©cution de l'envoi programmÃ© (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
+    // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
     properties.deleteProperty(proprieteId);
   } finally {
     // Nettoyage : supprimer le dÃ©clencheur qui vient de s'exÃ©cuter
@@ -122,6 +120,9 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\appsscript.json ---
+
 {
   "timeZone": "Indian/Mauritius",
   "dependencies": {},
