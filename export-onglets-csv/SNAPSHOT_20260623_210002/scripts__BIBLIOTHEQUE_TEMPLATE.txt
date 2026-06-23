@@ -432,17 +432,12 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
 
     if (infosProfilComplet) {
-      resultats = { ...resultats, ...infosProfilComplet };
-    }
-    resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
-  }
-
-  _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
-  return resultats;
-}
-
+      resultats = { 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js ---
 
+alculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
+  return resultats;
+}
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
