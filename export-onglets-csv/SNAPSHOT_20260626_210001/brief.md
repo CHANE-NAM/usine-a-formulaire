@@ -1,8 +1,8 @@
 ﻿# Snapshot brief
 
 Informations
-- Snapshot : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20260614_214102
-- Genere   : 2026-06-14T21:41:40Z
+- Snapshot : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20260626_210001
+- Genere   : 2026-06-26T21:00:43Z
 - Fichiers : 75  -  Taille totale : 1.5 MB
 
 ## Repartition par type
@@ -17,8 +17,8 @@ Informations
 
 | Chemin | Taille |
 |--------|--------|
-| docs\ai\_TEMPLATE_V2_Kit_de_Traitement.md | 170.4 KB |
-| scripts__TEMPLATE_V2_Kit_de_Traitement.txt | 168.4 KB |
+| docs\ai\_TEMPLATE_V2_Kit_de_Traitement.md | 170.5 KB |
+| scripts__TEMPLATE_V2_Kit_de_Traitement.txt | 168.6 KB |
 | docs\ai\_BIBLIOTHEQUE_TEMPLATE.md | 119.9 KB |
 | scripts__BIBLIOTHEQUE_TEMPLATE.txt | 118 KB |
 | docs\ai\_MOTEUR_V2_Usine_à_Tests.md | 82 KB |
