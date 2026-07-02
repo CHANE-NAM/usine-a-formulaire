@@ -604,11 +604,10 @@ function ouvrirSidebarPourLigne(rowIndex) {
 /** CrÃ©e le dÃ©clencheur onFormSubmit. */
 function activerTraitementAutomatique() {
 Â  const ss = SpreadsheetApp.getActive();
-Â  Â  ScriptApp.getUserTriggers(ss).forEach(trigger => {
-Â  Â  if (trigger.getHandlerFunction() === 'onFormSubmit') {
-Â  Â  Â  ScriptApp.deleteTrigger(trigger);
-Â  Â  }
-Â  });
+Â  Â  ScriptApp.getUserTriggers(ss)
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Environnement.js ---
+
+� });
 Â  Â  ScriptApp.newTrigger('onFormSubmit')
 Â  Â  .forSpreadsheet(ss)
 Â  Â  .onFormSubmit()
@@ -707,9 +706,6 @@ function ui_ConfigResponsesSheet() {
 Â  props.setProperty('RESPONSES_SSID', val);
 Â  ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val);
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Environnement.js ---
-
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
 Â * Regroupe 60 items ENV001..ENV060 en 15 thÃ¨mes (paquets de 4 : 2 "K", 2 "r").
@@ -1849,7 +1845,10 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
     const compoData = compoSheet.getDataRange().getValues();
     const compoHeaders = compoData.shift().map(h => String(h || '').trim());
-    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
+    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: com
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js ---
+
+compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
     
     let briquesDeContenu = compoData.filter((row) => {
         const typeLigne = (row[idx.typeTest] || '').toString().trim();
@@ -2009,9 +2008,6 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       _log_mail(true, '--- FIN ASSEMBLAGE EMAIL ---');
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js ---
-
 /**
 Â * =================================================================================
 Â * == FICHIER : TEMPLATE_T_Data.gs (POUR LA BIBLIOTHÃˆQUE)
