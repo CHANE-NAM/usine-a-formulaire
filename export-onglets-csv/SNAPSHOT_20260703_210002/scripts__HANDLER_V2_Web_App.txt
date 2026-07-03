@@ -292,10 +292,10 @@ function afficherPageB2B(config, encryptedCode) {
 // ===============================================================
 
 /**
- * RÃ©cupÃ¨re la configuration complÃ¨te pour une ligne
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\08_handler\Paiement.html ---
-
-ttendu: numÃ©ro de ligne >= 2).");
+ * RÃ©cupÃ¨re la configuration complÃ¨te pour une ligne donnÃ©e.
+ */
+function getConfigFromRow(rowIndex) {
+  if (!rowIndex || rowIndex < 2) throw new Error("rowIndex invalide (attendu: numÃ©ro de ligne >= 2).");
 
   const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
   const sh = ss.getSheetByName('ParamÃ¨tres GÃ©nÃ©raux');
@@ -504,6 +504,9 @@ function handleFormSubmit(e) {
     Logger.log('ERREUR dans handleFormSubmit: ' + err.toString() + "\n" + err.stack);
   }
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\08_handler\Paiement.html ---
 
 <!DOCTYPE html>
 <html>
