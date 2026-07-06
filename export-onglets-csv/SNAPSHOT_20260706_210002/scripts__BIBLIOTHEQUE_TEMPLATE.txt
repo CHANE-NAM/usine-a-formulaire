@@ -1145,11 +1145,10 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames, kitSprea
       if (formIdMatch) {
         const formId = formIdMatch[0];
         targetRow = data.slice(1).find(r => String(r[idx['ID_Formulaire_Cible']] || '') === formId);
-      }
-    }
+   
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js ---
 
-    // ANCIENNE STRATÃ‰GIE (pour la compatibilitÃ©) : Si non trouvÃ©, on cherche par l'ID du Sheet.
-Â  Â  if (!targetRow && idx['ID_Sheet_Cible'] != null) {
+dx['ID_Sheet_Cible'] != null) {
 Â  Â  Â  targetRow = data.slice(1).find(r => String(r[idx['ID_Sheet_Cible']] || '') === kitId);
 Â  Â  }
 
@@ -1361,9 +1360,6 @@ function findAttachments(config, profilCode, niveauPJ, langueCode) {
 Â  Â  return [];
 Â  }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js ---
-
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Creativite.js
@@ -2479,9 +2475,10 @@ function _chargerQuestions(typeTest, langue) {
     const sheet = bdd.getSheetByName(nomFeuil);
     if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuil}`);
     const data = sheet.getDataRange().getValues();
-    const headersRaw = data.shift();
-    const headers = (headersRaw || []).map(h => String(h || '').replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim());
-    const idCol = headers.indexOf('ID');
+    const headersRaw = da
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js ---
+
+ol = headers.indexOf('ID');
     const paramsCol = headers.indexOf('ParamÃ¨tres (JSON)');
     if (idCol === -1 || paramsCol === -1) throw new Error("Colonnes ID ou 'ParamÃ¨tres (JSON)' manquantes.");
 
@@ -2558,9 +2555,6 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js ---
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_Moteur_Standard.gs
