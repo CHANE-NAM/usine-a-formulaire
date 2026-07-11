@@ -2479,9 +2479,10 @@ function _chargerQuestions(typeTest, langue) {
     const sheet = bdd.getSheetByName(nomFeuil);
     if (!sheet) throw new Error(`Feuille introuvable: ${nomFeuil}`);
     const data = sheet.getDataRange().getValues();
-    const headersRaw = data.shift();
-    const headers = (headersRaw || []).map(h => String(h || '').replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim());
-    const idCol = headers.indexOf('ID');
+    const headersRaw = da
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js ---
+
+ol = headers.indexOf('ID');
     const paramsCol = headers.indexOf('ParamÃ¨tres (JSON)');
     if (idCol === -1 || paramsCol === -1) throw new Error("Colonnes ID ou 'ParamÃ¨tres (JSON)' manquantes.");
 
@@ -2558,9 +2559,6 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_Standard.js ---
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_Moteur_Standard.gs
