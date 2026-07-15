@@ -841,10 +841,8 @@ function _getReponsesSheet_(config, options) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.repon
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
-
-|| config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
+    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
     ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
@@ -1256,6 +1254,9 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
+
 // =================================================================================
 // == FICHIER : Utilities.gs
 // == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clÃ©â†’valeur)
@@ -2235,10 +2236,10 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  const K1 = envVals[base+1], K2 = envVals[base+2];
 Â  Â  const R1 = envVals[base+3], R2 = envVals[base+4];
 
-Â  Â  const hasK = (K1!=null && K2!
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
-
- R2) : null;
+Â  Â  const hasK = (K1!=null && K2!=null);
+Â  Â  const hasR = (R1!=null && R2!=null);
+Â  Â  const k = hasK ? avg(K1, K2) : null;
+Â  Â  const r = hasR ? avg(R1, R2) : null;
 Â  Â  if (k!=null) { sumK += k; filledK++; }
 Â  Â  if (r!=null) { sumR += r; filledR++; }
 
@@ -2296,6 +2297,9 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Resilience.js
@@ -3144,10 +3148,9 @@ function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 function _getReponsesSheet_(config, options) {
   options = options || {};
   const sys = (typeof getSystemIds === 'function') ? getSystemIds() : {};
-  const pr
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
-
-sed = '';
+  const props = PropertiesService.getScriptProperties();
+  const ssidProp = props.getProperty('RESPONSES_SSID');
+  let ss = null, used = '';
   function tryOpenById(id, tag) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null;
@@ -3252,6 +3255,9 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+
 /**
  * T_PDF.gs
  * GÃ©nÃ¨re un fichier PDF Ã  partir d'un modÃ¨le Google Doc en remplaÃ§ant des variables.
