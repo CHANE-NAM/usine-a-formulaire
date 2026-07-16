@@ -636,10 +636,10 @@ function activerTraitementAutomatique() {
     .onFormSubmit()
     .create();
 
-  SpreadsheetApp.getUi().alert('âœ… DÃ©clencheur activÃ© ! Le traitement automatique des rÃ©ponses est maintenant opÃ©rationnel.');
-}
+  SpreadsheetApp.getUi().alert('âœ… DÃ©clen
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
 
-/* ============================================================================
+===========================================
  * SOUS-MENU "Usine Ã  Tests" : helpers & actions
  * NÃ©cessite : getTestConfiguration(), getOriginalLanguage(),
  * _creerObjetReponse(), _getReponsesSheet_(), retraitementTestSansEnvoi(), traiterLigne()
@@ -751,9 +751,6 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
 
 /**
  * =================================================================================
@@ -3149,10 +3146,9 @@ function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 function _getReponsesSheet_(config, options) {
   options = options || {};
   const sys = (typeof getSystemIds === 'function') ? getSystemIds() : {};
-  const pr
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
-
-sed = '';
+  const props = PropertiesService.getScriptProperties();
+  const ssidProp = props.getProperty('RESPONSES_SSID');
+  let ss = null, used = '';
   function tryOpenById(id, tag) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null;
@@ -3257,6 +3253,9 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+
 /**
  * T_PDF.gs
  * GÃ©nÃ¨re un fichier PDF Ã  partir d'un modÃ¨le Google Doc en remplaÃ§ant des variables.
