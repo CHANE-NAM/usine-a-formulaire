@@ -422,10 +422,8 @@ function _normLang(s) {
       </div>
       
       <div id="formateur-email-group" class="form-group hidden">
-        <label for="email-forma
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
-
-dresse.formateur@example.com">
+        <label for="email-formateur">E-MAIL DU FORMATEUR</label>
+        <input type="email" id="email-formateur" name="email_formateur" placeholder="adresse.formateur@example.com">
       </div>
       
       <div id="patron-email-group" class="form-group hidden">
@@ -535,6 +533,9 @@ dresse.formateur@example.com">
     </script>
   </body>
 </html>
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+
 // =================================================================================
 // == FICHIER : Menu.gs
 // == VERSION : 2.6  (onInstall + onOpen unique, titre harmonisÃ©)
@@ -3389,10 +3390,8 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       profilFinal: profilFinal,
       Titre_Profil: profilFinal,
       Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
-      Pourcentage_K: parseFloat((100 - pourcentage_r).
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
-
-scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
+      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
+      Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
@@ -3491,6 +3490,9 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
+
 
 
 // ===============================================================
