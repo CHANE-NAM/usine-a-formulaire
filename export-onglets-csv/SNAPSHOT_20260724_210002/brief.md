@@ -1,8 +1,8 @@
 ﻿# Snapshot brief
 
 Informations
-- Snapshot : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20260713_062145
-- Genere   : 2026-07-13T06:22:30Z
+- Snapshot : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20260724_210002
+- Genere   : 2026-07-24T21:00:44Z
 - Fichiers : 75  -  Taille totale : 1.5 MB
 
 ## Repartition par type
