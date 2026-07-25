@@ -500,10 +500,11 @@ function etape2_configurerKit(rowIndex) {
         }
       ]
     };
-    const batchUpdateUrl = `https://forms.googleapis.com/v1/forms/${f
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\ZZZ_CryptoJS_Patch_WordArrayRandom.js ---
-
-tchUpdateRequest),
+    const batchUpdateUrl = `https://forms.googleapis.com/v1/forms/${formId}:batchUpdate`;
+    const batchUpdateOptions = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(batchUpdateRequest),
       headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
       muteHttpExceptions: true
     };
@@ -646,6 +647,9 @@ function etape3_verifierKit(rowIndex) {
     SpreadsheetApp.getUi().alert('âŒ ERREUR', e.message, SpreadsheetApp.getUi().ButtonSet.OK);
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\01_Moteur\ZZZ_CryptoJS_Patch_WordArrayRandom.js ---
+
 // Patch CryptoJS.WordArray.random pour Google Apps Script
 // Remplace la source d'alÃ©a native (inexistante dans GAS) par Utilities.getUuid() + MD5.
 // Charge ce fichier APRES AAA_CryptoJS_AES.gs (d'oÃ¹ le prÃ©fixe ZZZ).
