@@ -108,10 +108,10 @@ function getQuestionCountForTestType(typeTest) {
 
 /**
  * Traite les donnÃ©es soumises depuis la barre latÃ©rale et crÃ©e une nouvelle ligne de configuration.
- * @param {Object} formObject L'objet contenant les donnÃ©es du formulaire.
- * @returns {string} Un message de succÃ¨s.
- */
-function processNewTestConfiguration(formObject) {
+ * @param {Object} formObject L'objet conte
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\FormulaireUI.html ---
+
+t) {
   try {
     const ss = SpreadsheetApp.openById(ID_FEUILLE_CONFIG);
     const paramsSheet = ss.getSheetByName("ParamÃ¨tres GÃ©nÃ©raux");
@@ -366,9 +366,6 @@ function getSystemIds() {
   });
   return ids;
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\02_configuration\FormulaireUI.html ---
-
 <!DOCTYPE html>
 <html>
   <head>
