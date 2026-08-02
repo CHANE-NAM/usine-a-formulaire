@@ -3602,10 +3602,9 @@ function lancerRetraitementDepuisUI(options) {
   return TEMPLATE.lancerRetraitementDepuisUI(options);
 }
 
-// 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
-
-====================================
+// ===============================================================
+// == FONCTIONS DE TEST D'AUTORISATION
+// ===============================================================
 
 /**
  * Fonction temporaire pour forcer la demande d'autorisation pour lire les alias Gmail.
@@ -3626,6 +3625,9 @@ function testAuthDocs() {
     Logger.log('La demande d\'autorisation pour Google Docs a Ã©tÃ© dÃ©clenchÃ©e.');
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
+
 /*******************************
  * AUDIT RAPIDE DU KIT (V1)
  * Ã€ coller dans le projet du KIT (Sheet de rÃ©ponses)
