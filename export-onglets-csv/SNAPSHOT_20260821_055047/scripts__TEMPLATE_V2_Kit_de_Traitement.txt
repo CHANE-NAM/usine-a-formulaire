@@ -422,8 +422,10 @@ function _normLang(s) {
       </div>
       
       <div id="formateur-email-group" class="form-group hidden">
-        <label for="email-formateur">E-MAIL DU FORMATEUR</label>
-        <input type="email" id="email-formateur" name="email_formateur" placeholder="adresse.formateur@example.com">
+        <label for="email-forma
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+
+dresse.formateur@example.com">
       </div>
       
       <div id="patron-email-group" class="form-group hidden">
@@ -533,9 +535,6 @@ function _normLang(s) {
     </script>
   </body>
 </html>
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
-
 // =================================================================================
 // == FICHIER : Menu.gs
 // == VERSION : 2.6  (onInstall + onOpen unique, titre harmonisÃ©)
@@ -636,10 +635,10 @@ function activerTraitementAutomatique() {
     .onFormSubmit()
     .create();
 
-  SpreadsheetApp.getUi().alert('âœ… DÃ©clen
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
+  SpreadsheetApp.getUi().alert('âœ… DÃ©clencheur activÃ© ! Le traitement automatique des rÃ©ponses est maintenant opÃ©rationnel.');
+}
 
-===========================================
+/* ============================================================================
  * SOUS-MENU "Usine Ã  Tests" : helpers & actions
  * NÃ©cessite : getTestConfiguration(), getOriginalLanguage(),
  * _creerObjetReponse(), _getReponsesSheet_(), retraitementTestSansEnvoi(), traiterLigne()
@@ -751,6 +750,9 @@ function ui_ConfigResponsesSheet() {
   props.setProperty('RESPONSES_SSID', val);
   ui.alert('âœ… Feuille de rÃ©ponses configurÃ©e.\nID = ' + val + '\nRelance un dry-run.');
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TraitementReponses.js ---
 
 /**
  * =================================================================================
@@ -1340,8 +1342,10 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRow[0].toLowerCase();
-    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
+    const header0 = headersRo
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
+
+des('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1653,9 +1657,6 @@ function mapQuestionsById(bdd, nomFeuille) {
   return mapById;
 }
 
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -1940,10 +1941,12 @@ function _injectScenario(opts) {
         }
         // Fallback : prendre le profil Ã  l'index courant
         if (!profil) {
-          profil = profilSequence[scaleIndex] || 'ENV
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
+          profil = profilSequence[scaleIndex] || 'ENV_STABILITE';
+        }
 
-Scenario(profil, min, max, scenario, scaleIndex);
+        const min = scale.getLowerBound();
+        const max = scale.getUpperBound();
+        const val = _valueForScenario(profil, min, max, scenario, scaleIndex);
         resp.withItemResponse(scale.createResponse(val));
 
         scaleIndex++;
@@ -2136,6 +2139,9 @@ function _valueForScenario(profil, min, max, scenario, idx /* index dâ€™Ã�
 }
 
 
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Environnement.js ---
 
 /**
 Â * Moteur de calcul â€” r&K_Environnement (Ã©chelle 1..10)
@@ -2924,10 +2930,10 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   }
 
   for (const brique of briquesDeContenu) {
-    const elementType 
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
-
- case 'Sujet_Email': sujet = contenu; break;
+    const elementType = (brique[idx.element] || '').toString().trim();
+    const contenu = brique[idx.contenu];
+    switch (elementType) {
+      case 'Sujet_Email': sujet = contenu; break;
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Champ_Profil': if (contenu && donneesPourEmail[contenu]) { corpsHtml += donneesPourEmail[contenu] + "<br>"; } break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
@@ -3044,6 +3050,9 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+
 /**
  * T_Data.gs
  * @fileoverview GÃ¨re la lecture et la prÃ©paration des donnÃ©es depuis les feuilles de calcul.
