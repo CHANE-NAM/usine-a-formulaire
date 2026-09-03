@@ -2237,10 +2237,10 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  const K1 = envVals[base+1], K2 = envVals[base+2];
 Â  Â  const R1 = envVals[base+3], R2 = envVals[base+4];
 
-Â  Â  const hasK = (K1!=null && K2!=null);
-Â  Â  const hasR = (R1!=null && R2!=null);
-Â  Â  const k = hasK ? avg(K1, K2) : null;
-Â  Â  const r = hasR ? avg(R1, R2) : null;
+Â  Â  const hasK = (K1!=null && K2!
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+
+ R2) : null;
 Â  Â  if (k!=null) { sumK += k; filledK++; }
 Â  Â  if (r!=null) { sumR += r; filledR++; }
 
@@ -2298,9 +2298,6 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
-
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Resilience.js
@@ -3737,8 +3734,10 @@ function auditKit() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const list = ScriptApp.getUserTriggers(ss) || [];
     const hasInstallable = list.some(t => t.getHandlerFunction && t.getHandlerFunction() === 'handleFormSubmit');
-    out.checks.triggerInstallable = { ok: hasInstallable, found: list.map(t => t.getHandlerFunction && t.getHandlerFunction()) };
-    if (!hasInstallable) out.notes.push('Aucun dÃ©clencheur installable "handleFormSubmit" dÃ©tectÃ©â€”relance le menu "Activer le traitement automatique".');
+    out.checks.triggerInstallable = { ok: ha
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TriggerHandler.js ---
+
+un dÃ©clencheur installable "handleFormSubmit" dÃ©tectÃ©â€”relance le menu "Activer le traitement automatique".');
   } catch (e) {
     out.checks.triggerInstallable = { ok: false, error: e.message };
     out.errors.push('Triggers: ' + e.message);
@@ -3763,9 +3762,6 @@ function auditKit() {
 
   return out; // pratique si tu veux consommer le JSON ailleurs
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TriggerHandler.js ---
 
 /**
  * @OnlyCurrentDoc
