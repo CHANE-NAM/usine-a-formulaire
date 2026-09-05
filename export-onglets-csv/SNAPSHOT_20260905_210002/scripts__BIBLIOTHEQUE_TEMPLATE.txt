@@ -103,8 +103,10 @@ function envoyerEmailProgramme(e) {
     Logger.log(`Nettoyage de la propriÃ©tÃ© ${proprieteId} terminÃ©.`);
 
   } catch (err) {
-    Logger.log(`ERREUR FATALE lors de l'exÃ©cution de l'envoi programmÃ© (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
-    // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
+    L
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\appsscript.json ---
+
+  // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
     properties.deleteProperty(proprieteId);
   } finally {
     // Nettoyage : supprimer le dÃ©clencheur qui vient de s'exÃ©cuter
@@ -120,9 +122,6 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\appsscript.json ---
-
 {
   "timeZone": "Indian/Mauritius",
   "dependencies": {},
@@ -221,9 +220,10 @@ function envoyerEmailProgramme(e) {
            <option value="N3">Niveau 3</option>
          </select>
         </div>
-        <div class="form-group">
-         <label for="alias-expediteur">ALIAS D'EXPÃ‰DITION (VIDE = email par dÃ©faut)</label>
-         <input type="email" id="alias-expediteur" name="alias_expediteur">
+        <div class="form-group"
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
+
+email" id="alias-expediteur" name="alias_expediteur">
         </div>
         </div>
     <h3 style="margin-top: 20px; border-top: 1px solid #dadce0; padding-top: 16px;">Destinataires</h3>
@@ -336,9 +336,6 @@ function envoyerEmailProgramme(e) {
     </script>
   </body>
 </html>
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\Code.js ---
-
 function myFunction() {
   
   
@@ -432,17 +429,12 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
 
     if (infosProfilComplet) {
-      resultats = { ...resultats, ...infosProfilComplet };
-    }
-    resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
-  }
-
-  _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
-  return resultats;
-}
-
+      resultats = { 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js ---
 
+alculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
+  return resultats;
+}
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
