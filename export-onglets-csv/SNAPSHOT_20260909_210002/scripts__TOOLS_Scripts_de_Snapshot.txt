@@ -831,10 +831,17 @@ function askChoice() {
         if (!/^[123]$/.test(ans)) {
           console.log("Choix invalide. Tape 1, 2 ou 3.");
           return prompt();
-        
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\gen_docs.ps1 ---
+        }
+        rl.close();
+        resolve(ans);
+      });
 
-'entrée ===
+    showMenu();
+    prompt();
+  });
+}
+
+// === Point d'entrée ===
 (async () => {
   const argChoice = (process.argv[2] || "").trim();
   const choice = /^[123]$/.test(argChoice) ? argChoice : await askChoice();
@@ -845,6 +852,9 @@ function askChoice() {
     process.exit(1);
   }
 })();
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\gen_docs.ps1 ---
 
 # Tools\gen_docs.ps1 — génère docs AI/État/Users + brief IA, appels nommés/positionnels/auto
 #requires -Version 5.1
