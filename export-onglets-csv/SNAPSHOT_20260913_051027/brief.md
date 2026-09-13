@@ -1,8 +1,8 @@
 ﻿# Snapshot brief
 
 Informations
-- Snapshot : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20260831_210002
-- Genere   : 2026-08-31T21:00:42Z
+- Snapshot : G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\export-onglets-csv\SNAPSHOT_20260913_051027
+- Genere   : 2026-09-13T05:11:11Z
 - Fichiers : 75  -  Taille totale : 1.49 MB
 
 ## Repartition par type
@@ -26,4 +26,4 @@ Informations
 | BDD_V2_Tests_Profils_1m2MGB\sys_Composition_Emails.csv | 76.1 KB |
 | docs\ai\_HANDLER_V2_Web_App.md | 73.4 KB |
 | scripts__HANDLER_V2_Web_App.txt | 71.6 KB |
-| docs\ai\_TOOLS_Scripts_de_Snapshot.md | 63.2 KB |
+| docs\ai\_TOOLS_Scripts_de_Snapshot.md | 63.6 KB |
