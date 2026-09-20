@@ -1145,11 +1145,10 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames, kitSprea
       if (formIdMatch) {
         const formId = formIdMatch[0];
         targetRow = data.slice(1).find(r => String(r[idx['ID_Formulaire_Cible']] || '') === formId);
-      }
-    }
+   
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js ---
 
-    // ANCIENNE STRATÃ‰GIE (pour la compatibilitÃ©) : Si non trouvÃ©, on cherche par l'ID du Sheet.
-Â  Â  if (!targetRow && idx['ID_Sheet_Cible'] != null) {
+dx['ID_Sheet_Cible'] != null) {
 Â  Â  Â  targetRow = data.slice(1).find(r => String(r[idx['ID_Sheet_Cible']] || '') === kitId);
 Â  Â  }
 
@@ -1361,9 +1360,6 @@ function findAttachments(config, profilCode, niveauPJ, langueCode) {
 Â  Â  return [];
 Â  }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Moteur_rK_Creativite.js ---
-
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Creativite.js
@@ -1447,8 +1443,10 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
       
       Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
-      Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
-      Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
+      Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresP
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Main.js ---
+
+].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
       Score_MiseenOeuvre: scoresParAxe["Mise en Å“uvre"].total > 0 ? parseFloat(((scoresParAxe["Mise en Å“uvre"].r / scoresParAxe["Mise en Å“uvre"].total) * 10).toFixed(1)) : 0,
 
@@ -1541,9 +1539,6 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Main.js ---
-
 /**
 Â * =================================================================================
 Â * == FICHIER : TEMPLATE_T_Main.gs (POUR LA BIBLIOTHÃˆQUE)
@@ -1630,9 +1625,10 @@ function ui_DryRunLigneSelection(kitId) {
 Â  Â  Â  niveau: niveau,
 Â  Â  Â  destinataires: { test: Session.getActiveUser().getEmail() }
 Â  Â  });
-Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + '. Voir les journaux de la bibliothÃ¨que.');
-Â  } catch (e) {
-Â  Â  SpreadsheetApp.getUi().alert('Erreur Dry-run (ligne sÃ©lectionnÃ©e) : ' + e.message);
+Â  Â  SpreadsheetApp.getUi().alert('Dry-run lancÃ© sur la ligne ' + row + 
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js ---
+
+ectionnÃ©e) : ' + e.message);
 Â  }
 }
 
@@ -1770,9 +1766,6 @@ function retraitementTestSansEnvoi(rowIndex, kitSpreadsheet, options) {
 Â  Â  throw new Error(e.message);
 Â  }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Mail.js ---
-
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_Mail.gs
@@ -1849,7 +1842,10 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     const compoSheet = bdd.getSheetByName("sys_Composition_Emails");
     const compoData = compoSheet.getDataRange().getValues();
     const compoHeaders = compoData.shift().map(h => String(h || '').trim());
-    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: compoHeaders.indexOf('Code_Niveau_Email'), profil: compoHeaders.indexOf('Code_Profil'), element: compoHeaders.indexOf('Element'), ordre: compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
+    const idx = { typeTest: compoHeaders.indexOf('Type_Test'), langue: compoHeaders.indexOf('Code_Langue'), niveau: com
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js ---
+
+compoHeaders.indexOf('Ordre'), contenu: compoHeaders.indexOf('Contenu / ID_Document') };
     
     let briquesDeContenu = compoData.filter((row) => {
         const typeLigne = (row[idx.typeTest] || '').toString().trim();
@@ -2009,9 +2005,6 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
       _log_mail(true, '--- FIN ASSEMBLAGE EMAIL ---');
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_Data.js ---
-
 /**
 Â * =================================================================================
 Â * == FICHIER : TEMPLATE_T_Data.gs (POUR LA BIBLIOTHÃˆQUE)

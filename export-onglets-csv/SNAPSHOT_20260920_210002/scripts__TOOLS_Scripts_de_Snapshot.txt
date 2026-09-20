@@ -545,9 +545,10 @@ function Write-BriefMd {
   # -- byType est un PSCustomObject => passer par .PSObject.Properties
   $countsProps = @()
   if ($sum.counts.byType) {
-    $countsProps = $sum.counts.byType.PSObject.Properties |
-                   Sort-Object Name |
-                   ForEach-Object { @{ Name = $_.Name; Value = $_.Value } }
+    $countsProps = $sum.coun
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\backup_menu.js ---
+
+.Name; Value = $_.Value } }
   }
 
   $countsRows = @()
@@ -708,9 +709,6 @@ function Write-AlertIfNeeded {
     Write-Host "[ALERT] Aucun problème critique détecté (filtre strict)."
   }
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\backup_menu.js ---
 
 // Tools/backup_menu.js
 "use strict";
@@ -960,9 +958,10 @@ foreach ($cf in $concatFiles) {
     [void]$sb.AppendLine('---')
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('### Fichiers CSV exportés (aperçu)')
-    foreach ($c in ($csvs | Select-Object -First 30)) {
-      $rel = $c.FullName.Replace($SnapshotDir, '').TrimStart('\')
-      [void]$sb.AppendLine('* ' + $rel)
+    foreach ($c
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\AI-Brief.ps1 ---
+
+id]$sb.AppendLine('* ' + $rel)
     }
     if ($csvs.Count -gt 30) { [void]$sb.AppendLine(('* ... ({0} de plus)' -f ($csvs.Count - 30))) }
     [void]$sb.AppendLine('')
@@ -1125,9 +1124,6 @@ if ($prevSnap) {
 
 Write-Host '[DOCS] Génération terminée : ' $DocsRoot
 exit 0
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\AI-Brief.ps1 ---
 
 # Tools\AI-Brief.ps1 â€” brief riche (ASCII-safe)
 [CmdletBinding()]
