@@ -76,10 +76,9 @@ try {
     }
     Write-Host "RepoPath = $RepoPath"
 
-    # 1) CLASP PULL dans tous les sous
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1 ---
-
-ilter ".clasp.json" |
+    # 1) CLASP PULL dans tous les sous-projets dÃ©tectÃ©s
+    if ($hasClasp) {
+        $projects = Get-ChildItem -Path $RepoPath -Recurse -Force -File -Filter ".clasp.json" |
                     Select-Object -ExpandProperty DirectoryName -Unique
         if (-not $projects) {
             Write-Host "Aucun .clasp.json trouvÃ©. (Ignorable si tout est local)"
@@ -126,6 +125,9 @@ catch {
 finally {
     Stop-Transcript | Out-Null
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1 ---
 
 # Tools\snapshot_rk.ps1
 # === Snapshot complet : GAS + CSV + DOCS + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
@@ -958,10 +960,9 @@ foreach ($cf in $concatFiles) {
     [void]$sb.AppendLine('---')
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('### Fichiers CSV exportés (aperçu)')
-    foreach ($c
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\AI-Brief.ps1 ---
-
-id]$sb.AppendLine('* ' + $rel)
+    foreach ($c in ($csvs | Select-Object -First 30)) {
+      $rel = $c.FullName.Replace($SnapshotDir, '').TrimStart('\')
+      [void]$sb.AppendLine('* ' + $rel)
     }
     if ($csvs.Count -gt 30) { [void]$sb.AppendLine(('* ... ({0} de plus)' -f ($csvs.Count - 30))) }
     [void]$sb.AppendLine('')
@@ -1124,6 +1125,9 @@ if ($prevSnap) {
 
 Write-Host '[DOCS] Génération terminée : ' $DocsRoot
 exit 0
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\AI-Brief.ps1 ---
 
 # Tools\AI-Brief.ps1 â€” brief riche (ASCII-safe)
 [CmdletBinding()]
