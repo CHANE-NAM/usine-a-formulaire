@@ -545,10 +545,9 @@ function Write-BriefMd {
   # -- byType est un PSCustomObject => passer par .PSObject.Properties
   $countsProps = @()
   if ($sum.counts.byType) {
-    $countsProps = $sum.coun
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\backup_menu.js ---
-
-.Name; Value = $_.Value } }
+    $countsProps = $sum.counts.byType.PSObject.Properties |
+                   Sort-Object Name |
+                   ForEach-Object { @{ Name = $_.Name; Value = $_.Value } }
   }
 
   $countsRows = @()
@@ -709,6 +708,9 @@ function Write-AlertIfNeeded {
     Write-Host "[ALERT] Aucun problème critique détecté (filtre strict)."
   }
 }
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\backup_menu.js ---
 
 // Tools/backup_menu.js
 "use strict";
@@ -1232,10 +1234,10 @@ if ($ByTypeLines.Count) {
   [void]$content.AppendLine('- **Par type** :')
   foreach ($l in $ByTypeLines) { [void]$content.AppendLine($l) }
 }
-[void]$content.AppendLine('')
-[void]$content.AppendLine('- **CSV exportes** : ' + $CsvCount)
-[void]$content.AppendLine('')
-[void]$content.AppendLine('## Commits recents')
+[void]$content.A
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\FinaliserKit.ps1 ---
+
+AppendLine('## Commits recents')
 if ($Commits -and $Commits.Count) { foreach ($c in $Commits) { [void]$content.AppendLine('* ' + $c) } }
 else { [void]$content.AppendLine('_(git log indisponible)_') }
 
@@ -1260,9 +1262,6 @@ if (Get-Command Set-Clipboard -ErrorAction SilentlyContinue) {
 }
 Start-Process notepad $BriefPath
 Write-Host "[BRIEF] Genere, copie et ouvert : $BriefPath"
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\FinaliserKit.ps1 ---
 
 # =================================================================================
 # FinaliserKit.ps1 — Rename Google Sheet à partir de la CONFIG (ligne 16)
