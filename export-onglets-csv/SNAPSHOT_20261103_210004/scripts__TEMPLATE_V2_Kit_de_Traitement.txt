@@ -2381,10 +2381,8 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
     const pourcentage_K = (grand_total > 0) ? (total_K / grand_total) * 100 : 0;
 
     // 3. DÃ©termination du niveau de rÃ©silience
-    const profilsDataBrutes = _chargerDonneesProfilsBr
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
-
-gth} profils trouvÃ©s.`);
+    const profilsDataBrutes = _chargerDonneesProfilsBrutes(config.Type_Test, langueCible);
+     _log_res(DEBUG_RES_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
     const niveauResilience = _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsDataBrutes);
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === niveauResilience) || {};
     
@@ -2491,6 +2489,9 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
+
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
@@ -3148,10 +3149,9 @@ function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 function _getReponsesSheet_(config, options) {
   options = options || {};
   const sys = (typeof getSystemIds === 'function') ? getSystemIds() : {};
-  const pr
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
-
-sed = '';
+  const props = PropertiesService.getScriptProperties();
+  const ssidProp = props.getProperty('RESPONSES_SSID');
+  let ss = null, used = '';
   function tryOpenById(id, tag) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null;
@@ -3256,6 +3256,9 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+
 /**
  * T_PDF.gs
  * GÃ©nÃ¨re un fichier PDF Ã  partir d'un modÃ¨le Google Doc en remplaÃ§ant des variables.
@@ -3388,8 +3391,10 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       profilFinal: profilFinal,
       Titre_Profil: profilFinal,
       Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
-      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
-      Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
+      Pourcentage_K: parseFloat((100 - pourcentage_r).
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
+
+scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
@@ -3488,9 +3493,6 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
-
 
 
 // ===============================================================
