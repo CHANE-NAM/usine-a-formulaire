@@ -432,17 +432,12 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
 
     if (infosProfilComplet) {
-      resultats = { ...resultats, ...infosProfilComplet };
-    }
-    resultats.mapCodeToName = _creerMapCodeVersNom(profilsMap);
-  }
-
-  _log(DEBUG_FLOW, `<- calculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
-  return resultats;
-}
-
+      resultats = { 
 --- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_Graphiques.js ---
 
+alculerResultats : TerminÃ©. Profil Final: "${resultats.profilFinal}".`);
+  return resultats;
+}
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
@@ -2102,10 +2097,10 @@ function _sheetLooksLikeResponses_(sheet) {
 
 function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 Â  if (nameMaybe) {
-Â  Â  const sh
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js ---
-
-nses?.*|responses?)$/i;
+Â  Â  const sh = ss.getSheetByName(nameMaybe);
+Â  Â  if (sh) return sh;
+Â  }
+Â  const rx = /^(rÃ©ponses?\s+au\s+formulaire.*|form\s+responses?.*|responses?)$/i;
 Â  const sheets = ss.getSheets();
 Â  for (const sh of sheets) {
 Â  Â  if (rx.test(sh.getName())) return sh;
@@ -2238,6 +2233,9 @@ function diagnostic_CompoEmails_v20_1(kitId) {
 Â  Â  Logger.log('ERREUR diagnostic compo: ' + e.message);
 Â  }
 }
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\05_Bibliotheque\TEMPLATE_T_PDF.js ---
+
 /**
  * =================================================================================
  * == FICHIER : TEMPLATE_T_PDF.gs
