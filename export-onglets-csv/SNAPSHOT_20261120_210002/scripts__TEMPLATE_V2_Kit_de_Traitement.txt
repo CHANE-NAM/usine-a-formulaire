@@ -117,10 +117,10 @@ function calculerResultats(reponsesUtilisateur, langueCible, config, langueOrigi
     const profilEtReco = _determinerProfilFinal(resultats.scoresData, config.Type_Test, langCibleNorm);
     resultats = { ...resultats, ...profilEtReco };
     const profilsMap = _chargerProfils(config.Type_Test, langCibleNorm);
-    const infosProfilComplet = profilsMap[resultats.profilFinal];
+    const infosProfilComplet = profilsMap[resulta
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\RetraitementUI.html ---
 
-    // --- ESPIONS POUR LE BUG DE CORRESPONDANCE ---
-    _log(DEBUG_DATA_LOADING, 'PROFIL RECHERCHÃ‰ :', `"${resultats.profilFinal}"`);
+sultats.profilFinal}"`);
     _log(DEBUG_DATA_LOADING, 'PROFILS DISPONIBLES :', Object.keys(profilsMap));
     _log(DEBUG_DATA_LOADING, 'DONNÃ‰ES TROUVÃ‰ES :', infosProfilComplet);
     // --- FIN DES ESPIONS ---
@@ -353,9 +353,6 @@ function _normLang(s) {
   if (/^en|angl|english|uk|us/.test(x)) return 'EN';
   return x.toUpperCase();
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\RetraitementUI.html ---
-
  <!DOCTYPE html>
 <html>
   <head>
@@ -422,8 +419,10 @@ function _normLang(s) {
       </div>
       
       <div id="formateur-email-group" class="form-group hidden">
-        <label for="email-formateur">E-MAIL DU FORMATEUR</label>
-        <input type="email" id="email-formateur" name="email_formateur" placeholder="adresse.formateur@example.com">
+        <label for="email-forma
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
+
+dresse.formateur@example.com">
       </div>
       
       <div id="patron-email-group" class="form-group hidden">
@@ -533,9 +532,6 @@ function _normLang(s) {
     </script>
   </body>
 </html>
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Menu.js ---
-
 // =================================================================================
 // == FICHIER : Menu.gs
 // == VERSION : 2.6  (onInstall + onOpen unique, titre harmonisÃ©)
@@ -838,8 +834,10 @@ function _getReponsesSheet_(config, options) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null; }
   }
-  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.reponsesSpreadsheetId, 'ById(options)')) || (ssidProp && tryOpenById(ssidProp, 'ScriptProp')) ||
-    ( (config?.ID_Sheet_Reponses || config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
+  let pick = (options.reponsesSpreadsheetId && tryOpenById(options.repon
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
+
+|| config?.ID_SHEET_REPONSES || config?.ID_REPONSES_SPREADSHEET) && tryOpenById(config.ID_Sheet_Reponses || config.ID_SHEET_REPONSES || config.ID_REPONSES_SPREADSHEET, 'CONFIG') ) ||
     ( (sys?.ID_Sheet_Reponses || sys?.ID_SHEET_REPONSES || sys?.ID_REPONSES || sys?.ID_REPONSES_SHEET) && tryOpenById(sys.ID_Sheet_Reponses || sys.ID_SHEET_REPONSES || sys.ID_REPONSES || sys.ID_REPONSES_SHEET, 'SYS') );
   if (pick) { ss = pick.ss; used = pick.used; }
   if (!ss) { try { ss = SpreadsheetApp.getActiveSpreadsheet(); if (ss) used = 'ActiveSpreadsheet'; } catch (_) {} }
@@ -1251,9 +1249,6 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Utilities.js ---
-
 // =================================================================================
 // == FICHIER : Utilities.gs
 // == VERSION : 9.1 (Multi-sources + lecture format horizontal OU clÃ©â†’valeur)
@@ -1340,8 +1335,10 @@ function _tryReadKeyValueOrHorizontalConfig(fileId, possibleSheetNames) {
     const nbCols = headersRow.length;
 
     // Heuristique : format ClÃ©â†’Valeur si 2 colonnes OU si la 1Ã¨re colonne sâ€™appelle "ClÃ©"/"Key"
-    const header0 = headersRow[0].toLowerCase();
-    const isKeyValue = (nbCols <= 3) && (header0.includes('clÃ©') || header0.includes('cle') || header0.includes('key'));
+    const header0 = headersRo
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
+
+des('key'));
 
     if (isKeyValue) {
       // Lecture ClÃ©â†’Valeur
@@ -1653,9 +1650,6 @@ function mapQuestionsById(bdd, nomFeuille) {
   return mapById;
 }
 
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\DialogueLigne.html ---
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -1800,7 +1794,9 @@ function envoyerEmailProgramme(e) {
     Logger.log(`Nettoyage de la propriÃ©tÃ© ${proprieteId} terminÃ©.`);
 
   } catch (err) {
-    Logger.log(`ERREUR FATALE lors de l'exÃ©cution de l'envoi programmÃ© (ID: ${proprieteId}): ${err.toString()}\n${err.stack}`);
+    L
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
+
     // On supprime quand mÃªme la propriÃ©tÃ© pour Ã©viter des erreurs en boucle
     properties.deleteProperty(proprieteId);
   } finally {
@@ -1817,9 +1813,6 @@ function envoyerEmailProgramme(e) {
     }
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\TestFusionDoc.js ---
-
 function testFusionRapportFull() {
   const templateId = '1F-vPh9xhtWlF2eAHEfzwgwo3cmGbIyJXrMgmCePaDKQ';
 
@@ -3138,9 +3131,10 @@ function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 function _getReponsesSheet_(config, options) {
   options = options || {};
   const sys = (typeof getSystemIds === 'function') ? getSystemIds() : {};
-  const props = PropertiesService.getScriptProperties();
-  const ssidProp = props.getProperty('RESPONSES_SSID');
-  let ss = null, used = '';
+  const pr
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+
+sed = '';
   function tryOpenById(id, tag) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null;
@@ -3245,9 +3239,6 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
-
 /**
  * T_PDF.gs
  * GÃ©nÃ¨re un fichier PDF Ã  partir d'un modÃ¨le Google Doc en remplaÃ§ant des variables.
@@ -3380,8 +3371,10 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       profilFinal: profilFinal,
       Titre_Profil: profilFinal,
       Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
-      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
-      Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
+      Pourcentage_K: parseFloat((100 - pourcentage_r).
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
+
+scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
@@ -3480,9 +3473,6 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
-
 
 
 // ===============================================================
@@ -3591,9 +3581,10 @@ function lancerRetraitementDepuisUI(options) {
   return TEMPLATE.lancerRetraitementDepuisUI(options);
 }
 
-// ===============================================================
-// == FONCTIONS DE TEST D'AUTORISATION
-// ===============================================================
+// 
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
+
+====================================
 
 /**
  * Fonction temporaire pour forcer la demande d'autorisation pour lire les alias Gmail.
@@ -3614,9 +3605,6 @@ function testAuthDocs() {
     Logger.log('La demande d\'autorisation pour Google Docs a Ã©tÃ© dÃ©clenchÃ©e.');
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\mini_script_audit.js ---
-
 /*******************************
  * AUDIT RAPIDE DU KIT (V1)
  * Ã€ coller dans le projet du KIT (Sheet de rÃ©ponses)
