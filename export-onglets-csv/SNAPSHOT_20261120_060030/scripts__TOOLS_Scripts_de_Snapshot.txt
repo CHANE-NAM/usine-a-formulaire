@@ -237,10 +237,10 @@ foreach ($p in $Projets) {
   $pname = $p[0]
   $pdir  = $p[1]
 
-  if (-not (Test-Path -LiteralPath $pdir)) { Write-Warning ("Dossier introuvable: {0}" -f $pdir); continue }
+  if (-not (Test-Path -LiteralPath $pdir)) { Write-W
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\fix_nbsp.ps1 ---
 
-  $safeName = ($pname -replace '[^\w\-]+','_')
-  $outTxt   = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
+  = Join-Path $SnapDir ("scripts_" + $safeName + ".txt")
 
   $files = Get-ChildItem -LiteralPath $pdir -Recurse -File -ErrorAction SilentlyContinue |
            Where-Object { 
@@ -352,9 +352,6 @@ try {
   else { throw "git diff --cached --quiet a échoué (exit=$exit)." }
 } catch { Write-Warning ("[GIT] Commit/push auto a échoué : {0}" -f $_.Exception.Message) }
 try { Stop-Transcript | Out-Null } catch {}
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\fix_nbsp.ps1 ---
 
 # Tools/fix_nbsp.ps1
 $path = Join-Path $PSScriptRoot 'snapshot_rk.ps1'
@@ -831,10 +828,17 @@ function askChoice() {
         if (!/^[123]$/.test(ans)) {
           console.log("Choix invalide. Tape 1, 2 ou 3.");
           return prompt();
-        
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\gen_docs.ps1 ---
+        }
+        rl.close();
+        resolve(ans);
+      });
 
-'entrée ===
+    showMenu();
+    prompt();
+  });
+}
+
+// === Point d'entrée ===
 (async () => {
   const argChoice = (process.argv[2] || "").trim();
   const choice = /^[123]$/.test(argChoice) ? argChoice : await askChoice();
@@ -845,6 +849,9 @@ function askChoice() {
     process.exit(1);
   }
 })();
+
+
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\gen_docs.ps1 ---
 
 # Tools\gen_docs.ps1 — génère docs AI/État/Users + brief IA, appels nommés/positionnels/auto
 #requires -Version 5.1
@@ -1343,8 +1350,10 @@ try {
   $driveMeta = $null
   try {
     $driveMeta = GET ("https://www.googleapis.com/drive/v3/files/{0}?fields=id,name,mimeType,owners(emailAddress,displayName)" -f $TargetSpreadsheetId)
-    $owner = $driveMeta.owners[0].emailAddress
-    Write-Host -ForegroundColor Yellow ("Drive OK → Nom actuel: ""{0}"" | Type: {1} | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
+    $owner =
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
+
+ | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
   } catch {
     Write-Host -ForegroundColor Red "❌ Drive metadata KO (ID invalide, API non activée ou pas d’accès). Détails :"
     Show-HttpError $_
@@ -1431,9 +1440,6 @@ catch {
   Write-Host -ForegroundColor Red $_
   exit 1
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
 
 {"timeZone":"Indian/Mauritius","exceptionLogging":"STACKDRIVER","runtimeVersion":"V8"}
 
