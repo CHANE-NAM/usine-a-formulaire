@@ -76,9 +76,10 @@ try {
     }
     Write-Host "RepoPath = $RepoPath"
 
-    # 1) CLASP PULL dans tous les sous-projets dÃ©tectÃ©s
-    if ($hasClasp) {
-        $projects = Get-ChildItem -Path $RepoPath -Recurse -Force -File -Filter ".clasp.json" |
+    # 1) CLASP PULL dans tous les sous
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1 ---
+
+ilter ".clasp.json" |
                     Select-Object -ExpandProperty DirectoryName -Unique
         if (-not $projects) {
             Write-Host "Aucun .clasp.json trouvÃ©. (Ignorable si tout est local)"
@@ -125,9 +126,6 @@ catch {
 finally {
     Stop-Transcript | Out-Null
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\snapshot_rk.ps1 ---
 
 # Tools\snapshot_rk.ps1
 # === Snapshot complet : GAS + CSV + DOCS + ZIP (+ manifest/brief/diff, + hook docs optionnel) ===
@@ -960,9 +958,10 @@ foreach ($cf in $concatFiles) {
     [void]$sb.AppendLine('---')
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('### Fichiers CSV exportés (aperçu)')
-    foreach ($c in ($csvs | Select-Object -First 30)) {
-      $rel = $c.FullName.Replace($SnapshotDir, '').TrimStart('\')
-      [void]$sb.AppendLine('* ' + $rel)
+    foreach ($c
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\AI-Brief.ps1 ---
+
+id]$sb.AppendLine('* ' + $rel)
     }
     if ($csvs.Count -gt 30) { [void]$sb.AppendLine(('* ... ({0} de plus)' -f ($csvs.Count - 30))) }
     [void]$sb.AppendLine('')
@@ -1126,9 +1125,6 @@ if ($prevSnap) {
 Write-Host '[DOCS] Génération terminée : ' $DocsRoot
 exit 0
 
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\AI-Brief.ps1 ---
-
 # Tools\AI-Brief.ps1 â€” brief riche (ASCII-safe)
 [CmdletBinding()]
 param()
@@ -1234,10 +1230,10 @@ if ($ByTypeLines.Count) {
   [void]$content.AppendLine('- **Par type** :')
   foreach ($l in $ByTypeLines) { [void]$content.AppendLine($l) }
 }
-[void]$content.AppendLine('')
-[void]$content.AppendLine('- **CSV exportes** : ' + $CsvCount)
-[void]$content.AppendLine('')
-[void]$content.AppendLine('## Commits recents')
+[void]$content.A
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\FinaliserKit.ps1 ---
+
+AppendLine('## Commits recents')
 if ($Commits -and $Commits.Count) { foreach ($c in $Commits) { [void]$content.AppendLine('* ' + $c) } }
 else { [void]$content.AppendLine('_(git log indisponible)_') }
 
@@ -1262,9 +1258,6 @@ if (Get-Command Set-Clipboard -ErrorAction SilentlyContinue) {
 }
 Start-Process notepad $BriefPath
 Write-Host "[BRIEF] Genere, copie et ouvert : $BriefPath"
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\FinaliserKit.ps1 ---
 
 # =================================================================================
 # FinaliserKit.ps1 — Rename Google Sheet à partir de la CONFIG (ligne 16)
@@ -1353,8 +1346,10 @@ try {
   $driveMeta = $null
   try {
     $driveMeta = GET ("https://www.googleapis.com/drive/v3/files/{0}?fields=id,name,mimeType,owners(emailAddress,displayName)" -f $TargetSpreadsheetId)
-    $owner = $driveMeta.owners[0].emailAddress
-    Write-Host -ForegroundColor Yellow ("Drive OK → Nom actuel: ""{0}"" | Type: {1} | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
+    $owner =
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
+
+ | Propriétaire: {2}" -f $driveMeta.name, $driveMeta.mimeType, $owner)
   } catch {
     Write-Host -ForegroundColor Red "❌ Drive metadata KO (ID invalide, API non activée ou pas d’accès). Détails :"
     Show-HttpError $_
@@ -1441,9 +1436,6 @@ catch {
   Write-Host -ForegroundColor Red $_
   exit 1
 }
-
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\Tools\appsscript.json ---
 
 {"timeZone":"Indian/Mauritius","exceptionLogging":"STACKDRIVER","runtimeVersion":"V8"}
 

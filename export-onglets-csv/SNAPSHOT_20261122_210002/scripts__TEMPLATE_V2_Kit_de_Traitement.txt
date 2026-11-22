@@ -2237,10 +2237,10 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  const K1 = envVals[base+1], K2 = envVals[base+2];
 Â  Â  const R1 = envVals[base+3], R2 = envVals[base+4];
 
-Â  Â  const hasK = (K1!=null && K2!=null);
-Â  Â  const hasR = (R1!=null && R2!=null);
-Â  Â  const k = hasK ? avg(K1, K2) : null;
-Â  Â  const r = hasR ? avg(R1, R2) : null;
+Â  Â  const hasK = (K1!=null && K2!
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
+
+ R2) : null;
 Â  Â  if (k!=null) { sumK += k; filledK++; }
 Â  Â  if (r!=null) { sumR += r; filledR++; }
 
@@ -2298,9 +2298,6 @@ function calculerResultats_rK_Environnement(reponse, langueCible, config) {
 Â  Â  ...flat
 Â  };
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Moteur_rK_Resilience.js ---
-
 /**
  * =================================================================================
  * == FICHIER : Moteur_rK_Resilience.js
@@ -2381,8 +2378,10 @@ function calculerResultats_rK_Resilience(reponses, langueCible, config, langueOr
     const pourcentage_K = (grand_total > 0) ? (total_K / grand_total) * 100 : 0;
 
     // 3. DÃ©termination du niveau de rÃ©silience
-    const profilsDataBrutes = _chargerDonneesProfilsBrutes(config.Type_Test, langueCible);
-     _log_res(DEBUG_RES_DATA, `Chargement des profils terminÃ©. ${profilsDataBrutes.length} profils trouvÃ©s.`);
+    const profilsDataBrutes = _chargerDonneesProfilsBr
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
+
+gth} profils trouvÃ©s.`);
     const niveauResilience = _determinerNiveauResilience(pourcentage_r, pourcentage_K, profilsDataBrutes);
     const profilData = profilsDataBrutes.find(row => row.Code_Profil === niveauResilience) || {};
     
@@ -2489,9 +2488,6 @@ function _chargerDonneesProfilsBrutes(typeTest, langue) {
     return [];
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\Graphiques.js ---
-
 /**
  * =================================================================================
  * == FICHIER : Graphiques.gs
@@ -2714,8 +2710,10 @@ function ui_DryRunLigneSelection() {
 function ui_EnvoiReelLigneSelection() {
   try {
     const row = _getRowFromSelectionOrAsk_();
-    if (typeof traiterLigne !== 'function') {
-      SpreadsheetApp.getUi().alert('âš ï¸ Fonction manquante: traiterLigne(). VÃ©rifiez la prÃ©sence du fichier T_Main.gs.');
+    if (typeof traiterLigne !== 'fun
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
+
+du fichier T_Main.gs.');
       return;
     }
     traiterLigne(row, { isRetraitement: true, dryRun: false, ignoreDeveloppeurEmail: false });
@@ -2851,9 +2849,6 @@ function retraitementTestSansEnvoi(rowIndex, options) {
     throw new Error(e.message);
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Mail.js ---
-
 /**
  * T_Mail.gs
  * @fileoverview GÃ¨re la composition et l'envoi des e-mails de rÃ©sultats.
@@ -2932,10 +2927,10 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
   }
 
   for (const brique of briquesDeContenu) {
-    const elementType = (brique[idx.element] || '').toString().trim();
-    const contenu = brique[idx.contenu];
-    switch (elementType) {
-      case 'Sujet_Email': sujet = contenu; break;
+    const elementType 
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
+
+ case 'Sujet_Email': sujet = contenu; break;
       case 'Introduction': case 'Corps_Texte': corpsHtml += (contenu || "") + "<br>"; break;
       case 'Champ_Profil': if (contenu && donneesPourEmail[contenu]) { corpsHtml += donneesPourEmail[contenu] + "<br>"; } break;
       case 'Document': if (contenu && String(contenu).trim()) piecesJointesIds.add(String(contenu).trim()); break;
@@ -3052,9 +3047,6 @@ function assemblerEtEnvoyerEmailUniversel(config, reponse, resultats, langueCibl
     }
   });
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_Data.js ---
-
 /**
  * T_Data.gs
  * @fileoverview GÃ¨re la lecture et la prÃ©paration des donnÃ©es depuis les feuilles de calcul.
@@ -3149,9 +3141,10 @@ function _pickSheetByNameOrHeuristic_(ss, nameMaybe) {
 function _getReponsesSheet_(config, options) {
   options = options || {};
   const sys = (typeof getSystemIds === 'function') ? getSystemIds() : {};
-  const props = PropertiesService.getScriptProperties();
-  const ssidProp = props.getProperty('RESPONSES_SSID');
-  let ss = null, used = '';
+  const pr
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
+
+sed = '';
   function tryOpenById(id, tag) {
     if (!id) return null;
     try { return { ss: SpreadsheetApp.openById(id), used: `${tag}(${id})` }; } catch(_){ DBG('tryOpenById FAIL', tag, id); return null;
@@ -3256,9 +3249,6 @@ function diagnostic_CompoEmails_v20_1() {
     Logger.log('ERREUR diagnostic compo: ' + e.message);
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\T_PDF.js ---
-
 /**
  * T_PDF.gs
  * GÃ©nÃ¨re un fichier PDF Ã  partir d'un modÃ¨le Google Doc en remplaÃ§ant des variables.
@@ -3391,8 +3381,10 @@ function calculerResultats_rK_Creativite(reponses, langueCible, config, langueOr
       profilFinal: profilFinal,
       Titre_Profil: profilFinal,
       Pourcentage_r: parseFloat(pourcentage_r.toFixed(1)),
-      Pourcentage_K: parseFloat((100 - pourcentage_r).toFixed(1)),
-      Score_Ideation: scoresParAxe["IdÃ©ation"].total > 0 ? parseFloat(((scoresParAxe["IdÃ©ation"].r / scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
+      Pourcentage_K: parseFloat((100 - pourcentage_r).
+--- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
+
+scoresParAxe["IdÃ©ation"].total) * 10).toFixed(1)) : 0,
       Score_Selection: scoresParAxe["SÃ©lection"].total > 0 ? parseFloat(((scoresParAxe["SÃ©lection"].r / scoresParAxe["SÃ©lection"].total) * 10).toFixed(1)) : 0,
       Score_Innovation: scoresParAxe["Innovation"].total > 0 ? parseFloat(((scoresParAxe["Innovation"].r / scoresParAxe["Innovation"].total) * 10).toFixed(1)) : 0,
       Score_Contraintes: scoresParAxe["Gestion des contraintes"].total > 0 ? parseFloat(((scoresParAxe["Gestion des contraintes"].r / scoresParAxe["Gestion des contraintes"].total) * 10).toFixed(1)) : 0,
@@ -3491,9 +3483,6 @@ function _chargerDonneesProfilsBrutes_V2(typeTest, langue) {
     return [];
   }
 }
-
---- FILE: G:\Mon Drive\APPLI TEST Personnalité Drive\Projet USINE à FORMULAIRE GoogleForm\04_Templates\code.js ---
-
 
 
 // ===============================================================
